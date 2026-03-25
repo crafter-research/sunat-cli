@@ -1,62 +1,68 @@
 ---
 import { codeToHtml } from "shiki";
 
+const sunatTheme = {
+	name: "sunat",
+	type: "dark" as const,
+	settings: [
+		{ scope: ["comment", "comment.line", "comment.line.number-sign", "comment.line.number-sign.shell", "punctuation.definition.comment"], settings: { foreground: "#64748B", fontStyle: "italic" } },
+		{ scope: ["string", "string.quoted", "string.quoted.double", "string.quoted.single"], settings: { foreground: "#FCA5A5" } },
+		{ scope: ["constant", "constant.numeric", "constant.language"], settings: { foreground: "#C41E3A" } },
+		{ scope: ["keyword", "keyword.operator", "keyword.control"], settings: { foreground: "#93C5FD" } },
+		{ scope: ["entity.name.function", "support.function"], settings: { foreground: "#FFFFFF" } },
+		{ scope: ["variable", "variable.other", "variable.parameter"], settings: { foreground: "#D1D5DB" } },
+		{ scope: ["punctuation", "meta.brace"], settings: { foreground: "#94A3B8" } },
+		{ scope: ["source", "text"], settings: { foreground: "#CBD5E1" } },
+	],
+	colors: {
+		"editor.background": "#0F172A",
+		"editor.foreground": "#CBD5E1",
+	},
+};
+
 const features = [
 	{
 		title: "RHE Emission",
 		desc: "Emit Recibos por Honorarios in batch. 12 months in one command.",
-		code: "sunat-cli rhe emit --batch ./data.csv",
+		code: "$ sunat-cli rhe emit --batch ./data.csv",
 	},
 	{
 		title: "F616 Declaration",
-		desc: "Monthly 4ta categoria declarations. Input masks cracked via CDP.",
-		code: "sunat-cli f616 declare --json '{...}'",
+		desc: "Monthly 4ta categoria declarations via CDP automation.",
+		code: '$ sunat-cli f616 declare \\\n  --json \'{"periodo":"03/2025"}\'',
 	},
 	{
 		title: "Schema Introspection",
-		desc: "Agents self-serve field definitions at runtime. Zero docs overhead.",
-		code: "sunat-cli schema rhe",
+		desc: "Agents self-serve field definitions at runtime.",
+		code: "$ sunat-cli schema rhe\n# Returns JSON schema of all fields",
 	},
 	{
 		title: "OAuth2 Verification",
-		desc: "Verify emissions via SUNAT REST API. Token management built-in.",
-		code: "sunat-cli api token",
+		desc: "Verify emissions via SUNAT REST API.",
+		code: "$ sunat-cli api token\n# JWT valid for 1 hour",
 	},
 ];
+
+const featureHtmls = await Promise.all(
+	features.map(f => codeToHtml(f.code, { lang: "bash", theme: sunatTheme }))
+);
 
 const heroCode = `# Install globally
 $ bun add -g @crafter/sunat-cli
 
-# Login (no CAPTCHA)
+# Login to SUNAT (zero CAPTCHA)
 $ sunat-cli login
-✓ Logged in to SOL (RHE)
+✓ Logged in to SOL
 
-# Dry-run first, always
+# Always dry-run first
 $ sunat-cli rhe emit --batch ./data.csv --dry-run
-{ "dryRun": true, "status": "would-emit", ... }
+{ "dryRun": true, "input": {...}, "status": "would-emit" }
 
-# Emit 19 RHEs in one batch
+# Ship it — 19 RHEs in one batch
 $ sunat-cli rhe emit --batch ./data.csv
-✓ 19 RHEs emitted successfully`;
+✓ 19 RHEs emitted`;
 
-const heroCodeHtml = await codeToHtml(heroCode, {
-	lang: "bash",
-	theme: {
-		name: "sunat",
-		type: "dark",
-		settings: [],
-		colors: {
-			"editor.background": "#0F172A",
-			"editor.foreground": "#CBD5E1",
-		},
-		tokenColors: [
-			{ scope: "comment", settings: { foreground: "#64748B" } },
-			{ scope: "string", settings: { foreground: "#C41E3A" } },
-			{ scope: "keyword", settings: { foreground: "#7DD3FC" } },
-			{ scope: "variable", settings: { foreground: "#CBD5E1" } },
-		],
-	},
-});
+const heroCodeHtml = await codeToHtml(heroCode, { lang: "bash", theme: sunatTheme });
 
 const principles = [
 	"--json payloads over flags",
@@ -68,10 +74,10 @@ const principles = [
 ];
 
 const stats = [
-	{ value: "0", label: "CAPTCHAs needed" },
-	{ value: "19", label: "RHEs in one batch" },
-	{ value: "3", label: "Portals reverse-engineered" },
-	{ value: "1h", label: "OAuth2 token TTL" },
+	{ value: "0", label: "CAPTCHAs" },
+	{ value: "19", label: "RHEs / batch" },
+	{ value: "3", label: "Portals cracked" },
+	{ value: "1h", label: "Token TTL" },
 ];
 ---
 
@@ -79,6 +85,7 @@ const stats = [
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>sunat-cli — Agent-First Tax Automation for Peru</title>
 		<meta name="description" content="Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616, verify via API. Built for AI agents. Open source by Crafter Station." />
@@ -91,7 +98,6 @@ const stats = [
 		<meta property="og:image:height" content="630" />
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:image" content="https://sunat-cli.crafter.ing/og-twitter.png" />
-		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -100,312 +106,136 @@ const stats = [
 			html { scroll-behavior: smooth; }
 
 			:root {
-				--sunat-blue: #1A3567;
-				--sunat-blue-light: #2B4A8A;
-				--sunat-red: #C41E3A;
-				--sunat-red-hover: #A8182F;
-				--bg-white: #FFFFFF;
-				--bg-gray: #F5F5F5;
+				--blue: #1A3567;
+				--blue-light: #2B4A8A;
+				--red: #C41E3A;
+				--bg: #FFFFFF;
+				--bg-alt: #F8FAFC;
 				--bg-dark: #0F172A;
-				--border: #D1D5DB;
-				--text-primary: #1A1A1A;
-				--text-secondary: #4B5563;
-				--text-muted: #9CA3AF;
+				--border: #E2E8F0;
+				--text: #0F172A;
+				--text-2: #475569;
+				--text-3: #94A3B8;
 			}
 
 			body {
 				font-family: 'Inter', system-ui, sans-serif;
 				font-size: 15px;
 				line-height: 1.6;
-				color: var(--text-primary);
-				background: var(--bg-white);
+				color: var(--text);
+				background: var(--bg);
 				-webkit-font-smoothing: antialiased;
 			}
 
 			.mono { font-family: 'JetBrains Mono', monospace; }
-
-			.container {
-				max-width: 1080px;
-				margin: 0 auto;
-				padding: 0 24px;
-			}
+			.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
 			/* Nav */
 			nav {
-				position: fixed;
-				top: 0;
-				left: 0;
-				right: 0;
-				z-index: 100;
-				background: rgba(255,255,255,0.85);
-				backdrop-filter: blur(12px);
+				position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+				background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
 				border-bottom: 1px solid var(--border);
 			}
 			.nav-inner {
-				max-width: 1080px;
-				margin: 0 auto;
-				padding: 0 24px;
-				height: 56px;
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
+				max-width: 1080px; margin: 0 auto; padding: 0 24px;
+				height: 56px; display: flex; align-items: center; justify-content: space-between;
 			}
-			.nav-brand {
-				font-weight: 700;
-				font-size: 15px;
-				color: var(--sunat-blue);
-				text-decoration: none;
-				display: flex;
-				align-items: center;
-				gap: 6px;
-			}
-			.nav-brand span { color: var(--sunat-red); }
+			.nav-brand { font-weight: 700; font-size: 15px; color: var(--blue); text-decoration: none; }
+			.nav-brand span { color: var(--red); }
 			.nav-links { display: flex; gap: 24px; align-items: center; }
-			.nav-links a {
-				color: var(--text-secondary);
-				text-decoration: none;
-				font-size: 13px;
-				font-weight: 500;
-				transition: color 150ms;
-			}
-			.nav-links a:hover { color: var(--text-primary); }
-			.nav-cta {
-				background: var(--sunat-blue) !important;
-				color: white !important;
-				padding: 6px 16px;
-				border-radius: 6px;
-				font-size: 13px !important;
-			}
-			.nav-cta:hover { background: var(--sunat-blue-light) !important; }
+			.nav-links a { color: var(--text-2); text-decoration: none; font-size: 13px; font-weight: 500; }
+			.nav-links a:hover { color: var(--text); }
+			.nav-cta { background: var(--blue) !important; color: white !important; padding: 6px 16px; border-radius: 6px; }
+			.nav-cta:hover { background: var(--blue-light) !important; }
 
 			/* Hero */
-			.hero {
-				padding: 140px 24px 80px;
-				text-align: center;
-				background: var(--bg-gray);
-				border-bottom: 1px solid var(--border);
-			}
+			.hero { padding: 120px 24px 60px; }
+			.hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
 			.hero-badge {
-				display: inline-flex;
-				align-items: center;
-				gap: 6px;
-				padding: 4px 12px;
-				background: white;
-				border: 1px solid var(--border);
-				border-radius: 999px;
-				font-size: 12px;
-				color: var(--text-secondary);
-				margin-bottom: 24px;
+				display: inline-flex; align-items: center; gap: 6px;
+				padding: 4px 12px; background: var(--bg-alt); border: 1px solid var(--border);
+				border-radius: 999px; font-size: 12px; color: var(--text-2); margin-bottom: 20px;
 			}
-			.hero-badge .dot {
-				width: 6px;
-				height: 6px;
-				border-radius: 50%;
-				background: var(--sunat-red);
-			}
+			.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 			.hero h1 {
-				font-size: clamp(32px, 5vw, 52px);
-				font-weight: 700;
-				line-height: 1.1;
-				letter-spacing: -0.03em;
-				color: var(--sunat-blue);
-				margin-bottom: 16px;
+				font-size: 40px; font-weight: 700; line-height: 1.15;
+				letter-spacing: -0.03em; color: var(--blue); margin-bottom: 16px;
 			}
-			.hero h1 .accent { color: var(--sunat-red); }
-			.hero p {
-				font-size: 17px;
-				color: var(--text-secondary);
-				max-width: 520px;
-				margin: 0 auto 32px;
-				font-weight: 400;
-				line-height: 1.7;
-			}
-			.hero-actions {
-				display: flex;
-				gap: 12px;
-				justify-content: center;
-				flex-wrap: wrap;
-				margin-bottom: 32px;
-			}
+			.hero h1 .accent { color: var(--red); }
+			.hero-desc { font-size: 16px; color: var(--text-2); line-height: 1.7; margin-bottom: 24px; }
+			.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 			.btn {
-				display: inline-flex;
-				align-items: center;
-				padding: 10px 24px;
-				border-radius: 8px;
-				font-size: 14px;
-				font-weight: 600;
-				text-decoration: none;
-				transition: all 150ms;
-				border: none;
-				cursor: pointer;
+				display: inline-flex; align-items: center; padding: 10px 22px;
+				border-radius: 8px; font-size: 14px; font-weight: 600;
+				text-decoration: none; border: none; cursor: pointer; transition: all 150ms;
 			}
-			.btn-primary {
-				background: var(--sunat-red);
-				color: white;
-			}
-			.btn-primary:hover { background: var(--sunat-red-hover); }
-			.btn-outline {
-				background: white;
-				color: var(--text-primary);
-				border: 1px solid var(--border);
-			}
-			.btn-outline:hover { border-color: var(--text-secondary); }
-
-			.install-box {
-				display: inline-flex;
-				align-items: center;
-				gap: 8px;
-				padding: 10px 20px;
-				background: var(--bg-dark);
-				border-radius: 8px;
-				color: var(--text-muted);
-				font-size: 13px;
-			}
-			.install-box code { color: #E2E8F0; }
-			.install-box .prompt { color: var(--sunat-red); }
+			.btn-primary { background: var(--red); color: white; }
+			.btn-primary:hover { background: #A8182F; }
+			.btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
+			.btn-outline:hover { border-color: var(--text-2); }
+			.install-cmd { font-size: 13px; color: var(--text-3); }
+			.install-cmd code { color: var(--text); }
 
 			.hero-code {
-				max-width: 560px;
-				margin: 32px auto 0;
-				text-align: left;
-				border-radius: 10px;
-				overflow: hidden;
-				box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+				border-radius: 12px; overflow: hidden;
+				box-shadow: 0 8px 32px rgba(15,23,42,0.2);
 			}
 			.hero-code :global(pre) {
-				padding: 20px 24px !important;
-				font-size: 12.5px !important;
-				line-height: 1.7 !important;
-				margin: 0 !important;
-				border-radius: 10px !important;
+				padding: 24px !important; font-size: 12.5px !important;
+				line-height: 1.8 !important; margin: 0 !important;
 			}
-			.hero-code :global(code) {
-				font-family: 'JetBrains Mono', monospace !important;
-			}
+			.hero-code :global(code) { font-family: 'JetBrains Mono', monospace !important; }
 
 			/* Stats */
-			.stats {
-				padding: 48px 24px;
-				border-bottom: 1px solid var(--border);
-			}
-			.stats-grid {
-				display: grid;
-				grid-template-columns: repeat(4, 1fr);
-				gap: 0;
-			}
-			.stat {
-				text-align: center;
-				padding: 16px;
-			}
+			.stats { padding: 40px 24px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+			.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+			.stat { text-align: center; padding: 12px; }
 			.stat:not(:last-child) { border-right: 1px solid var(--border); }
-			.stat-value {
-				font-size: 36px;
-				font-weight: 700;
-				color: var(--sunat-blue);
-				line-height: 1;
-			}
-			.stat-label {
-				font-size: 12px;
-				color: var(--text-muted);
-				margin-top: 4px;
-				text-transform: uppercase;
-				letter-spacing: 0.05em;
-			}
+			.stat-value { font-size: 32px; font-weight: 700; color: var(--blue); line-height: 1; }
+			.stat-label { font-size: 11px; color: var(--text-3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
 
 			/* Features */
-			.features { padding: 80px 24px; }
-			.section-label {
-				font-size: 12px;
-				font-weight: 600;
-				text-transform: uppercase;
-				letter-spacing: 0.1em;
-				color: var(--sunat-red);
-				margin-bottom: 8px;
-			}
-			.section-title {
-				font-size: 28px;
-				font-weight: 700;
-				color: var(--text-primary);
-				margin-bottom: 40px;
-				letter-spacing: -0.02em;
-			}
-			.features-grid {
-				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-				gap: 16px;
-			}
+			.features { padding: 80px 24px; background: var(--bg-alt); }
+			.section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red); margin-bottom: 8px; }
+			.section-title { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 40px; }
+			.features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 			.feature-card {
-				border: 1px solid var(--border);
-				border-radius: 10px;
-				padding: 24px;
-				transition: border-color 200ms, box-shadow 200ms;
+				background: white; border: 1px solid var(--border); border-radius: 12px;
+				padding: 24px; transition: border-color 200ms, box-shadow 200ms;
 			}
-			.feature-card:hover {
-				border-color: var(--sunat-blue);
-				box-shadow: 0 4px 12px rgba(26,53,103,0.08);
+			.feature-card:hover { border-color: var(--blue); box-shadow: 0 4px 12px rgba(26,53,103,0.06); }
+			.feature-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+			.feature-desc { font-size: 14px; color: var(--text-2); margin-bottom: 16px; line-height: 1.6; }
+			.feature-code { border-radius: 8px; overflow: hidden; }
+			.feature-code :global(pre) {
+				padding: 12px 16px !important; font-size: 12px !important;
+				line-height: 1.7 !important; margin: 0 !important;
 			}
-			.feature-title {
-				font-size: 16px;
-				font-weight: 600;
-				margin-bottom: 6px;
-			}
-			.feature-desc {
-				font-size: 14px;
-				color: var(--text-secondary);
-				margin-bottom: 16px;
-				line-height: 1.6;
-			}
-			.feature-code {
-				background: var(--bg-dark);
-				color: #94A3B8;
-				padding: 8px 12px;
-				border-radius: 6px;
-				font-size: 12px;
-				white-space: normal;
-				word-break: break-all;
-			}
+			.feature-code :global(code) { font-family: 'JetBrains Mono', monospace !important; }
 
 			/* Agent DX */
-			.agent-dx {
-				padding: 80px 24px;
-				background: var(--sunat-blue);
-				color: white;
-			}
-			.agent-dx .section-label { color: rgba(255,255,255,0.5); }
+			.agent-dx { padding: 80px 24px; background: var(--blue); color: white; }
+			.agent-dx .section-label { color: rgba(255,255,255,0.4); }
 			.agent-dx .section-title { color: white; }
-			.agent-dx-desc {
-				color: rgba(255,255,255,0.7);
-				max-width: 560px;
-				font-size: 15px;
-				line-height: 1.7;
-				margin-bottom: 32px;
-			}
-			.principles {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 8px;
-			}
+			.agent-dx-desc { color: rgba(255,255,255,0.65); max-width: 560px; font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+			.principles { display: flex; flex-wrap: wrap; gap: 8px; }
 			.principle {
-				padding: 8px 16px;
-				border: 1px solid rgba(255,255,255,0.2);
-				border-radius: 6px;
-				font-size: 13px;
-				color: rgba(255,255,255,0.85);
+				padding: 8px 16px; border: 1px solid rgba(255,255,255,0.15);
+				border-radius: 6px; font-size: 13px; color: rgba(255,255,255,0.8);
 				background: rgba(255,255,255,0.05);
 			}
 
-			/* Footer */
 			footer {
-				padding: 32px 24px;
-				border-top: 1px solid var(--border);
-				text-align: center;
-				font-size: 13px;
-				color: var(--text-muted);
+				padding: 32px 24px; border-top: 1px solid var(--border);
+				text-align: center; font-size: 13px; color: var(--text-3);
 			}
-			footer a { color: var(--sunat-blue); text-decoration: none; }
+			footer a { color: var(--blue); text-decoration: none; }
 			footer a:hover { text-decoration: underline; }
 
-			@media (max-width: 640px) {
+			@media (max-width: 768px) {
+				.hero-inner { grid-template-columns: 1fr; }
+				.hero h1 { font-size: 32px; }
+				.features-grid { grid-template-columns: 1fr; }
 				.stats-grid { grid-template-columns: repeat(2, 1fr); }
 				.stat:nth-child(2) { border-right: none; }
 				.stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--border); }
@@ -420,6 +250,7 @@ const stats = [
 				<div class="nav-links">
 					<a href="#features">Features</a>
 					<a href="#agent-dx">Agent DX</a>
+					<a href="/legal">Legal</a>
 					<a href="https://github.com/crafter-station/sunat-cli" class="nav-cta">GitHub</a>
 				</div>
 			</div>
@@ -427,24 +258,25 @@ const stats = [
 
 		<section class="hero">
 			<div class="container">
-				<div class="hero-badge">
-					<span class="dot"></span>
-					<span class="mono">crafter station / gov-tech</span>
+				<div class="hero-inner">
+					<div>
+						<div class="hero-badge">
+							<span class="dot"></span>
+							<span class="mono">crafter station / gov-tech</span>
+						</div>
+						<h1>Automate SUNAT<br/>with <span class="accent">one CLI</span></h1>
+						<p class="hero-desc">
+							Agent-first CLI for Peru's tax authority. Emit RHE, declare F616,
+							verify via OAuth2 API. Built for AI agents as primary consumers.
+						</p>
+						<div class="hero-actions">
+							<a href="https://github.com/crafter-station/sunat-cli" class="btn btn-primary">Get started</a>
+							<a href="#features" class="btn btn-outline">Learn more</a>
+						</div>
+						<p class="install-cmd mono">$ <code>bun add -g @crafter/sunat-cli</code></p>
+					</div>
+					<div class="hero-code" set:html={heroCodeHtml} />
 				</div>
-				<h1>Automate SUNAT<br/>with <span class="accent">one CLI</span></h1>
-				<p>
-					Agent-first CLI for Peru's tax authority. Emit RHE, declare F616,
-					verify via OAuth2 API. Built for AI agents as primary consumers.
-				</p>
-				<div class="hero-actions">
-					<a href="https://github.com/crafter-station/sunat-cli" class="btn btn-primary">Get started</a>
-					<a href="#features" class="btn btn-outline">Learn more</a>
-				</div>
-				<div class="install-box mono">
-					<span class="prompt">$</span>
-					<code>bun add -g @crafter/sunat-cli</code>
-				</div>
-				<div class="hero-code" set:html={heroCodeHtml} />
 			</div>
 		</section>
 
@@ -466,11 +298,11 @@ const stats = [
 				<p class="section-label mono">Capabilities</p>
 				<h2 class="section-title">Everything SUNAT, one command</h2>
 				<div class="features-grid">
-					{features.map((f) => (
+					{features.map((f, i) => (
 						<div class="feature-card">
 							<h3 class="feature-title">{f.title}</h3>
 							<p class="feature-desc">{f.desc}</p>
-							<pre class="feature-code mono">{f.code}</pre>
+							<div class="feature-code" set:html={featureHtmls[i]} />
 						</div>
 					))}
 				</div>
