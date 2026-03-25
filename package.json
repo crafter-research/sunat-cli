@@ -1,24 +1,5 @@
 {
-	"name": "sunat-cli",
-	"version": "0.1.0",
-	"description": "Agent-first CLI for SUNAT tax automation",
-	"module": "bin/sunat.ts",
-	"type": "module",
-	"bin": {
-		"sunat": "bin/sunat.ts"
-	},
-	"scripts": {
-		"dev": "bun run bin/sunat.ts",
-		"check": "biome check --write ."
-	},
-	"devDependencies": {
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
-		"typescript": "^5.0.0"
-	},
-	"dependencies": {
-		"@clack/prompts": "^1.1.0",
-		"commander": "^14.0.3"
-	}
+	"name": "sunat-cli-monorepo",
+	"private": true,
+	"workspaces": ["packages/*"]
 }

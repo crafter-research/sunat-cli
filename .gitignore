@@ -107,8 +107,8 @@ web_modules/
 .env.local
 
 # Private data (real tax data, credentials)
-data/regularizacion.csv
-data/*.private.csv
+**/regularizacion.csv
+**/*.private.csv
 
 # parcel-bundler cache (https://parceljs.org/)
 

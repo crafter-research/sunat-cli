@@ -1,0 +1,411 @@
+---
+const features = [
+	{
+		title: "RHE Emission",
+		desc: "Emit Recibos por Honorarios in batch. 12 months in one command.",
+		code: 'sunat-cli rhe emit --batch ./data.csv --dry-run',
+	},
+	{
+		title: "F616 Declaration",
+		desc: "Monthly 4ta categoria declarations. Input masks cracked via CDP.",
+		code: 'sunat-cli f616 declare --json \'{"periodo":"03/2025"}\'',
+	},
+	{
+		title: "Schema Introspection",
+		desc: "Agents self-serve field definitions at runtime. No docs needed.",
+		code: "sunat-cli schema rhe --output json",
+	},
+	{
+		title: "OAuth2 API",
+		desc: "Verify emissions via SUNAT REST API. Token management built-in.",
+		code: "sunat-cli api token --output json",
+	},
+];
+---
+
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>sunat-cli // Agent-First Tax Automation</title>
+		<meta name="description" content="Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616, verify via API. Built for AI agents as primary consumers." />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+		<style>
+			* { margin: 0; padding: 0; box-sizing: border-box; }
+
+			:root {
+				--bg-primary: #8BA4C8;
+				--bg-secondary: #5A7A4A;
+				--bg-tertiary: #E8D8B0;
+				--accent-pink: #FF1493;
+				--accent-green: #1DB954;
+				--text-primary: #FFFFFF;
+				--text-secondary: #1A1A1A;
+				--text-muted: #4A4A4A;
+				--radius-card: 8px;
+				--radius-pill: 9999px;
+				--radius-panel: 12px;
+				--shadow-panel: 0 8px 32px rgba(0,0,0,0.2);
+			}
+
+			body {
+				font-family: 'Inter', 'Helvetica Neue', sans-serif;
+				font-weight: 400;
+				font-size: 13px;
+				line-height: 1.5;
+				color: var(--text-secondary);
+				background: var(--bg-tertiary);
+				overflow-x: hidden;
+			}
+
+			.display { font-family: 'Playfair Display', Georgia, serif; }
+			.mono { font-family: 'JetBrains Mono', monospace; }
+
+			/* Hero */
+			.hero {
+				min-height: 100vh;
+				background: var(--bg-primary);
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				text-align: center;
+				padding: 2rem;
+				position: relative;
+				overflow: hidden;
+			}
+
+			.hero::before {
+				content: '';
+				position: absolute;
+				inset: 0;
+				background:
+					radial-gradient(ellipse at 20% 50%, rgba(90,122,74,0.4) 0%, transparent 50%),
+					radial-gradient(ellipse at 80% 20%, rgba(255,20,147,0.15) 0%, transparent 40%);
+				pointer-events: none;
+			}
+
+			.hero-brand {
+				font-size: 11px;
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--text-primary);
+				opacity: 0.7;
+				margin-bottom: 2rem;
+			}
+
+			.hero-title {
+				font-size: clamp(42px, 8vw, 96px);
+				font-weight: 900;
+				color: var(--text-primary);
+				line-height: 1;
+				letter-spacing: -0.03em;
+				margin-bottom: 0.5rem;
+				position: relative;
+				z-index: 1;
+			}
+
+			.hero-title .slash {
+				color: var(--accent-pink);
+				font-weight: 400;
+			}
+
+			.hero-subtitle {
+				font-size: clamp(13px, 2vw, 18px);
+				color: var(--text-primary);
+				opacity: 0.85;
+				max-width: 520px;
+				margin: 1.5rem auto 2.5rem;
+				line-height: 1.7;
+				font-weight: 300;
+			}
+
+			.hero-actions {
+				display: flex;
+				gap: 12px;
+				flex-wrap: wrap;
+				justify-content: center;
+				z-index: 1;
+			}
+
+			.btn-primary {
+				background: var(--accent-pink);
+				color: white;
+				border: none;
+				padding: 12px 32px;
+				border-radius: var(--radius-pill);
+				font-family: 'Inter', sans-serif;
+				font-size: 13px;
+				font-weight: 600;
+				cursor: pointer;
+				text-decoration: none;
+				transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+			}
+			.btn-primary:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 4px 20px rgba(255,20,147,0.4);
+			}
+
+			.btn-secondary {
+				background: rgba(255,255,255,0.15);
+				color: white;
+				border: 1px solid rgba(255,255,255,0.3);
+				padding: 12px 32px;
+				border-radius: var(--radius-pill);
+				font-family: 'JetBrains Mono', monospace;
+				font-size: 12px;
+				font-weight: 400;
+				cursor: pointer;
+				text-decoration: none;
+				backdrop-filter: blur(8px);
+				transition: background 200ms ease-out;
+			}
+			.btn-secondary:hover { background: rgba(255,255,255,0.25); }
+
+			.install-cmd {
+				margin-top: 2rem;
+				padding: 10px 24px;
+				background: rgba(0,0,0,0.2);
+				border-radius: var(--radius-pill);
+				color: var(--text-primary);
+				font-size: 12px;
+				backdrop-filter: blur(4px);
+				z-index: 1;
+			}
+
+			/* Stats */
+			.stats {
+				background: var(--text-secondary);
+				padding: 3rem 2rem;
+				display: flex;
+				justify-content: center;
+				gap: 4rem;
+				flex-wrap: wrap;
+			}
+			.stat { text-align: center; }
+			.stat-value {
+				font-size: 42px;
+				font-weight: 900;
+				color: var(--accent-pink);
+				line-height: 1;
+			}
+			.stat-label {
+				font-size: 11px;
+				color: rgba(255,255,255,0.5);
+				text-transform: uppercase;
+				letter-spacing: 0.15em;
+				margin-top: 0.5rem;
+			}
+
+			/* Features */
+			.features {
+				padding: 5rem 2rem;
+				background: var(--bg-tertiary);
+				max-width: 1000px;
+				margin: 0 auto;
+			}
+
+			.features-header {
+				text-align: center;
+				margin-bottom: 3rem;
+			}
+
+			.features-label {
+				font-size: 11px;
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--accent-pink);
+				margin-bottom: 1rem;
+			}
+
+			.features-title {
+				font-size: 28px;
+				font-weight: 900;
+				color: var(--text-secondary);
+				line-height: 1.2;
+			}
+
+			.features-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+				gap: 20px;
+			}
+
+			.feature-card {
+				background: white;
+				border-radius: var(--radius-panel);
+				padding: 2rem;
+				box-shadow: var(--shadow-panel);
+				transition: transform 200ms ease-out;
+			}
+			.feature-card:hover { transform: translateY(-4px); }
+
+			.feature-title {
+				font-size: 18px;
+				font-weight: 700;
+				margin-bottom: 0.5rem;
+				color: var(--text-secondary);
+			}
+
+			.feature-desc {
+				color: var(--text-muted);
+				margin-bottom: 1rem;
+				line-height: 1.7;
+			}
+
+			.feature-code {
+				background: var(--text-secondary);
+				color: var(--accent-green);
+				padding: 10px 14px;
+				border-radius: var(--radius-card);
+				font-size: 11px;
+				overflow-x: auto;
+				white-space: nowrap;
+			}
+
+			/* Agent DX */
+			.agent-dx {
+				background: var(--bg-secondary);
+				padding: 5rem 2rem;
+				text-align: center;
+			}
+
+			.agent-dx-label {
+				font-size: 11px;
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--accent-green);
+				margin-bottom: 1rem;
+			}
+
+			.agent-dx-title {
+				font-size: 28px;
+				font-weight: 900;
+				color: var(--text-primary);
+				margin-bottom: 1rem;
+			}
+
+			.agent-dx-desc {
+				color: rgba(255,255,255,0.8);
+				max-width: 600px;
+				margin: 0 auto 2.5rem;
+				line-height: 1.7;
+				font-weight: 300;
+			}
+
+			.principles {
+				display: flex;
+				gap: 20px;
+				justify-content: center;
+				flex-wrap: wrap;
+				max-width: 800px;
+				margin: 0 auto;
+			}
+
+			.principle {
+				background: rgba(255,255,255,0.1);
+				backdrop-filter: blur(8px);
+				border: 1px solid rgba(255,255,255,0.15);
+				border-radius: var(--radius-card);
+				padding: 1rem 1.5rem;
+				color: var(--text-primary);
+				font-size: 12px;
+				font-weight: 500;
+			}
+
+			/* Footer */
+			.footer {
+				background: var(--text-secondary);
+				padding: 2rem;
+				text-align: center;
+				color: rgba(255,255,255,0.4);
+				font-size: 12px;
+			}
+			.footer a { color: var(--accent-pink); text-decoration: none; }
+			.footer a:hover { text-decoration: underline; }
+
+			@media (max-width: 600px) {
+				.stats { gap: 2rem; }
+				.principles { flex-direction: column; align-items: center; }
+			}
+		</style>
+	</head>
+	<body>
+		<section class="hero">
+			<p class="hero-brand mono">crafter station // gov-tech</p>
+			<h1 class="hero-title display">
+				sunat<span class="slash">//</span>cli
+			</h1>
+			<p class="hero-subtitle">
+				Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616,
+				verify via API. Built for AI agents as primary consumers.
+			</p>
+			<div class="hero-actions">
+				<a href="https://github.com/crafter-station/sunat-cli" class="btn-primary">View on GitHub</a>
+				<a href="#features" class="btn-secondary">See features</a>
+			</div>
+			<p class="install-cmd mono">bun add @crafter/sunat-cli</p>
+		</section>
+
+		<section class="stats">
+			<div class="stat">
+				<div class="stat-value display">0</div>
+				<div class="stat-label">CAPTCHAs needed</div>
+			</div>
+			<div class="stat">
+				<div class="stat-value display">19</div>
+				<div class="stat-label">RHEs in one batch</div>
+			</div>
+			<div class="stat">
+				<div class="stat-value display">3</div>
+				<div class="stat-label">SUNAT portals mapped</div>
+			</div>
+			<div class="stat">
+				<div class="stat-value display">1h</div>
+				<div class="stat-label">OAuth2 token TTL</div>
+			</div>
+		</section>
+
+		<section class="features" id="features">
+			<div class="features-header">
+				<p class="features-label mono">Capabilities</p>
+				<h2 class="features-title display">Everything SUNAT, one CLI</h2>
+			</div>
+			<div class="features-grid">
+				{features.map((f) => (
+					<div class="feature-card">
+						<h3 class="feature-title">{f.title}</h3>
+						<p class="feature-desc">{f.desc}</p>
+						<pre class="feature-code mono">{f.code}</pre>
+					</div>
+				))}
+			</div>
+		</section>
+
+		<section class="agent-dx">
+			<p class="agent-dx-label mono">Design philosophy</p>
+			<h2 class="agent-dx-title display">Agent DX &gt; Human DX</h2>
+			<p class="agent-dx-desc">
+				Built following Justin Poehnelt's "Rewrite Your CLI for AI Agents" principles
+				and the agentskills.io specification. The agent is not a trusted operator.
+			</p>
+			<div class="principles">
+				<div class="principle">--json payloads over flags</div>
+				<div class="principle">--dry-run for all mutations</div>
+				<div class="principle">--output json by default</div>
+				<div class="principle">Schema introspection at runtime</div>
+				<div class="principle">Input hardening against hallucinations</div>
+				<div class="principle">SKILL.md per agentskills.io spec</div>
+			</div>
+		</section>
+
+		<footer class="footer">
+			<p>
+				<a href="https://crafterstation.com">Crafter Station</a> // Gov-Tech Research
+			</p>
+		</footer>
+	</body>
+</html>

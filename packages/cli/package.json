@@ -1,0 +1,21 @@
+{
+	"name": "@crafter/sunat-cli",
+	"version": "0.1.0",
+	"description": "Agent-first CLI for SUNAT tax automation",
+	"module": "bin/sunat.ts",
+	"type": "module",
+	"bin": {
+		"sunat-cli": "bin/sunat.ts"
+	},
+	"scripts": {
+		"dev": "bun run bin/sunat.ts",
+		"check": "biome check --write ."
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.1.0",
+		"commander": "^14.0.3"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	}
+}

@@ -1,0 +1,13 @@
+{
+	"name": "@crafter/sunat-cli-website",
+	"type": "module",
+	"version": "0.0.1",
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro preview"
+	},
+	"dependencies": {
+		"astro": "^6.0.8"
+	}
+}
