@@ -3,7 +3,7 @@ const features = [
 	{
 		title: "RHE Emission",
 		desc: "Emit Recibos por Honorarios in batch. 12 months in one command.",
-		code: 'sunat-cli rhe emit --batch ./data.csv --dry-run',
+		code: "sunat-cli rhe emit --batch ./data.csv --dry-run",
 	},
 	{
 		title: "F616 Declaration",
@@ -12,14 +12,30 @@ const features = [
 	},
 	{
 		title: "Schema Introspection",
-		desc: "Agents self-serve field definitions at runtime. No docs needed.",
+		desc: "Agents self-serve field definitions at runtime. Zero docs overhead.",
 		code: "sunat-cli schema rhe --output json",
 	},
 	{
-		title: "OAuth2 API",
+		title: "OAuth2 Verification",
 		desc: "Verify emissions via SUNAT REST API. Token management built-in.",
 		code: "sunat-cli api token --output json",
 	},
+];
+
+const principles = [
+	"--json payloads over flags",
+	"--dry-run for all mutations",
+	"--output json by default",
+	"Schema introspection at runtime",
+	"Input hardening against hallucinations",
+	"SKILL.md per agentskills.io spec",
+];
+
+const stats = [
+	{ value: "0", label: "CAPTCHAs needed" },
+	{ value: "19", label: "RHEs in one batch" },
+	{ value: "3", label: "Portals reverse-engineered" },
+	{ value: "1h", label: "OAuth2 token TTL" },
 ];
 ---
 
@@ -28,384 +44,397 @@ const features = [
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>sunat-cli // Agent-First Tax Automation</title>
-		<meta name="description" content="Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616, verify via API. Built for AI agents as primary consumers." />
+		<title>sunat-cli — Agent-First Tax Automation for Peru</title>
+		<meta name="description" content="Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616, verify via API. Built for AI agents. Open source by Crafter Station." />
+		<meta property="og:title" content="sunat-cli — Agent-First Tax Automation" />
+		<meta property="og:description" content="Automate SUNAT taxes: RHE, F616, OAuth2 API. Built for AI agents as primary consumers." />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://sunat-cli.crafter.ing" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 		<style>
 			* { margin: 0; padding: 0; box-sizing: border-box; }
+			html { scroll-behavior: smooth; }
 
 			:root {
-				--bg-primary: #8BA4C8;
-				--bg-secondary: #5A7A4A;
-				--bg-tertiary: #E8D8B0;
-				--accent-pink: #FF1493;
-				--accent-green: #1DB954;
-				--text-primary: #FFFFFF;
-				--text-secondary: #1A1A1A;
-				--text-muted: #4A4A4A;
-				--radius-card: 8px;
-				--radius-pill: 9999px;
-				--radius-panel: 12px;
-				--shadow-panel: 0 8px 32px rgba(0,0,0,0.2);
+				--sunat-blue: #1A3567;
+				--sunat-blue-light: #2B4A8A;
+				--sunat-red: #C41E3A;
+				--sunat-red-hover: #A8182F;
+				--bg-white: #FFFFFF;
+				--bg-gray: #F5F5F5;
+				--bg-dark: #0F172A;
+				--border: #D1D5DB;
+				--text-primary: #1A1A1A;
+				--text-secondary: #4B5563;
+				--text-muted: #9CA3AF;
 			}
 
 			body {
-				font-family: 'Inter', 'Helvetica Neue', sans-serif;
-				font-weight: 400;
-				font-size: 13px;
-				line-height: 1.5;
-				color: var(--text-secondary);
-				background: var(--bg-tertiary);
-				overflow-x: hidden;
+				font-family: 'Inter', system-ui, sans-serif;
+				font-size: 15px;
+				line-height: 1.6;
+				color: var(--text-primary);
+				background: var(--bg-white);
+				-webkit-font-smoothing: antialiased;
 			}
 
-			.display { font-family: 'Playfair Display', Georgia, serif; }
 			.mono { font-family: 'JetBrains Mono', monospace; }
+
+			.container {
+				max-width: 1080px;
+				margin: 0 auto;
+				padding: 0 24px;
+			}
+
+			/* Nav */
+			nav {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 100;
+				background: rgba(255,255,255,0.85);
+				backdrop-filter: blur(12px);
+				border-bottom: 1px solid var(--border);
+			}
+			.nav-inner {
+				max-width: 1080px;
+				margin: 0 auto;
+				padding: 0 24px;
+				height: 56px;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+			.nav-brand {
+				font-weight: 700;
+				font-size: 15px;
+				color: var(--sunat-blue);
+				text-decoration: none;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.nav-brand span { color: var(--sunat-red); }
+			.nav-links { display: flex; gap: 24px; align-items: center; }
+			.nav-links a {
+				color: var(--text-secondary);
+				text-decoration: none;
+				font-size: 13px;
+				font-weight: 500;
+				transition: color 150ms;
+			}
+			.nav-links a:hover { color: var(--text-primary); }
+			.nav-cta {
+				background: var(--sunat-blue) !important;
+				color: white !important;
+				padding: 6px 16px;
+				border-radius: 6px;
+				font-size: 13px !important;
+			}
+			.nav-cta:hover { background: var(--sunat-blue-light) !important; }
 
 			/* Hero */
 			.hero {
-				min-height: 100vh;
-				background: var(--bg-primary);
-				display: flex;
-				flex-direction: column;
-				justify-content: center;
-				align-items: center;
+				padding: 140px 24px 80px;
 				text-align: center;
-				padding: 2rem;
-				position: relative;
-				overflow: hidden;
+				background: var(--bg-gray);
+				border-bottom: 1px solid var(--border);
 			}
-
-			.hero::before {
-				content: '';
-				position: absolute;
-				inset: 0;
-				background:
-					radial-gradient(ellipse at 20% 50%, rgba(90,122,74,0.4) 0%, transparent 50%),
-					radial-gradient(ellipse at 80% 20%, rgba(255,20,147,0.15) 0%, transparent 40%);
-				pointer-events: none;
+			.hero-badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 12px;
+				background: white;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				font-size: 12px;
+				color: var(--text-secondary);
+				margin-bottom: 24px;
 			}
-
-			.hero-brand {
-				font-size: 11px;
-				letter-spacing: 0.2em;
-				text-transform: uppercase;
-				color: var(--text-primary);
-				opacity: 0.7;
-				margin-bottom: 2rem;
+			.hero-badge .dot {
+				width: 6px;
+				height: 6px;
+				border-radius: 50%;
+				background: var(--sunat-red);
 			}
-
-			.hero-title {
-				font-size: clamp(42px, 8vw, 96px);
-				font-weight: 900;
-				color: var(--text-primary);
-				line-height: 1;
+			.hero h1 {
+				font-size: clamp(32px, 5vw, 52px);
+				font-weight: 700;
+				line-height: 1.1;
 				letter-spacing: -0.03em;
-				margin-bottom: 0.5rem;
-				position: relative;
-				z-index: 1;
+				color: var(--sunat-blue);
+				margin-bottom: 16px;
 			}
-
-			.hero-title .slash {
-				color: var(--accent-pink);
-				font-weight: 400;
-			}
-
-			.hero-subtitle {
-				font-size: clamp(13px, 2vw, 18px);
-				color: var(--text-primary);
-				opacity: 0.85;
+			.hero h1 .accent { color: var(--sunat-red); }
+			.hero p {
+				font-size: 17px;
+				color: var(--text-secondary);
 				max-width: 520px;
-				margin: 1.5rem auto 2.5rem;
+				margin: 0 auto 32px;
+				font-weight: 400;
 				line-height: 1.7;
-				font-weight: 300;
 			}
-
 			.hero-actions {
 				display: flex;
 				gap: 12px;
-				flex-wrap: wrap;
 				justify-content: center;
-				z-index: 1;
+				flex-wrap: wrap;
+				margin-bottom: 32px;
 			}
-
-			.btn-primary {
-				background: var(--accent-pink);
-				color: white;
-				border: none;
-				padding: 12px 32px;
-				border-radius: var(--radius-pill);
-				font-family: 'Inter', sans-serif;
-				font-size: 13px;
-				font-weight: 600;
-				cursor: pointer;
-				text-decoration: none;
-				transition: transform 200ms ease-out, box-shadow 200ms ease-out;
-			}
-			.btn-primary:hover {
-				transform: translateY(-2px);
-				box-shadow: 0 4px 20px rgba(255,20,147,0.4);
-			}
-
-			.btn-secondary {
-				background: rgba(255,255,255,0.15);
-				color: white;
-				border: 1px solid rgba(255,255,255,0.3);
-				padding: 12px 32px;
-				border-radius: var(--radius-pill);
-				font-family: 'JetBrains Mono', monospace;
-				font-size: 12px;
-				font-weight: 400;
-				cursor: pointer;
-				text-decoration: none;
-				backdrop-filter: blur(8px);
-				transition: background 200ms ease-out;
-			}
-			.btn-secondary:hover { background: rgba(255,255,255,0.25); }
-
-			.install-cmd {
-				margin-top: 2rem;
+			.btn {
+				display: inline-flex;
+				align-items: center;
 				padding: 10px 24px;
-				background: rgba(0,0,0,0.2);
-				border-radius: var(--radius-pill);
-				color: var(--text-primary);
-				font-size: 12px;
-				backdrop-filter: blur(4px);
-				z-index: 1;
+				border-radius: 8px;
+				font-size: 14px;
+				font-weight: 600;
+				text-decoration: none;
+				transition: all 150ms;
+				border: none;
+				cursor: pointer;
 			}
+			.btn-primary {
+				background: var(--sunat-red);
+				color: white;
+			}
+			.btn-primary:hover { background: var(--sunat-red-hover); }
+			.btn-outline {
+				background: white;
+				color: var(--text-primary);
+				border: 1px solid var(--border);
+			}
+			.btn-outline:hover { border-color: var(--text-secondary); }
+
+			.install-box {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 10px 20px;
+				background: var(--bg-dark);
+				border-radius: 8px;
+				color: var(--text-muted);
+				font-size: 13px;
+			}
+			.install-box code { color: #E2E8F0; }
+			.install-box .prompt { color: var(--sunat-red); }
 
 			/* Stats */
 			.stats {
-				background: var(--text-secondary);
-				padding: 3rem 2rem;
-				display: flex;
-				justify-content: center;
-				gap: 4rem;
-				flex-wrap: wrap;
+				padding: 48px 24px;
+				border-bottom: 1px solid var(--border);
 			}
-			.stat { text-align: center; }
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 0;
+			}
+			.stat {
+				text-align: center;
+				padding: 16px;
+			}
+			.stat:not(:last-child) { border-right: 1px solid var(--border); }
 			.stat-value {
-				font-size: 42px;
-				font-weight: 900;
-				color: var(--accent-pink);
+				font-size: 36px;
+				font-weight: 700;
+				color: var(--sunat-blue);
 				line-height: 1;
 			}
 			.stat-label {
-				font-size: 11px;
-				color: rgba(255,255,255,0.5);
+				font-size: 12px;
+				color: var(--text-muted);
+				margin-top: 4px;
 				text-transform: uppercase;
-				letter-spacing: 0.15em;
-				margin-top: 0.5rem;
+				letter-spacing: 0.05em;
 			}
 
 			/* Features */
-			.features {
-				padding: 5rem 2rem;
-				background: var(--bg-tertiary);
-				max-width: 1000px;
-				margin: 0 auto;
-			}
-
-			.features-header {
-				text-align: center;
-				margin-bottom: 3rem;
-			}
-
-			.features-label {
-				font-size: 11px;
-				letter-spacing: 0.2em;
+			.features { padding: 80px 24px; }
+			.section-label {
+				font-size: 12px;
+				font-weight: 600;
 				text-transform: uppercase;
-				color: var(--accent-pink);
-				margin-bottom: 1rem;
+				letter-spacing: 0.1em;
+				color: var(--sunat-red);
+				margin-bottom: 8px;
 			}
-
-			.features-title {
+			.section-title {
 				font-size: 28px;
-				font-weight: 900;
-				color: var(--text-secondary);
-				line-height: 1.2;
+				font-weight: 700;
+				color: var(--text-primary);
+				margin-bottom: 40px;
+				letter-spacing: -0.02em;
 			}
-
 			.features-grid {
 				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-				gap: 20px;
+				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+				gap: 16px;
 			}
-
 			.feature-card {
-				background: white;
-				border-radius: var(--radius-panel);
-				padding: 2rem;
-				box-shadow: var(--shadow-panel);
-				transition: transform 200ms ease-out;
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 24px;
+				transition: border-color 200ms, box-shadow 200ms;
 			}
-			.feature-card:hover { transform: translateY(-4px); }
-
+			.feature-card:hover {
+				border-color: var(--sunat-blue);
+				box-shadow: 0 4px 12px rgba(26,53,103,0.08);
+			}
 			.feature-title {
-				font-size: 18px;
-				font-weight: 700;
-				margin-bottom: 0.5rem;
-				color: var(--text-secondary);
+				font-size: 16px;
+				font-weight: 600;
+				margin-bottom: 6px;
 			}
-
 			.feature-desc {
-				color: var(--text-muted);
-				margin-bottom: 1rem;
-				line-height: 1.7;
+				font-size: 14px;
+				color: var(--text-secondary);
+				margin-bottom: 16px;
+				line-height: 1.6;
 			}
-
 			.feature-code {
-				background: var(--text-secondary);
-				color: var(--accent-green);
-				padding: 10px 14px;
-				border-radius: var(--radius-card);
-				font-size: 11px;
+				background: var(--bg-dark);
+				color: #94A3B8;
+				padding: 8px 12px;
+				border-radius: 6px;
+				font-size: 11.5px;
 				overflow-x: auto;
 				white-space: nowrap;
 			}
 
 			/* Agent DX */
 			.agent-dx {
-				background: var(--bg-secondary);
-				padding: 5rem 2rem;
-				text-align: center;
+				padding: 80px 24px;
+				background: var(--sunat-blue);
+				color: white;
 			}
-
-			.agent-dx-label {
-				font-size: 11px;
-				letter-spacing: 0.2em;
-				text-transform: uppercase;
-				color: var(--accent-green);
-				margin-bottom: 1rem;
-			}
-
-			.agent-dx-title {
-				font-size: 28px;
-				font-weight: 900;
-				color: var(--text-primary);
-				margin-bottom: 1rem;
-			}
-
+			.agent-dx .section-label { color: rgba(255,255,255,0.5); }
+			.agent-dx .section-title { color: white; }
 			.agent-dx-desc {
-				color: rgba(255,255,255,0.8);
-				max-width: 600px;
-				margin: 0 auto 2.5rem;
+				color: rgba(255,255,255,0.7);
+				max-width: 560px;
+				font-size: 15px;
 				line-height: 1.7;
-				font-weight: 300;
+				margin-bottom: 32px;
 			}
-
 			.principles {
 				display: flex;
-				gap: 20px;
-				justify-content: center;
 				flex-wrap: wrap;
-				max-width: 800px;
-				margin: 0 auto;
+				gap: 8px;
 			}
-
 			.principle {
-				background: rgba(255,255,255,0.1);
-				backdrop-filter: blur(8px);
-				border: 1px solid rgba(255,255,255,0.15);
-				border-radius: var(--radius-card);
-				padding: 1rem 1.5rem;
-				color: var(--text-primary);
-				font-size: 12px;
-				font-weight: 500;
+				padding: 8px 16px;
+				border: 1px solid rgba(255,255,255,0.2);
+				border-radius: 6px;
+				font-size: 13px;
+				color: rgba(255,255,255,0.85);
+				background: rgba(255,255,255,0.05);
 			}
 
 			/* Footer */
-			.footer {
-				background: var(--text-secondary);
-				padding: 2rem;
+			footer {
+				padding: 32px 24px;
+				border-top: 1px solid var(--border);
 				text-align: center;
-				color: rgba(255,255,255,0.4);
-				font-size: 12px;
+				font-size: 13px;
+				color: var(--text-muted);
 			}
-			.footer a { color: var(--accent-pink); text-decoration: none; }
-			.footer a:hover { text-decoration: underline; }
+			footer a { color: var(--sunat-blue); text-decoration: none; }
+			footer a:hover { text-decoration: underline; }
 
-			@media (max-width: 600px) {
-				.stats { gap: 2rem; }
-				.principles { flex-direction: column; align-items: center; }
+			@media (max-width: 640px) {
+				.stats-grid { grid-template-columns: repeat(2, 1fr); }
+				.stat:nth-child(2) { border-right: none; }
+				.stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--border); }
+				.nav-links a:not(.nav-cta) { display: none; }
 			}
 		</style>
 	</head>
 	<body>
-		<section class="hero">
-			<p class="hero-brand mono">crafter station // gov-tech</p>
-			<h1 class="hero-title display">
-				sunat<span class="slash">//</span>cli
-			</h1>
-			<p class="hero-subtitle">
-				Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616,
-				verify via API. Built for AI agents as primary consumers.
-			</p>
-			<div class="hero-actions">
-				<a href="https://github.com/crafter-station/sunat-cli" class="btn-primary">View on GitHub</a>
-				<a href="#features" class="btn-secondary">See features</a>
+		<nav>
+			<div class="nav-inner">
+				<a href="#" class="nav-brand">sunat<span>/</span>cli</a>
+				<div class="nav-links">
+					<a href="#features">Features</a>
+					<a href="#agent-dx">Agent DX</a>
+					<a href="https://github.com/crafter-station/sunat-cli" class="nav-cta">GitHub</a>
+				</div>
 			</div>
-			<p class="install-cmd mono">bun add @crafter/sunat-cli</p>
+		</nav>
+
+		<section class="hero">
+			<div class="container">
+				<div class="hero-badge">
+					<span class="dot"></span>
+					<span class="mono">crafter station / gov-tech</span>
+				</div>
+				<h1>Automate SUNAT<br/>with <span class="accent">one CLI</span></h1>
+				<p>
+					Agent-first CLI for Peru's tax authority. Emit RHE, declare F616,
+					verify via OAuth2 API. Built for AI agents as primary consumers.
+				</p>
+				<div class="hero-actions">
+					<a href="https://github.com/crafter-station/sunat-cli" class="btn btn-primary">Get started</a>
+					<a href="#features" class="btn btn-outline">Learn more</a>
+				</div>
+				<div class="install-box mono">
+					<span class="prompt">$</span>
+					<code>bun add @crafter/sunat-cli</code>
+				</div>
+			</div>
 		</section>
 
 		<section class="stats">
-			<div class="stat">
-				<div class="stat-value display">0</div>
-				<div class="stat-label">CAPTCHAs needed</div>
-			</div>
-			<div class="stat">
-				<div class="stat-value display">19</div>
-				<div class="stat-label">RHEs in one batch</div>
-			</div>
-			<div class="stat">
-				<div class="stat-value display">3</div>
-				<div class="stat-label">SUNAT portals mapped</div>
-			</div>
-			<div class="stat">
-				<div class="stat-value display">1h</div>
-				<div class="stat-label">OAuth2 token TTL</div>
+			<div class="container">
+				<div class="stats-grid">
+					{stats.map((s) => (
+						<div class="stat">
+							<div class="stat-value">{s.value}</div>
+							<div class="stat-label">{s.label}</div>
+						</div>
+					))}
+				</div>
 			</div>
 		</section>
 
 		<section class="features" id="features">
-			<div class="features-header">
-				<p class="features-label mono">Capabilities</p>
-				<h2 class="features-title display">Everything SUNAT, one CLI</h2>
-			</div>
-			<div class="features-grid">
-				{features.map((f) => (
-					<div class="feature-card">
-						<h3 class="feature-title">{f.title}</h3>
-						<p class="feature-desc">{f.desc}</p>
-						<pre class="feature-code mono">{f.code}</pre>
-					</div>
-				))}
-			</div>
-		</section>
-
-		<section class="agent-dx">
-			<p class="agent-dx-label mono">Design philosophy</p>
-			<h2 class="agent-dx-title display">Agent DX &gt; Human DX</h2>
-			<p class="agent-dx-desc">
-				Built following Justin Poehnelt's "Rewrite Your CLI for AI Agents" principles
-				and the agentskills.io specification. The agent is not a trusted operator.
-			</p>
-			<div class="principles">
-				<div class="principle">--json payloads over flags</div>
-				<div class="principle">--dry-run for all mutations</div>
-				<div class="principle">--output json by default</div>
-				<div class="principle">Schema introspection at runtime</div>
-				<div class="principle">Input hardening against hallucinations</div>
-				<div class="principle">SKILL.md per agentskills.io spec</div>
+			<div class="container">
+				<p class="section-label mono">Capabilities</p>
+				<h2 class="section-title">Everything SUNAT, one command</h2>
+				<div class="features-grid">
+					{features.map((f) => (
+						<div class="feature-card">
+							<h3 class="feature-title">{f.title}</h3>
+							<p class="feature-desc">{f.desc}</p>
+							<pre class="feature-code mono">{f.code}</pre>
+						</div>
+					))}
+				</div>
 			</div>
 		</section>
 
-		<footer class="footer">
-			<p>
-				<a href="https://crafterstation.com">Crafter Station</a> // Gov-Tech Research
-			</p>
+		<section class="agent-dx" id="agent-dx">
+			<div class="container">
+				<p class="section-label mono">Design philosophy</p>
+				<h2 class="section-title">Agent DX first</h2>
+				<p class="agent-dx-desc">
+					Following Justin Poehnelt's "Rewrite Your CLI for AI Agents" principles
+					and the agentskills.io specification. The agent is not a trusted operator.
+				</p>
+				<div class="principles">
+					{principles.map((p) => (
+						<div class="principle mono">{p}</div>
+					))}
+				</div>
+			</div>
+		</section>
+
+		<footer>
+			<div class="container">
+				<a href="https://crafterstation.com">Crafter Station</a> — Gov-Tech Research, Lima, Peru
+			</div>
 		</footer>
 	</body>
 </html>
