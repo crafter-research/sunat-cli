@@ -1,0 +1,33 @@
+{
+	"command": "f616 declare",
+	"description": "File Formulario Virtual 616 monthly tax declaration for 4ta categoria workers",
+	"fields": {
+		"periodo": {
+			"type": "string",
+			"required": true,
+			"format": "YYYY-MM",
+			"description": "Tax period (e.g. 2025-10 for October 2025)"
+		},
+		"ingresoPEN": {
+			"type": "number",
+			"required": true,
+			"min": 0,
+			"description": "Total monthly income in PEN. System calculates 8% tax."
+		},
+		"retenciones": {
+			"type": "number",
+			"default": 0,
+			"description": "4ta categoria withholdings received (usually 0 for foreign employers)"
+		}
+	},
+	"flags": {
+		"--dry-run": "Preview the declaration without submitting to SUNAT",
+		"--output json": "Machine-readable JSON output",
+		"--batch --months <range>": "Declare multiple months (e.g. '2025-03..2026-02')"
+	},
+	"computed": {
+		"pagoACuenta": "ingresoPEN * 0.08 - retenciones"
+	},
+	"auth": "Requires Nueva Plataforma session. Run 'sunat login --nueva-plataforma' first.",
+	"portal": "Nueva Plataforma (e-menu.sunat.gob.pe/cl-ti-itmenu2/) — requires reCAPTCHA v2 (one-time)"
+}

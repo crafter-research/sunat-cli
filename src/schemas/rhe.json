@@ -1,0 +1,56 @@
+{
+	"command": "rhe emit",
+	"description": "Emit a Recibo por Honorarios Electronico (RHE) via SUNAT SOL",
+	"fields": {
+		"empresa": {
+			"type": "string",
+			"required": true,
+			"description": "Company or person name receiving the service",
+			"maxLength": 100
+		},
+		"tipoDoc": {
+			"type": "enum",
+			"values": ["SIN DOCUMENTO", "RUC", "DNI", "CARNET DE EXTRANJERIA", "PASAPORTE", "CED. DIPLOMATICA DE IDENTIDAD"],
+			"default": "SIN DOCUMENTO",
+			"description": "Client document type. Use SIN DOCUMENTO for foreign companies."
+		},
+		"descripcion": {
+			"type": "string",
+			"required": true,
+			"maxLength": 200,
+			"description": "Service description (e.g. 'Servicios de desarrollo de software')"
+		},
+		"monto": {
+			"type": "number",
+			"required": true,
+			"min": 0.01,
+			"max": 1000000,
+			"description": "Total amount. If moneda=USD, will be converted to PEN at SUNAT exchange rate."
+		},
+		"moneda": {
+			"type": "enum",
+			"values": ["PEN", "USD"],
+			"default": "PEN",
+			"description": "Currency. PEN for soles, USD for dollars (auto-converts)."
+		},
+		"medioPago": {
+			"type": "enum",
+			"values": ["DEPOSITO", "GIRO", "TRANSFERENCIA", "ORDEN DE PAGO", "TARJETA DEBITO", "TARJETA CREDITO", "CHEQUE", "EFECTIVO"],
+			"default": "TRANSFERENCIA",
+			"description": "Payment method used."
+		},
+		"fechaEmision": {
+			"type": "date",
+			"format": "YYYY-MM-DD",
+			"default": "today",
+			"description": "Emission date. SUNAT allows max 2-3 days retroactive."
+		}
+	},
+	"flags": {
+		"--dry-run": "Preview the RHE without submitting to SUNAT",
+		"--output json": "Machine-readable JSON output",
+		"--batch <file>": "Process multiple RHEs from CSV file"
+	},
+	"auth": "Requires SOL session. Run 'sunat login' first.",
+	"portal": "SOL viejo (e-menu.sunat.gob.pe/cl-ti-itmenu/) — NO CAPTCHA"
+}
