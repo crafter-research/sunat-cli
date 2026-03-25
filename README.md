@@ -11,6 +11,12 @@ Agent-first CLI for SUNAT tax automation. Built for AI agents as primary consume
 - **OAuth2 API** — Verify emissions via SUNAT REST API
 - **Schema introspection** — Agents self-serve field definitions at runtime
 
+## Requirements
+
+- [Bun](https://bun.sh) v1.2+
+- [agent-browser](https://github.com/AncoraSoftware/agent-browser) v0.22+
+- Chrome or Chromium (agent-browser uses it via CDP)
+
 ## Install
 
 ```bash
