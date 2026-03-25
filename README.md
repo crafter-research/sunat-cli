@@ -14,7 +14,7 @@ Agent-first CLI for SUNAT tax automation. Built for AI agents as primary consume
 ## Requirements
 
 - [Bun](https://bun.sh) v1.2+
-- [agent-browser](https://github.com/AncoraSoftware/agent-browser) v0.22+
+- [agent-browser](https://github.com/vercel-labs/agent-browser) v0.22+
 - Chrome or Chromium (agent-browser uses it via CDP)
 
 ## Install
