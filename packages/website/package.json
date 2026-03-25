@@ -8,7 +8,9 @@
 		"preview": "astro preview"
 	},
 	"dependencies": {
-		"astro": "^6.0.8"
+		"@astrojs/mdx": "^5.0.2",
+		"astro": "^6.0.8",
+		"shiki": "^4.0.2"
 	},
 	"devDependencies": {
 		"sharp": "^0.34.5"

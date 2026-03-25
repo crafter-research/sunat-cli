@@ -1,26 +1,62 @@
 ---
+import { codeToHtml } from "shiki";
+
 const features = [
 	{
 		title: "RHE Emission",
 		desc: "Emit Recibos por Honorarios in batch. 12 months in one command.",
-		code: "sunat-cli rhe emit --batch ./data.csv --dry-run",
+		code: "sunat-cli rhe emit --batch ./data.csv",
 	},
 	{
 		title: "F616 Declaration",
 		desc: "Monthly 4ta categoria declarations. Input masks cracked via CDP.",
-		code: 'sunat-cli f616 declare --json \'{"periodo":"03/2025"}\'',
+		code: "sunat-cli f616 declare --json '{...}'",
 	},
 	{
 		title: "Schema Introspection",
 		desc: "Agents self-serve field definitions at runtime. Zero docs overhead.",
-		code: "sunat-cli schema rhe --output json",
+		code: "sunat-cli schema rhe",
 	},
 	{
 		title: "OAuth2 Verification",
 		desc: "Verify emissions via SUNAT REST API. Token management built-in.",
-		code: "sunat-cli api token --output json",
+		code: "sunat-cli api token",
 	},
 ];
+
+const heroCode = `# Install globally
+$ bun add -g @crafter/sunat-cli
+
+# Login (no CAPTCHA)
+$ sunat-cli login
+✓ Logged in to SOL (RHE)
+
+# Dry-run first, always
+$ sunat-cli rhe emit --batch ./data.csv --dry-run
+{ "dryRun": true, "status": "would-emit", ... }
+
+# Emit 19 RHEs in one batch
+$ sunat-cli rhe emit --batch ./data.csv
+✓ 19 RHEs emitted successfully`;
+
+const heroCodeHtml = await codeToHtml(heroCode, {
+	lang: "bash",
+	theme: {
+		name: "sunat",
+		type: "dark",
+		settings: [],
+		colors: {
+			"editor.background": "#0F172A",
+			"editor.foreground": "#CBD5E1",
+		},
+		tokenColors: [
+			{ scope: "comment", settings: { foreground: "#64748B" } },
+			{ scope: "string", settings: { foreground: "#C41E3A" } },
+			{ scope: "keyword", settings: { foreground: "#7DD3FC" } },
+			{ scope: "variable", settings: { foreground: "#CBD5E1" } },
+		],
+	},
+});
 
 const principles = [
 	"--json payloads over flags",
@@ -228,6 +264,25 @@ const stats = [
 			.install-box code { color: #E2E8F0; }
 			.install-box .prompt { color: var(--sunat-red); }
 
+			.hero-code {
+				max-width: 560px;
+				margin: 32px auto 0;
+				text-align: left;
+				border-radius: 10px;
+				overflow: hidden;
+				box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+			}
+			.hero-code :global(pre) {
+				padding: 20px 24px !important;
+				font-size: 12.5px !important;
+				line-height: 1.7 !important;
+				margin: 0 !important;
+				border-radius: 10px !important;
+			}
+			.hero-code :global(code) {
+				font-family: 'JetBrains Mono', monospace !important;
+			}
+
 			/* Stats */
 			.stats {
 				padding: 48px 24px;
@@ -305,9 +360,9 @@ const stats = [
 				color: #94A3B8;
 				padding: 8px 12px;
 				border-radius: 6px;
-				font-size: 11.5px;
-				overflow-x: auto;
-				white-space: nowrap;
+				font-size: 12px;
+				white-space: normal;
+				word-break: break-all;
 			}
 
 			/* Agent DX */
@@ -387,8 +442,9 @@ const stats = [
 				</div>
 				<div class="install-box mono">
 					<span class="prompt">$</span>
-					<code>bun add @crafter/sunat-cli</code>
+					<code>bun add -g @crafter/sunat-cli</code>
 				</div>
+				<div class="hero-code" set:html={heroCodeHtml} />
 			</div>
 		</section>
 
@@ -440,6 +496,7 @@ const stats = [
 		<footer>
 			<div class="container">
 				<a href="https://crafterstation.com">Crafter Station</a> — Gov-Tech Research, Lima, Peru
+				 · <a href="/legal">Legal</a>
 			</div>
 		</footer>
 	</body>
