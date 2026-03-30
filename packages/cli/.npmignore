@@ -1,0 +1,5 @@
+sunat-cli
+node_modules
+.env
+*.private.csv
+regularizacion.csv
