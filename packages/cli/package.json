@@ -1,9 +1,29 @@
 {
 	"name": "@crafter/sunat-cli",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Agent-first CLI for SUNAT tax automation",
 	"module": "bin/sunat.ts",
 	"type": "module",
+	"license": "MIT",
+	"homepage": "https://sunat-cli.crafter.ing",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/crafter-research/sunat-cli",
+		"directory": "packages/cli"
+	},
+	"keywords": [
+		"sunat",
+		"peru",
+		"tax",
+		"cli",
+		"agent",
+		"automation",
+		"rhe",
+		"f616",
+		"gov-tech",
+		"agent-browser",
+		"cdp"
+	],
 	"bin": {
 		"sunat-cli": "bin/sunat.ts"
 	},
