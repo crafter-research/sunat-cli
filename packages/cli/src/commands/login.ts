@@ -6,18 +6,25 @@ import { audit } from "../data/audit.ts";
 import { isSkillInstalled, installSkill } from "../utils/skill.ts";
 import * as p from "@clack/prompts";
 
-async function getOrPromptCredentials(isTTY: boolean): Promise<{ ruc: string; usuario: string; password: string }> {
+interface LoginOpts {
+	nuevaPlataforma?: boolean;
+	ruc?: string;
+	user?: string;
+	password?: string;
+}
+
+async function getOrPromptCredentials(opts: LoginOpts, isTTY: boolean): Promise<{ ruc: string; usuario: string; password: string }> {
 	const config = loadConfig();
-	let ruc = process.env.SUNAT_RUC || config.ruc;
-	let usuario = process.env.SUNAT_USER || config.usuario;
-	let password = process.env.SUNAT_PASSWORD;
+	let ruc = opts.ruc || process.env.SUNAT_RUC || config.ruc;
+	let usuario = opts.user || process.env.SUNAT_USER || config.usuario;
+	let password = opts.password || process.env.SUNAT_PASSWORD;
 
 	if (ruc && usuario && password) {
 		return { ruc, usuario, password };
 	}
 
 	if (!isTTY) {
-		throw new Error("Missing credentials. Set SUNAT_RUC, SUNAT_USER, SUNAT_PASSWORD env vars");
+		throw new Error("Missing credentials. Pass --ruc, --user, --password flags or set SUNAT_RUC, SUNAT_USER, SUNAT_PASSWORD env vars");
 	}
 
 	p.intro("sunat login -- first time setup");
@@ -68,12 +75,15 @@ export function createLoginCommand(): Command {
 	return new Command("login")
 		.description("Authenticate with SUNAT Clave SOL")
 		.option("--nueva-plataforma", "Login to Nueva Plataforma (requires reCAPTCHA)")
-		.action(async (opts, cmd) => {
+		.option("--ruc <ruc>", "RUC number (11 digits)")
+		.option("--user <usuario>", "SOL username")
+		.option("--password <clave>", "SOL password")
+		.action(async (opts: LoginOpts, cmd) => {
 			const format = cmd.parent?.opts().output || "table";
 			const portal = opts.nuevaPlataforma ? "nueva-plataforma" : "sol";
 			const isTTY = process.stdout.isTTY && format !== "json";
 			try {
-				const creds = await getOrPromptCredentials(isTTY);
+				const creds = await getOrPromptCredentials(opts, isTTY);
 				if (opts.nuevaPlataforma) {
 					await loginNuevaPlataforma(creds);
 				} else {
