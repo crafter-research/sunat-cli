@@ -1,130 +1,123 @@
 ---
 name: sunat-cli
-description: >-
-  Automate SUNAT tax operations for Peruvian freelancers: emit Recibos por
-  Honorarios Electronicos (RHE), file Formulario 616 monthly declarations,
-  and verify via OAuth2 API. Use when the user mentions SUNAT, RHE, taxes,
-  impuestos, cuarta categoria, F616, declaraciones, or tax regularization.
-license: MIT
-compatibility: Requires agent-browser CLI (v0.22+), Bun runtime, and Chrome/Chromium installed. macOS or Linux.
-metadata:
-  author: railly
-  version: "0.1.0"
+description: SUNAT tax automation CLI for Peru. Emit Recibos por Honorarios (RHE), file F616 monthly declarations, check auth status, and query SUNAT APIs. Use when: (1) user mentions SUNAT, RHE, recibo por honorarios, F616, impuestos Peru, (2) user wants to emit an invoice, (3) user asks about tax declarations or 4ta categoria, (4) user says "emitir recibo", "declarar F616", "pagar impuestos", "sunat login". Package: @crafter/sunat-cli (npm). Requires Clave SOL credentials in ~/.sunat-cli/.env
 ---
 
 # sunat-cli
 
-Agent-first CLI for SUNAT (Peru's tax authority) automation. Uses agent-browser to control Chrome via CDP.
-
-## Safety rules
-
-- ALWAYS use `--dry-run` before any mutating operation (emit, declare)
-- ALWAYS confirm with the user before executing write operations
-- NEVER emit RHEs or file declarations without explicit user approval
-- Check session status with `sunat whoami --output json` before operations
-- Use `sunat schema <resource>` to introspect available fields at runtime
+SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat` if globally installed).
 
 ## Prerequisites
 
-1. Environment variables configured in `.env`:
-   - `SUNAT_RUC` — RUC number (11 digits)
-   - `SUNAT_USER` — SOL username
-   - `SUNAT_PASSWORD` — SOL password
-   - `SUNAT_API_CLIENT_ID` — OAuth2 client ID (optional, for API verification)
-   - `SUNAT_API_CLIENT_SECRET` — OAuth2 client secret (optional)
-
-2. Run from project root: `cd ~/Programming/railly/sunat-cli`
-
-## Step-by-step workflows
-
-### 1. Check auth status
-
-```bash
-bun run bin/sunat.ts whoami --output json
+Credentials in `~/.sunat-cli/.env` or project `.env`:
+```
+SUNAT_RUC=10XXXXXXXXX
+SUNAT_USER=XXXXXXXX
+SUNAT_PASSWORD=XXXXXX
 ```
 
-If sessions are stale or missing, login first.
+## Commands
 
-### 2. Login to SOL (for RHE)
-
-```bash
-bun run bin/sunat.ts login
-```
-
-No CAPTCHA. Session saved to `~/.sunat/sessions/sol.json`. Expires after ~20 min (auto-refreshes).
-
-### 3. Introspect schemas
+### Auth
 
 ```bash
-bun run bin/sunat.ts schema rhe     # RHE field definitions
-bun run bin/sunat.ts schema f616    # F616 field definitions
-bun run bin/sunat.ts schema login   # Auth requirements
+sunat login                    # SOL viejo (RHE, no captcha)
+sunat login --nueva-plataforma # Nueva Plataforma (F616, reCAPTCHA one-time)
+sunat whoami                   # Check session status
 ```
 
-### 4. Emit single RHE (dry-run first, then real)
+### RHE (Recibo por Honorarios)
 
 ```bash
-bun run bin/sunat.ts rhe emit --dry-run --json '{"empresa":"Acme Corp.","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software","monto":5000,"moneda":"PEN","medioPago":"TRANSFERENCIA"}'
-```
-
-Review the output. If correct:
-
-```bash
-bun run bin/sunat.ts rhe emit --json '{"empresa":"Acme Corp.","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software","monto":5000,"moneda":"PEN","medioPago":"TRANSFERENCIA"}'
-```
-
-### 5. Batch emit RHEs from CSV
-
-```bash
-bun run bin/sunat.ts rhe emit --batch ./data/example.csv --dry-run
-bun run bin/sunat.ts rhe emit --batch ./data/example.csv
-```
-
-CSV format: `empresa,tipoDoc,descripcion,monto,moneda,medioPago`
-
-### 6. Get OAuth2 API token
-
-```bash
-bun run bin/sunat.ts api token --output json
-```
-
-Returns a JWT valid for 1 hour. Used for verification calls.
-
-## Input format
-
-Use `--json` for structured input (agent-first design):
-
-```json
-{
-  "empresa": "Company Name",
+# Emit single RHE
+sunat rhe emit --json '{
+  "empresa": "Clerk Inc",
   "tipoDoc": "SIN DOCUMENTO",
-  "descripcion": "Service description",
-  "monto": 5000,
-  "moneda": "PEN",
-  "medioPago": "TRANSFERENCIA",
-  "fechaEmision": "2026-03-25"
-}
+  "descripcion": "Servicios de desarrollo de software",
+  "monto": 6700,
+  "moneda": "USD",
+  "medioPago": "TRANSFERENCIA"
+}'
+
+# Preview without submitting
+sunat rhe emit --json '...' --dry-run
+
+# Batch from CSV
+sunat rhe emit --batch recibos.csv
+
+# List issued RHEs
+sunat rhe list
+
+# Verify registration
+sunat rhe verify --month 2026-03
 ```
 
-Valid `tipoDoc`: SIN DOCUMENTO, RUC, DNI, PASAPORTE, CARNET DE EXTRANJERIA
-Valid `moneda`: PEN, USD
-Valid `medioPago`: TRANSFERENCIA, DEPOSITO, EFECTIVO, TARJETA DEBITO, TARJETA CREDITO
+**RHE fields**: See `references/schemas.md` for full field specs.
 
-## Edge cases
+Key rules:
+- `tipoDoc`: Use `SIN DOCUMENTO` for foreign companies (no RUC/DNI)
+- `moneda`: USD auto-converts to PEN at SUNAT exchange rate
+- `fechaEmision`: Max 2-3 days retroactive
+- Auth: SOL viejo portal, no captcha
 
-- **Foreign companies**: Use `tipoDoc: "SIN DOCUMENTO"` — no RUC validation needed
-- **USD amounts**: Set `moneda: "USD"`, the CLI converts to PEN at SUNAT exchange rate
-- **Date restrictions**: SUNAT allows max 2-3 days retroactive for RHE dates
-- **F616 auto-populates**: Emit RHEs BEFORE declaring F616 — it pre-fills income data
-- **Session expiry**: Sessions last ~20 min. CLI re-authenticates automatically
-- **SUNAT blocks headless**: All browser operations use headed Chrome (handled internally)
+### F616 (Monthly Tax Declaration)
 
-## Output format
+```bash
+# Single month
+sunat f616 declare --json '{
+  "periodo": "2026-03",
+  "ingresoPEN": 25000,
+  "retenciones": 0
+}'
 
-- `--output json`: Machine-readable, NDJSON for arrays (default when piped)
-- `--output table`: Human-readable (default when TTY)
-- All mutations support `--dry-run` to preview without submitting
+# Preview
+sunat f616 declare --json '...' --dry-run
 
-## Technical reference
+# Batch multiple months
+sunat f616 declare --batch --months "2025-03..2026-02"
 
-See [RESEARCH.md](references/RESEARCH.md) for detailed portal mapping, CDP techniques, and API documentation.
+# Check status
+sunat f616 status
+```
+
+**F616 computation**: `pagoACuenta = ingresoPEN * 0.08 - retenciones`
+
+Key rules:
+- 4ta categoria workers only (freelancers/independent contractors)
+- 8% advance payment on monthly income
+- Auth: Nueva Plataforma (requires reCAPTCHA v2 one-time)
+
+### API & Schema
+
+```bash
+sunat api token              # Get/refresh OAuth2 token
+sunat schema rhe             # JSON schema for RHE fields
+sunat schema f616            # JSON schema for F616 fields
+```
+
+Use `sunat schema <resource>` to get machine-readable field definitions before constructing payloads.
+
+## Output Formats
+
+All commands support `--output <format>`:
+- `auto` (default): human-readable
+- `json`: machine-readable, pipe to `jq`
+
+## Common Workflows
+
+**Monthly routine (4ta categoria)**:
+1. `sunat login --nueva-plataforma`
+2. `sunat f616 declare --json '{"periodo":"2026-03","ingresoPEN":25000,"retenciones":0}' --dry-run`
+3. Review dry-run output
+4. Remove `--dry-run` to submit
+
+**Emit RHE for Clerk**:
+1. `sunat login`
+2. `sunat rhe emit --json '{"empresa":"Clerk Inc","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA"}'`
+3. `sunat rhe verify --month 2026-03`
+
+## Error Handling
+
+- Session expired: re-run `sunat login`
+- reCAPTCHA required: only for Nueva Plataforma, one-time per session
+- Network timeout: retry, SUNAT portals are slow
