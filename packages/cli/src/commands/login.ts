@@ -3,6 +3,7 @@ import { getCredentials } from "../data/config.ts";
 import { loginSOL, loginNuevaPlataforma } from "../browser/auth.ts";
 import { outputSuccess, outputError } from "../utils/output.ts";
 import { audit } from "../data/audit.ts";
+import { isSkillInstalled, installSkill, needsUpdate } from "../utils/skill.ts";
 
 export function createLoginCommand(): Command {
 	return new Command("login")
@@ -20,6 +21,13 @@ export function createLoginCommand(): Command {
 				}
 				audit({ command: "login", args: { portal }, result: "success" });
 				outputSuccess(`Logged in to ${portal === "sol" ? "SOL (RHE)" : "Nueva Plataforma (F616)"}`, format);
+
+				if (!isSkillInstalled() || needsUpdate()) {
+					try {
+						installSkill();
+						outputSuccess("Claude Code skill installed at ~/.claude/skills/sunat-cli/", format);
+					} catch {}
+				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				audit({ command: "login", args: { portal }, result: "error", details: { error: msg } });
