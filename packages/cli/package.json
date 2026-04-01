@@ -1,6 +1,6 @@
 {
 	"name": "@crafter/sunat-cli",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Agent-first CLI for SUNAT tax automation",
 	"module": "bin/sunat.ts",
 	"type": "module",
