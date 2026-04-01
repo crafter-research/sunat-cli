@@ -1,9 +1,68 @@
 import { Command } from "commander";
-import { getCredentials } from "../data/config.ts";
+import { loadConfig, saveConfig, ensureDirs } from "../data/config.ts";
 import { loginSOL, loginNuevaPlataforma } from "../browser/auth.ts";
 import { outputSuccess, outputError } from "../utils/output.ts";
 import { audit } from "../data/audit.ts";
 import { isSkillInstalled, installSkill } from "../utils/skill.ts";
+import * as p from "@clack/prompts";
+
+async function getOrPromptCredentials(isTTY: boolean): Promise<{ ruc: string; usuario: string; password: string }> {
+	const config = loadConfig();
+	let ruc = process.env.SUNAT_RUC || config.ruc;
+	let usuario = process.env.SUNAT_USER || config.usuario;
+	let password = process.env.SUNAT_PASSWORD;
+
+	if (ruc && usuario && password) {
+		return { ruc, usuario, password };
+	}
+
+	if (!isTTY) {
+		throw new Error("Missing credentials. Set SUNAT_RUC, SUNAT_USER, SUNAT_PASSWORD env vars");
+	}
+
+	p.intro("sunat login -- first time setup");
+
+	if (!ruc) {
+		const value = await p.text({
+			message: "RUC (11 digits)",
+			placeholder: "10XXXXXXXXX",
+			validate: (v) => {
+				if (!/^\d{11}$/.test(v)) return "RUC must be 11 digits";
+			},
+		});
+		if (p.isCancel(value)) { p.cancel("Login cancelled"); process.exit(0); }
+		ruc = value;
+	}
+
+	if (!usuario) {
+		const value = await p.text({
+			message: "Usuario SOL",
+			placeholder: "XXXXXXXX",
+			validate: (v) => {
+				if (!v.trim()) return "Required";
+			},
+		});
+		if (p.isCancel(value)) { p.cancel("Login cancelled"); process.exit(0); }
+		usuario = value;
+	}
+
+	if (!password) {
+		const value = await p.password({
+			message: "Clave SOL",
+			validate: (v) => {
+				if (!v.trim()) return "Required";
+			},
+		});
+		if (p.isCancel(value)) { p.cancel("Login cancelled"); process.exit(0); }
+		password = value;
+	}
+
+	ensureDirs();
+	saveConfig({ ...config, ruc, usuario });
+	p.log.success(`Credentials saved to ~/.sunat/config.json (password NOT stored)`);
+
+	return { ruc, usuario, password };
+}
 
 export function createLoginCommand(): Command {
 	return new Command("login")
@@ -14,7 +73,7 @@ export function createLoginCommand(): Command {
 			const portal = opts.nuevaPlataforma ? "nueva-plataforma" : "sol";
 			const isTTY = process.stdout.isTTY && format !== "json";
 			try {
-				const creds = getCredentials();
+				const creds = await getOrPromptCredentials(isTTY);
 				if (opts.nuevaPlataforma) {
 					await loginNuevaPlataforma(creds);
 				} else {
