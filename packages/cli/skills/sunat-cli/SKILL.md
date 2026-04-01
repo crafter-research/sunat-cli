@@ -7,24 +7,23 @@ description: SUNAT tax automation CLI for Peru. Emit Recibos por Honorarios (RHE
 
 SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat` if globally installed).
 
-## Prerequisites
+Install: `npx skills add Railly/sunat-cli -g`
 
-Credentials in `~/.sunat-cli/.env` or project `.env`:
-```
-SUNAT_RUC=10XXXXXXXXX
-SUNAT_USER=XXXXXXXX
-SUNAT_PASSWORD=XXXXXX
-```
+## Auth
 
-## Commands
+Three ways to provide credentials (priority order):
 
-### Auth
+1. **Inline flags** (agent-friendly): `sunat-cli login --ruc 10XXXXXXXXX --user XXXXXXXX --password XXXXXX`
+2. **Env vars**: `SUNAT_RUC`, `SUNAT_USER`, `SUNAT_PASSWORD`
+3. **Interactive prompts**: just run `sunat-cli login` and it asks step by step
 
 ```bash
-sunat login                    # SOL viejo (RHE, no captcha)
-sunat login --nueva-plataforma # Nueva Plataforma (F616, reCAPTCHA one-time)
-sunat whoami                   # Check session status
+sunat-cli login --ruc 10123456789 --user MYUSER --password MYPASS
+sunat-cli login --nueva-plataforma --ruc 10123456789 --user MYUSER --password MYPASS
+sunat-cli whoami
 ```
+
+RUC and usuario are saved to `~/.sunat/config.json` after first login. Password is never stored.
 
 ### RHE (Recibo por Honorarios)
 
