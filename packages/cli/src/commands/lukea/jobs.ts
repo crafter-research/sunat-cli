@@ -1,39 +1,91 @@
 import { Command } from "commander";
-import { getJobs, getJob, updateJob } from "./api-client.ts";
-import { outputError, output } from "../../utils/output.ts";
-import { audit } from "../../data/audit.ts";
+import { getJob, getJobs, updateJob } from "./api-client.ts";
+import { outputError } from "../../utils/output.ts";
+import { audit, auditScreenshotPath } from "../../data/audit.ts";
 import { getCredentials } from "../../data/config.ts";
 import { ensureSOLSession } from "../../browser/auth.ts";
 import { emitRHE } from "../../workflows/rhe.ts";
 import { declareF616 } from "../../workflows/f616.ts";
-import { auditScreenshotPath } from "../../data/audit.ts";
 import * as p from "@clack/prompts";
+
+const TYPE_LABELS: Record<string, string> = {
+	rhe_emission: "Emision RHE",
+	f616_declaration: "Declaracion F616",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+	queued: "\x1b[2m",
+	running: "\x1b[33m",
+	success: "\x1b[32m",
+	failed: "\x1b[31m",
+	cancelled: "\x1b[2m",
+};
 
 export function createLukeaJobsCommand(): Command {
 	const jobs = new Command("jobs").description("Gestionar jobs de Lukea");
 
 	jobs
 		.command("list")
-		.description("Listar jobs pendientes")
+		.description("Listar jobs")
 		.action(async (_opts, cmd) => {
 			const format = cmd.parent?.parent?.parent?.opts().output || "table";
 			const isTTY = process.stdout.isTTY && format !== "json";
 
 			try {
 				const spinner = isTTY ? p.spinner() : null;
-				spinner?.start("Obteniendo jobs...");
+				spinner?.start("Consultando jobs...");
 
 				const list = await getJobs();
 
-				spinner?.stop("Listo.");
+				spinner?.stop();
 
-				output(format, {
-					json: list,
-					table: {
-						headers: ["ID", "TIPO", "PERIODO", "ESTADO"],
-						rows: list.map((j) => [String(j.id), j.type, j.periodo, j.status]),
-					},
-				});
+				if (format === "json") {
+					console.log(JSON.stringify(list, null, 2));
+					return;
+				}
+
+				console.log();
+
+				if (list.length === 0) {
+					console.log("  \x1b[2mNo hay jobs.\x1b[0m");
+					console.log();
+					console.log(
+						"  Crea un job desde lukea.ai/dashboard",
+					);
+					console.log(
+						'  o haz click en "Resolver" en un periodo pendiente.',
+					);
+					console.log();
+					return;
+				}
+
+				const idW = 6;
+				const typeW = 22;
+				const periodoW = 10;
+				const statusW = 14;
+
+				console.log(
+					`  ${"ID".padEnd(idW)} ${"TIPO".padEnd(typeW)} ${"PERIODO".padEnd(periodoW)} ${"ESTADO".padEnd(statusW)}`,
+				);
+				console.log(`  ${"─".repeat(idW + typeW + periodoW + statusW + 3)}`);
+
+				for (const job of list) {
+					const color = STATUS_COLORS[job.status] || "";
+					const label = TYPE_LABELS[job.type] || job.type;
+					console.log(
+						`  ${String(job.id).padEnd(idW)} ${label.padEnd(typeW)} ${job.periodo.padEnd(periodoW)} ${color}${job.status}\x1b[0m`,
+					);
+				}
+
+				const queued = list.filter((j) => j.status === "queued");
+				if (queued.length > 0) {
+					console.log();
+					console.log(
+						`  \x1b[2m${queued.length} job${queued.length > 1 ? "s" : ""} en cola. Ejecuta:\x1b[0m sunat-cli lukea jobs run ${queued[0].id}`,
+					);
+				}
+
+				console.log();
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				outputError(msg, format);
@@ -42,37 +94,75 @@ export function createLukeaJobsCommand(): Command {
 
 	jobs
 		.command("run <jobId>")
-		.description("Ejecutar un job de Lukea")
+		.description("Ejecutar un job")
 		.action(async (jobId: string, _opts, cmd) => {
 			const format = cmd.parent?.parent?.parent?.opts().output || "table";
 			const isTTY = process.stdout.isTTY && format !== "json";
 
+			const startTime = Date.now();
+
 			try {
+				if (isTTY) {
+					p.intro(`lukea jobs run ${jobId}`);
+				}
+
 				const spinner = isTTY ? p.spinner() : null;
-				spinner?.start(`Obteniendo job ${jobId}...`);
+				spinner?.start("Obteniendo detalles del job...");
 
 				const job = await getJob(jobId);
+				const label = TYPE_LABELS[job.type] || job.type;
 
-				spinner?.stop(`Job: ${job.type} — ${job.periodo}`);
+				spinner?.stop(`${label} · ${job.periodo}`);
 
+				if (job.status !== "queued") {
+					if (isTTY) {
+						p.log.warn(
+							`Job ${jobId} tiene estado "${job.status}". Solo se pueden ejecutar jobs en estado "queued".`,
+						);
+						p.outro("Cancelado.");
+					}
+					return;
+				}
+
+				spinner?.start("Marcando como running...");
 				await updateJob(jobId, { status: "running" });
+				spinner?.stop("Estado: running");
 
+				spinner?.start("Obteniendo credenciales SUNAT...");
 				const creds = getCredentials();
+				spinner?.stop(`RUC: ${creds.ruc}`);
 
 				let result: Record<string, unknown>;
 
-				if (job.type === "rhe-emit") {
+				if (job.type === "rhe_emission") {
+					spinner?.start("Conectando a SUNAT SOL...");
 					await ensureSOLSession(creds);
+					spinner?.stop("Sesion SOL activa");
+
+					spinner?.start("Emitiendo RHE...");
 					const input = job.input as Parameters<typeof emitRHE>[0];
-					result = (await emitRHE(input, auditScreenshotPath("rhe-emit"))) as Record<string, unknown>;
-				} else if (job.type === "f616-declare") {
+					result = (await emitRHE(
+						input,
+						auditScreenshotPath("rhe-emit"),
+					)) as Record<string, unknown>;
+					spinner?.stop("RHE emitido");
+				} else if (job.type === "f616_declaration") {
+					spinner?.start("Conectando a SUNAT Nueva Plataforma...");
 					const input = job.input as Parameters<typeof declareF616>[0];
-					result = (await declareF616(input, auditScreenshotPath("f616-declare"))) as Record<string, unknown>;
+					result = (await declareF616(
+						input,
+						auditScreenshotPath("f616-declare"),
+					)) as Record<string, unknown>;
+					spinner?.stop("F616 declarado");
 				} else {
-					throw new Error(`Unknown job type: ${job.type}`);
+					throw new Error(`Tipo de job desconocido: ${job.type}`);
 				}
 
+				spinner?.start("Reportando resultado a Lukea...");
 				await updateJob(jobId, { status: "success", result });
+				spinner?.stop("Resultado reportado");
+
+				const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
 				audit({
 					command: "lukea jobs run",
@@ -81,13 +171,11 @@ export function createLukeaJobsCommand(): Command {
 					details: result,
 				});
 
-				output(format, {
-					json: { success: true, jobId, result },
-					table: {
-						headers: ["JOB ID", "TIPO", "PERIODO", "ESTADO"],
-						rows: [[String(jobId), job.type, job.periodo, "success"]],
-					},
-				});
+				if (isTTY) {
+					p.outro(`Completado en ${elapsed}s`);
+				} else {
+					console.log(JSON.stringify({ success: true, jobId, result }));
+				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				audit({
@@ -97,9 +185,18 @@ export function createLukeaJobsCommand(): Command {
 					details: { error: msg },
 				});
 				try {
-					await updateJob(jobId, { status: "failed", error: msg });
+					await updateJob(jobId, {
+						status: "failed",
+						errorMessage: msg,
+					});
 				} catch {}
-				outputError(msg, format);
+
+				if (isTTY) {
+					p.log.error(msg);
+					p.outro("Fallido.");
+				} else {
+					outputError(msg, format);
+				}
 			}
 		});
 

@@ -14,29 +14,52 @@ export function createLukeaWhoamiCommand(): Command {
 			try {
 				const creds = loadLukeaCredentials();
 				if (!creds) {
-					outputError("Not connected to Lukea. Run: sunat lukea login", format);
+					outputError(
+						"No conectado a Lukea. Ejecuta: sunat-cli lukea login",
+						format,
+					);
 					return;
 				}
 
-				let email = creds.email;
-				if (!email) {
-					try {
-						const me = await getMe();
-						email = me.email;
-					} catch {
-						email = undefined;
-					}
-				}
-
+				const me = await getMe();
 				const maskedKey = `lk_...${creds.apiKey.slice(-4)}`;
 
 				if (isTTY) {
-					p.log.info(`Conectado a Lukea${email ? ` como ${email}` : ""}`);
-					p.log.info(`API: ${creds.apiUrl}`);
-					p.log.info(`Key: ${maskedKey}`);
+					console.log();
+					if (me.name) {
+						console.log(`  \x1b[1m${me.name}\x1b[0m`);
+					}
+					console.log(`  \x1b[2m${me.email}\x1b[0m`);
+					console.log();
+
+					if (me.connections.length > 0) {
+						for (const conn of me.connections) {
+							const status = conn.isActive
+								? "\x1b[32mactivo\x1b[0m"
+								: "\x1b[2minactivo\x1b[0m";
+							console.log(
+								`  RUC ${conn.ruc} · ${conn.usuario} · ${status}`,
+							);
+						}
+						if (me.pendingPeriods > 0) {
+							console.log(
+								`  \x1b[33m${me.pendingPeriods} periodos pendientes\x1b[0m · \x1b[31mS/${me.totalDebt.toLocaleString("es-PE")}\x1b[0m`,
+							);
+						}
+					} else {
+						console.log("  \x1b[2mNo hay RUC conectado\x1b[0m");
+					}
+
+					console.log();
+					console.log(`  \x1b[2m${creds.apiUrl} · ${maskedKey}\x1b[0m`);
+					console.log();
 				} else {
 					outputSuccess(
-						JSON.stringify({ email, apiUrl: creds.apiUrl, key: maskedKey }),
+						JSON.stringify({
+							...me,
+							apiUrl: creds.apiUrl,
+							key: maskedKey,
+						}),
 						format,
 					);
 				}
