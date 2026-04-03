@@ -6,6 +6,7 @@ import { createLoginCommand } from "../src/commands/login.ts";
 import { createWhoamiCommand } from "../src/commands/whoami.ts";
 import { createSchemaCommand } from "../src/commands/schema.ts";
 import { createApiCommand } from "../src/commands/api/index.ts";
+import { createLukeaCommand } from "../src/commands/lukea/index.ts";
 
 const program = new Command();
 
@@ -27,5 +28,6 @@ program.addCommand(createSchemaCommand());
 program.addCommand(createRheCommand());
 program.addCommand(createF616Command());
 program.addCommand(createApiCommand());
+program.addCommand(createLukeaCommand());
 
 program.parse();
