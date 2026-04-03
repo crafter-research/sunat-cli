@@ -58,3 +58,17 @@ export async function updateJob(
 	});
 	if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
+
+export async function reportStep(
+	jobId: string,
+	step: string,
+	detail?: string,
+): Promise<void> {
+	try {
+		await lukeaFetch(`/api/jobs/${jobId}/steps`, {
+			method: "POST",
+			body: JSON.stringify({ step, detail }),
+		});
+	} catch {
+	}
+}

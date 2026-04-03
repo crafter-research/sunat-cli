@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { getJob, getJobs, updateJob } from "./api-client.ts";
+import { getJob, getJobs, reportStep, updateJob } from "./api-client.ts";
 import { outputError } from "../../utils/output.ts";
 import { audit, auditScreenshotPath } from "../../data/audit.ts";
 import { getCredentials } from "../../data/config.ts";
@@ -123,6 +123,7 @@ export function createLukeaJobsCommand(): Command {
 
 				spinner?.start("Marcando como running...");
 				await updateJob(jobId, { status: "running" });
+				void reportStep(jobId, "job_started", `Status: queued -> running`);
 				spinner?.stop("Estado: running");
 
 				spinner?.start("Obteniendo credenciales SUNAT...");
@@ -134,22 +135,32 @@ export function createLukeaJobsCommand(): Command {
 				if (job.type === "rhe_emission") {
 					spinner?.start("Conectando a SUNAT SOL...");
 					await ensureSOLSession(creds);
+					void reportStep(jobId, "sunat_login", "SOL session established");
 					spinner?.stop("Sesion SOL activa");
 
+					void reportStep(jobId, "sunat_navigate", "Navigated to RHE emission form");
 					spinner?.start("Emitiendo RHE...");
+					void reportStep(jobId, "sunat_fill", `Periodo: ${job.periodo}`);
 					const input = job.input as Parameters<typeof emitRHE>[0];
 					result = (await emitRHE(
 						input,
 						auditScreenshotPath("rhe-emit"),
 					)) as Record<string, unknown>;
+					void reportStep(jobId, "sunat_submit", "RHE form submitted");
+					void reportStep(jobId, "sunat_screenshot", "Screenshot saved");
 					spinner?.stop("RHE emitido");
 				} else if (job.type === "f616_declaration") {
 					spinner?.start("Conectando a SUNAT Nueva Plataforma...");
+					void reportStep(jobId, "sunat_login", "Nueva Plataforma session established");
+					void reportStep(jobId, "sunat_navigate", "Navigated to F616 form (code 55.1.3.1.5)");
 					const input = job.input as Parameters<typeof declareF616>[0];
+					void reportStep(jobId, "sunat_fill", `Periodo set: ${job.periodo}`);
 					result = (await declareF616(
 						input,
 						auditScreenshotPath("f616-declare"),
 					)) as Record<string, unknown>;
+					void reportStep(jobId, "sunat_submit", "F616 form submitted");
+					void reportStep(jobId, "sunat_screenshot", "Screenshot saved");
 					spinner?.stop("F616 declarado");
 				} else {
 					throw new Error(`Tipo de job desconocido: ${job.type}`);
