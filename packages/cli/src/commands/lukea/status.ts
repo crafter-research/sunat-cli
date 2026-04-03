@@ -34,8 +34,8 @@ export function createLukeaStatusCommand(): Command {
 				if (me.connections.length === 0) {
 					console.log("  \x1b[2mNo hay RUC conectado.\x1b[0m");
 					console.log();
-					console.log("  Conecta tu RUC en lukea.ai/connect");
-					console.log("  o ejecuta: sunat-cli lukea login");
+					console.log("  Conecta tu RUC en \x1b[4m\x1b[36mlukea.ai/connect\x1b[0m");
+					console.log("  o ejecuta: \x1b[1m\x1b[36msunat-cli lukea login\x1b[0m");
 					console.log();
 					return;
 				}
@@ -59,7 +59,7 @@ export function createLukeaStatusCommand(): Command {
 				console.log();
 
 				if (me.pendingPeriods > 0) {
-					console.log("  \x1b[2mSiguiente paso:\x1b[0m sunat-cli lukea jobs list");
+					console.log("  \x1b[2mSiguiente paso:\x1b[0m \x1b[1m\x1b[36msunat-cli lukea jobs list\x1b[0m");
 				}
 
 				console.log();

@@ -50,10 +50,10 @@ export function createLukeaJobsCommand(): Command {
 					console.log("  \x1b[2mNo hay jobs.\x1b[0m");
 					console.log();
 					console.log(
-						"  Crea un job desde lukea.ai/dashboard",
+						"  Crea un job desde \x1b[4m\x1b[36mlukea.ai/dashboard\x1b[0m",
 					);
 					console.log(
-						'  o haz click en "Resolver" en un periodo pendiente.',
+						'  o haz click en \x1b[1m"Resolver"\x1b[0m en un periodo pendiente.',
 					);
 					console.log();
 					return;
@@ -81,7 +81,10 @@ export function createLukeaJobsCommand(): Command {
 				if (queued.length > 0) {
 					console.log();
 					console.log(
-						`  \x1b[2m${queued.length} job${queued.length > 1 ? "s" : ""} en cola. Ejecuta:\x1b[0m sunat-cli lukea jobs run ${queued[0].id}`,
+						`  \x1b[2m${queued.length} job${queued.length > 1 ? "s" : ""} en cola.\x1b[0m`,
+					);
+					console.log(
+						`  \x1b[2mEjecuta:\x1b[0m \x1b[1m\x1b[36msunat-cli lukea jobs run ${queued[0].id}\x1b[0m`,
 					);
 				}
 
