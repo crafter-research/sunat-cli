@@ -29,15 +29,9 @@ export function createLukeaJobsCommand(): Command {
 		.description("Listar jobs")
 		.action(async (_opts, cmd) => {
 			const format = cmd.parent?.parent?.parent?.opts().output || "table";
-			const isTTY = process.stdout.isTTY && format !== "json";
 
 			try {
-				const spinner = isTTY ? p.spinner() : null;
-				spinner?.start("Consultando jobs...");
-
 				const list = await getJobs();
-
-				spinner?.stop();
 
 				if (format === "json") {
 					console.log(JSON.stringify(list, null, 2));

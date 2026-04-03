@@ -12,15 +12,9 @@ export function createLukeaStatusCommand(): Command {
 		.description("Diagnostico fiscal desde Lukea")
 		.action(async (_opts, cmd) => {
 			const format = cmd.parent?.parent?.opts().output || "table";
-			const isTTY = process.stdout.isTTY && format !== "json";
 
 			try {
-				const spinner = isTTY ? p.spinner() : null;
-				spinner?.start("Consultando Lukea...");
-
 				const me = await getMe();
-
-				spinner?.stop();
 
 				if (format === "json") {
 					console.log(JSON.stringify(me, null, 2));
