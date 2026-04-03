@@ -1,4 +1,4 @@
-import { lukeaFetch } from "../../data/lukea-config.ts";
+import { getLukeaClient, lukeaFetch } from "../../data/lukea-config.ts";
 
 export interface LukeaConnection {
 	ruc: string;
@@ -70,5 +70,31 @@ export async function reportStep(
 			body: JSON.stringify({ step, detail }),
 		});
 	} catch {
+	}
+}
+
+export async function uploadScreenshot(
+	jobId: string,
+	filePath: string,
+): Promise<string | null> {
+	try {
+		const { apiKey, apiUrl } = getLukeaClient();
+		const file = Bun.file(filePath);
+		if (!(await file.exists())) return null;
+
+		const formData = new FormData();
+		formData.append("file", file);
+
+		const res = await fetch(`${apiUrl}/api/jobs/${jobId}/screenshot`, {
+			method: "POST",
+			headers: { Authorization: `Bearer ${apiKey}` },
+			body: formData,
+		});
+
+		if (!res.ok) return null;
+		const data = (await res.json()) as { url: string };
+		return data.url;
+	} catch {
+		return null;
 	}
 }
