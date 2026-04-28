@@ -29,7 +29,10 @@
 	},
 	"scripts": {
 		"dev": "bun run bin/sunat.ts",
-		"check": "biome check --write ."
+		"check": "biome check --write .",
+		"test": "bun test",
+		"test:unit": "bun test tests/unit",
+		"test:e2e": "bun test tests/e2e"
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
