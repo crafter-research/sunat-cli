@@ -1,0 +1,33 @@
+{
+	"command": "cpe nc emit",
+	"description": "Emit a Nota de Credito Electronica (CPE tipo 07). Anula or reduces a previous Factura/Boleta. Trust level T2.",
+	"fields": {
+		"receptor": { "type": "object", "required": true, "description": "Same shape as cpe.factura.receptor." },
+		"items": { "type": "array", "required": true },
+		"totales": { "type": "object", "required": true },
+		"moneda": { "type": "enum", "values": ["PEN", "USD"], "default": "PEN" },
+		"serie": { "type": "string", "pattern": "^FC[0-9A-Z]{2}$|^BC[0-9A-Z]{2}$" },
+		"numero": { "type": "integer", "min": 1 },
+		"fechaEmision": { "type": "date", "default": "today" },
+		"motivo": {
+			"type": "string",
+			"required": true,
+			"description": "Free-form motivo, e.g. 'Anulacion por error en datos'."
+		},
+		"tipoNota": {
+			"type": "enum",
+			"values": ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"],
+			"description": "SUNAT Catalog 09. 01=Anulacion, 02=Anulacion por error en RUC, 03=Correccion descripcion, etc."
+		},
+		"refSerie": { "type": "string", "description": "Serie of the original Factura/Boleta being modified." },
+		"refNumero": { "type": "integer", "description": "Numero of the original document." }
+	},
+	"flags": {
+		"--dry-run": "Preview only",
+		"--yes": "Skip confirmation",
+		"--driver <name>": "Override active driver"
+	},
+	"trust": "T2",
+	"safety": ["Plazo igual que el documento referenciado.", "Para anulaciones totales prefer 'cpe factura void' (T3 con intent token)."],
+	"status": "STUB — driver=mock works."
+}

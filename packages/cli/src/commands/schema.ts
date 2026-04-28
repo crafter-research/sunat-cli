@@ -5,7 +5,7 @@ import { outputJSON } from "../utils/output.ts";
 
 const SCHEMAS_DIR = join(dirname(import.meta.dir), "schemas");
 
-const AVAILABLE_SCHEMAS = ["rhe", "f616", "login"] as const;
+const AVAILABLE_SCHEMAS = ["rhe", "f616", "login", "cpe-factura", "cpe-boleta", "cpe-nota-credito"] as const;
 
 export function createSchemaCommand(): Command {
 	return new Command("schema")
