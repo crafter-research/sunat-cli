@@ -34,7 +34,8 @@
 		"test:unit": "bun test tests/unit",
 		"test:e2e": "bun test tests/e2e",
 		"smoke:sunat": "bash scripts/smoke-sunat.sh",
-		"smoke:boleta": "bash scripts/smoke-boleta.sh"
+		"smoke:boleta": "bash scripts/smoke-boleta.sh",
+		"smoke:padron": "bash scripts/smoke-padron.sh"
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
