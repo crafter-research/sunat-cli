@@ -125,8 +125,11 @@ sunat cpe nc emit --params '...' --yes
 
 ### Setting up sunat-direct (real SUNAT submission)
 
+**Verified working against SUNAT beta** as of v0.2.0 (2026-04-29).
+Returns `cdrCode=0` (Aceptado) end-to-end.
+
 ```bash
-# 1. Save a profile
+# 1. Save a profile (replace with YOUR RUC + razon social)
 sunat cpe profile set --name beta --ruc 20131312955 --razon-social "ACME SAC" \
   --mode beta --cert-path /abs/path/to/cert.pfx --sol-usuario MODATOS1 --default
 
@@ -138,12 +141,27 @@ export CPE_SOL_PASSWORD='your-clave-sol'
 # 3. Verify
 sunat cpe --driver sunat-direct doctor
 # Checks: config_resolved, cert_file_exists, cert_loaded (validUntil),
-#         cert_expiry_warning (if <30 days), sunat_reachable (WSDL ping)
+#         cert_expiry_warning (if <30 days), sunat_reachable (WSDL ping),
+#         stale_pendings (alerts if there are pending audit entries >1h old)
 
 # 4. Emit a real Factura against SUNAT beta
 sunat cpe --driver sunat-direct factura emit --params '{...}' --yes
 # Returns CDR responseCode=0 (Aceptado) on success.
+
+# 5. Re-running with the same serie+numero returns cached CDR (idempotent)
+#    No second SOAP call to SUNAT. The natural idempotency key is RUC-tipo-serie-numero.
 ```
+
+### Quick smoke test (public Greenter cert against SUNAT beta)
+
+```bash
+# One-line verification — no your own cert needed
+bun smoke:sunat
+```
+
+This script downloads the public Greenter test cert, sets up a beta profile
+with RUC `20000000001`, emits a real Factura against `e-beta.sunat.gob.pe`,
+and prints the CDR. Useful for CI smoke tests and "does my install work?" checks.
 
 **Trust ladder**:
 - T0 (auto): `doctor`, `info`, `factura preview`, `cdr get`, `void prepare`

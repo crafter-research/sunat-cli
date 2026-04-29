@@ -1100,3 +1100,108 @@ CPE_NO_TELEMETRY      # disable any usage telemetry (default off anyway)
 ## Compliance disclaimer
 
 `sunat-cpe-api` es **una herramienta**, no un OSE/PSE acreditado por SUNAT. Cumplimiento fiscal es responsabilidad del emisor (la empresa con RUC 20). Si tu empresa esta obligada a usar OSE (>75 UIT/anio en CPE B2B segun cronograma SUNAT 2025-2026), usa el driver `nubefact` o conecta tu OSE preferido.
+
+---
+
+# Appendix — Errors learned in production (sunat-direct, 2026-04-29)
+
+Verified end-to-end with public Greenter test cert against SUNAT beta.
+Each error below is real SUNAT response received during implementation,
+with the exact fix that produced "Aceptado" (cdrCode=0).
+
+## 2335 — "El documento electronico ingresado ha sido alterado"
+
+Three flavors, three different root causes:
+
+### "Unsupported or unrecognized Signature signer format in the message"
+**Cause**: xml-crypto inserts `Id="_0"` on the `<Invoice>` root when computing
+enveloped signature. SUNAT does not accept this auto-Id.
+**Fix**: Reimplemented signer manually (`src/cpe/sign/xades.ts`):
+- Build empty `<ds:Signature>` skeleton, insert into `ext:ExtensionContent` first
+- Compute digest via clone-doc-without-sig + canonicalize
+- Sign canonical SignedInfo bytes with RSA-SHA1
+- Use `xml-crypto/lib/c14n-canonicalization.js` (W3C-spec C14n) directly
+
+### "Incorrect reference digest value"
+**Cause**: Inserting the signature into the document changes serialization
+(self-closing `<ext:ExtensionContent/>` → expanded `<ExtensionContent>...</ExtensionContent>`).
+xml-crypto computed digest before insertion, so SUNAT recanonicalization differs.
+**Fix**: Always insert empty `<ds:Signature>` skeleton FIRST, then compute digest
+from clone-without-sig.
+
+### "RSA signature did not verify"
+**Cause**: Canonical SignedInfo was missing inherited namespaces from the
+`<Invoice>` ancestor. SUNAT recanonicalizes including those namespaces and
+gets different bytes → RSA mismatch.
+**Fix**: `collectAncestorNamespaces()` walks parent chain and passes them as
+`ancestorNamespaces` to xml-crypto's c14n.
+
+## 3205 — "Debe consignar el tipo de operacion"
+
+**Cause**: Missing `<cbc:ProfileID>` referencing SUNAT Catalog 51 (Tipo Operacion).
+**Fix**: Added `<cbc:ProfileID schemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo51">0101</cbc:ProfileID>`
+right after `<cbc:CustomizationID>`. `0101` = "Venta interna" (most common).
+
+## 3244 — "Debe consignar la informacion del tipo de transaccion del comprobante"
+
+**Cause**: Missing `<cac:Signature>` block — this is the symbolic signatory
+reference UBL requires, NOT the actual `<ds:Signature>`. Both must coexist.
+**Fix**: Added `<cac:Signature>` block right after `<cbc:DocumentCurrencyCode>`
+with SignatoryParty (RUC + razon social) + DigitalSignatureAttachment pointing
+to `#SignatureSP` (matches the `Id` of the real `<ds:Signature>`).
+
+## "End of central directory record signature not found" (CDR parse error)
+
+**Cause**: SUNAT CDR ZIP has a placeholder `dummy/` directory entry as the
+first entry. My `unzipFirstEntry` returned that 0-byte directory and tried
+to unzip it as the inner CDR.
+**Fix**: `unzipFirstMatching(buffer, predicate)` skips directories and picks
+the first entry matching the predicate. CDR unzip uses `(name) => /\.(xml|zip)$/i.test(name)`.
+
+## Catalogs / required nodes (verified working)
+
+```
+ProfileID listURI=catalogo51 → "0101" (Venta interna)
+InvoiceTypeCode listID="0101" listURI=catalogo01 → "01" (Factura)
+schemeID="6" → RUC document type
+TaxScheme/cbc:ID = "1000" (IGV), Name=IGV, TaxTypeCode=VAT
+TaxExemptionReasonCode listURI=catalogo07 → "10" (Gravado IGV) or "20" (Exonerado)
+PriceTypeCode listURI=catalogo16 → "01" (Precio unitario)
+PaymentTerms with FormaPago=Contado
+LegalMonetaryTotal with LineExtensionAmount + TaxInclusiveAmount + PayableAmount
+```
+
+## SUNAT beta credentials (public)
+
+```
+RUC      = 20000000001
+SOL_USER = MODDATOS
+SOL_PASS = moddatos
+WS_USER  = ${RUC}${SOL_USER}  → "20000000001MODDATOS"
+
+Cert: Greenter test PEM (https://github.com/thegreenter/greenter/blob/master/packages/lite/tests/Resources/SFSCert.pem)
+Convert to PFX with: openssl pkcs12 -export -in SFSCert.pem -out test.pfx -password pass:test123
+```
+
+## Endpoints
+
+```
+beta = https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService
+prod = https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService
+```
+
+Beta accepts the same credentials as prod IF you have a real SUNAT account.
+The Greenter test cert + RUC 20000000001 only work against beta.
+
+## Idempotency
+
+The natural key is `{ruc}-{tipo}-{serie}-{numero}` (e.g. `20000000001-01-F001-1234`).
+SunatDirectDriver.emitFactura looks up the audit JSONL log; if a `success`
+entry exists for that key, returns the cached CDR without hitting SUNAT.
+
+Two-phase audit:
+1. `pending` entry written BEFORE SOAP call (audit trail even on crash)
+2. `success` or `error` entry written AFTER
+
+`cpe doctor` surfaces stale pending entries (>1h old) — likely process crashed
+mid-submit; operator should investigate.

@@ -1,5 +1,6 @@
 import { existsSync } from "fs";
 import { resolveCpeContext } from "../config.ts";
+import { findCachedResult, findStalePendings, idempotencyKey, logFailure, logPending, logSuccess } from "../idempotency.ts";
 import { signFacturaXml } from "../sign/xades.ts";
 import { loadPfx } from "../sign/cert-loader.ts";
 import { sendBill, SUNAT_ENDPOINTS_FAC } from "../soap/client.ts";
@@ -84,6 +85,17 @@ export class SunatDirectDriver implements CpeDriver {
 			checks.push({ name: "sunat_reachable", ok: false, detail: err instanceof Error ? err.message : String(err) });
 		}
 
+		const stale = findStalePendings();
+		if (stale.length > 0) {
+			checks.push({
+				name: "stale_pendings",
+				ok: false,
+				detail: `${stale.length} pending audit entries older than 1h — process likely crashed mid-submit. Review ~/.sunat/audit/`,
+			});
+		} else {
+			checks.push({ name: "stale_pendings", ok: true, detail: "no stale pending entries" });
+		}
+
 		const ok = checks.every((c) => c.ok);
 		return { driver: this.info(), ok, checks };
 	}
@@ -112,30 +124,49 @@ export class SunatDirectDriver implements CpeDriver {
 			throw new Error(`Validation failed: ${errors.map((e) => `[${e.code}] ${e.message}`).join("; ")}`);
 		}
 
+		const idemKey = { emisorRuc: ctx.emisor.ruc, tipo: "01" as const, serie: input.serie, numero: input.numero };
+
+		// Idempotency: if already submitted successfully, return cached CDR.
+		const cached = findCachedResult(idemKey);
+		if (cached) return cached;
+
 		const unsigned = buildFacturaUbl(input, { emisor: ctx.emisor });
 		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
 		const filename = facturaFilename(ctx.emisor.ruc, input.serie, input.numero);
 		const hash = `sha256:${await sha256Hex(signed.xml)}`;
 
-		const result = await sendBill({
-			mode: ctx.mode,
-			wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
-			wsPassword: ctx.solPassword,
-			xml: signed.xml,
-			filename,
-		});
+		// Two-phase audit: pre-write pending before SOAP call.
+		const auditArgs = { serie: input.serie, numero: input.numero, total: input.totales.total };
+		logPending(idemKey, "cpe factura emit", auditArgs);
 
-		return {
-			id: filename,
-			serie: input.serie,
-			numero: input.numero,
-			hash,
-			status: result.cdr.accepted ? "accepted" : "rejected",
-			cdrCode: result.cdr.responseCode,
-			cdrDesc: result.cdr.description,
-			xml: signed.xml,
-			ts: new Date().toISOString(),
-		};
+		try {
+			const soapResult = await sendBill({
+				mode: ctx.mode,
+				wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+				wsPassword: ctx.solPassword,
+				xml: signed.xml,
+				filename,
+			});
+
+			const result: CpeResult = {
+				id: idempotencyKey(idemKey),
+				serie: input.serie,
+				numero: input.numero,
+				hash,
+				status: soapResult.cdr.accepted ? "accepted" : "rejected",
+				cdrCode: soapResult.cdr.responseCode,
+				cdrDesc: soapResult.cdr.description,
+				xml: signed.xml,
+				ts: new Date().toISOString(),
+			};
+
+			logSuccess(idemKey, "cpe factura emit", auditArgs, result);
+			return result;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logFailure(idemKey, "cpe factura emit", auditArgs, msg);
+			throw err;
+		}
 	}
 
 	async emitBoleta(_input: BoletaInput): Promise<CpeResult> {

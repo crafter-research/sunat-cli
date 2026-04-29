@@ -6,7 +6,7 @@ interface AuditEntry {
 	timestamp: string;
 	command: string;
 	args: Record<string, unknown>;
-	result: "success" | "error" | "dry-run";
+	result: "success" | "error" | "dry-run" | "pending";
 	details?: Record<string, unknown>;
 	screenshot?: string;
 	durationMs?: number;

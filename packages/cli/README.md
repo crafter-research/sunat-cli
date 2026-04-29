@@ -39,7 +39,7 @@ via `--driver mock|sunat-direct|facturador|nubefact|apisperu`.
 | Driver | Status | Notes |
 |--------|--------|-------|
 | `mock` | ✅ wired | Default. In-memory, deterministic. Use for dev/agents/tests. |
-| `sunat-direct` | ✅ Factura only | Native SOAP + XAdES-BES TS. Hits SUNAT beta or prod directly. |
+| `sunat-direct` | ✅ verified end-to-end | Native SOAP + XAdES-BES TS. Factura only. Hits `e-beta.sunat.gob.pe` directly. CDR responseCode=0 (Aceptado) confirmed 2026-04-29. |
 | `facturador` | shaped | Will wrap containerized Java Facturador SUNAT. |
 | `nubefact`, `apisperu` | shaped | OSE/PSE adapters. |
 
@@ -56,12 +56,20 @@ sunat-cli cpe profile set --name beta --ruc 20131312955 \
 export CPE_PROFILE=beta CPE_CERT_PASSWORD=... CPE_SOL_PASSWORD=...
 sunat-cli cpe --driver sunat-direct doctor
 sunat-cli cpe --driver sunat-direct factura emit --params '...' --yes
+
+# Quick smoke test against SUNAT beta with public Greenter test cert
+bun smoke:sunat
 ```
 
 Trust ladder: T0 read/preview, T2 emit (requires `--yes`), T3 void (requires
 `--intent-token` from `cpe void prepare`).
 
-Full shaping rationale + recon dossier: `src/commands/cpe/RESEARCH.md`.
+Idempotency: every emit is keyed by `RUC-tipo-serie-numero`. Re-running with the
+same key returns the cached CDR without re-submitting to SUNAT. Audit log lives
+in `~/.sunat/audit/YYYY-MM-DD.jsonl` (two-phase: pending → success/error).
+
+Full shaping rationale + recon dossier + SUNAT debugging notes:
+`src/commands/cpe/RESEARCH.md`.
 
 ## Design
 

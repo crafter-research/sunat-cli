@@ -120,13 +120,20 @@ export function createCpeCommand(): Command {
 					return;
 				}
 
-				audit({ command: "cpe factura emit", args: input as unknown as Record<string, unknown>, result: "dry-run", details: { stage: "pending" } });
+				// Driver (sunat-direct) handles two-phase audit + idempotency internally.
+				// Mock driver doesn't audit; we keep one success entry here for it.
 				const result = await driver.emitFactura(input);
-				audit({ command: "cpe factura emit", args: input as unknown as Record<string, unknown>, result: "success", details: result as unknown as Record<string, unknown> });
+				if (driver.info().name === "mock") {
+					audit({
+						command: "cpe factura emit",
+						args: input as unknown as Record<string, unknown>,
+						result: "success",
+						details: result as unknown as Record<string, unknown>,
+					});
+				}
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
-				audit({ command: "cpe factura emit", args: {}, result: "error", details: { error: msg } });
 				outputError(msg, format);
 			}
 		});
