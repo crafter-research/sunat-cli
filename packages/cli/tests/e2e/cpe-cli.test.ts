@@ -207,11 +207,36 @@ describe("sunat cpe — E2E", () => {
 		expect(json.checks.find((c) => c.name === "config_resolved")?.ok).toBe(false);
 	});
 
-	test("cpe nd emit returns shaped-not-implemented stub error", async () => {
+	test("cpe nd emit fails on empty params (validation gate)", async () => {
 		const result = await runCli(["-o", "json", "cpe", "nd", "emit", "--params", "{}", "--yes"]);
 		expect(result.exitCode).toBe(1);
 		const combined = result.stdout + result.stderr;
-		expect(combined).toContain("not implemented");
+		// Either parseFacturaInput rejects empty receptor/items/totales, or
+		// parseNotaInput rejects missing refSerie. Both are valid gates.
+		const matchedReason = /Missing required fields|refSerie|refNumero|tipoNota/.test(combined);
+		expect(matchedReason).toBe(true);
+	});
+
+	test("cpe nd emit rejects nota with valid factura body but missing refSerie", async () => {
+		const result = await runCli(["-o", "json", "cpe", "nd", "emit", "--params", JSON.stringify(validFactura), "--yes"]);
+		expect(result.exitCode).toBe(1);
+		const combined = result.stdout + result.stderr;
+		expect(combined).toContain("refSerie");
+	});
+
+	test("cpe nd emit --yes succeeds with full nota payload (mock driver)", async () => {
+		const validNota = {
+			...validFactura,
+			motivo: "Aumento por mora",
+			tipoNota: "01", // Catálogo 10 — Intereses por mora
+			refSerie: "F001",
+			refNumero: 1230,
+		};
+		const result = await runCli(["-o", "json", "cpe", "nd", "emit", "--params", JSON.stringify(validNota), "--yes"]);
+		expect(result.exitCode).toBe(0);
+		const json = JSON.parse(result.stdout) as { success: boolean; status: string };
+		expect(json.success).toBe(true);
+		expect(json.status).toBe("accepted");
 	});
 
 	test("cpe gre --help lists emit + status verbs", async () => {

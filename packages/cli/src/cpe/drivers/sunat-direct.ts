@@ -7,8 +7,10 @@ import { getStatus, pollStatus, sendBill, sendSummary, SUNAT_ENDPOINTS_FAC } fro
 import { bajaFilenameRA, buildBajaUbl } from "../ubl/baja.ts";
 import { boletaFilename, boletaRequiresIndividualSubmission, buildBoletaUbl } from "../ubl/boleta.ts";
 import { buildFacturaUbl, facturaFilename } from "../ubl/factura.ts";
+import { buildNotaCreditoUbl, notaCreditoFilename } from "../ubl/nota-credito.ts";
+import { buildNotaDebitoUbl, notaDebitoFilename } from "../ubl/nota-debito.ts";
 import { buildResumenUbl, resumenFilename } from "../ubl/resumen.ts";
-import { validateBoleta, validateFactura } from "../validation/reglas.ts";
+import { validateBoleta, validateFactura, validateNotaCredito, validateNotaDebito } from "../validation/reglas.ts";
 import type {
 	BajaSubmitInput,
 	BajaSubmitResult,
@@ -252,12 +254,75 @@ export class SunatDirectDriver implements CpeDriver {
 		}
 	}
 
-	async emitNotaCredito(_input: NotaCreditoInput): Promise<CpeResult> {
-		throw new Error("sunat-direct: nota de credito not yet implemented. Use --driver mock.");
+	async emitNotaCredito(input: NotaCreditoInput): Promise<CpeResult> {
+		return this.emitNota(input, "07");
 	}
 
-	async emitNotaDebito(_input: NotaDebitoInput): Promise<CpeResult> {
-		throw new Error("sunat-direct: nota de debito not yet implemented. Use --driver mock.");
+	async emitNotaDebito(input: NotaDebitoInput): Promise<CpeResult> {
+		return this.emitNota(input, "08");
+	}
+
+	private async emitNota(input: NotaCreditoInput | NotaDebitoInput, tipo: "07" | "08"): Promise<CpeResult> {
+		const ctx = resolveCpeContext();
+		const errors = tipo === "07"
+			? validateNotaCredito(input as NotaCreditoInput)
+			: validateNotaDebito(input as NotaDebitoInput);
+		if (errors.length > 0) {
+			throw new Error(`Validation failed: ${errors.map((e) => `[${e.code}] ${e.message}`).join("; ")}`);
+		}
+
+		const idemKey = { emisorRuc: ctx.emisor.ruc, tipo: tipo as "07" | "08", serie: input.serie, numero: input.numero };
+		const cached = findCachedResult(idemKey);
+		if (cached) return cached;
+
+		const unsigned = tipo === "07"
+			? buildNotaCreditoUbl(input as NotaCreditoInput, { emisor: ctx.emisor })
+			: buildNotaDebitoUbl(input as NotaDebitoInput, { emisor: ctx.emisor });
+		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
+		const filename = tipo === "07"
+			? notaCreditoFilename(ctx.emisor.ruc, input.serie, input.numero)
+			: notaDebitoFilename(ctx.emisor.ruc, input.serie, input.numero);
+		const hash = `sha256:${await sha256Hex(signed.xml)}`;
+
+		const auditCmd = tipo === "07" ? "cpe nc emit" : "cpe nd emit";
+		const auditArgs = {
+			serie: input.serie,
+			numero: input.numero,
+			refSerie: input.refSerie,
+			refNumero: input.refNumero,
+			tipoNota: input.tipoNota,
+			total: input.totales.total,
+		};
+		logPending(idemKey, auditCmd, auditArgs);
+
+		try {
+			const soapResult = await sendBill({
+				mode: ctx.mode,
+				wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+				wsPassword: ctx.solPassword,
+				xml: signed.xml,
+				filename,
+			});
+
+			const result: CpeResult = {
+				id: idempotencyKey(idemKey),
+				serie: input.serie,
+				numero: input.numero,
+				hash,
+				status: soapResult.cdr.accepted ? "accepted" : "rejected",
+				cdrCode: soapResult.cdr.responseCode,
+				cdrDesc: soapResult.cdr.description,
+				xml: signed.xml,
+				ts: new Date().toISOString(),
+			};
+
+			logSuccess(idemKey, auditCmd, auditArgs, result);
+			return result;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logFailure(idemKey, auditCmd, auditArgs, msg);
+			throw err;
+		}
 	}
 
 	async submitResumen(input: ResumenSubmitInput): Promise<ResumenSubmitResult> {
