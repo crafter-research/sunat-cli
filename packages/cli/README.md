@@ -60,6 +60,22 @@ sunat-cli sire compras periodos
 sunat-cli sire compras propuesta --periodo 202404 --wait --out compras-202404.zip
 ```
 
+### Guía de Remisión Electrónica (GRE — REST OAuth)
+
+```bash
+export SUNAT_GRE_CLIENT_ID=...   # SOL → Credenciales API SUNAT, URI = "GRE Emisión de Comprobantes"
+export SUNAT_GRE_CLIENT_SECRET=...
+
+sunat-cli cpe gre emit --params '{
+  "serie": "T001", "numero": 1, "fechaEmision": "2026-04-29",
+  "destinatario": {"tipoDoc":"6","numDoc":"20100070970","rznSocial":"CLIENTE SAC"},
+  "envio": { ... codTraslado, modTraslado=02, chofer, vehiculo, partida, llegada },
+  "items": [{"codigo":"P001","descripcion":"Cajas","cantidad":10,"unidad":"NIU"}]
+}' --yes --wait
+
+sunat-cli cpe gre status --ticket 20240100000001 --wait
+```
+
 ### Padrón Reducido del RUC (offline lookup, no auth)
 
 ```bash

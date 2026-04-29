@@ -14,6 +14,7 @@
 const SECURITY_BASE = "https://api-seguridad.sunat.gob.pe/v1";
 const API_BASE = "https://api.sunat.gob.pe/v1";
 const SIRE_BASE = "https://api-sire.sunat.gob.pe/v1";
+const CPE_BASE = "https://api-cpe.sunat.gob.pe/v1";
 
 export interface OAuthCredentials {
 	clientId: string;
@@ -43,11 +44,12 @@ export const SUNAT_REST_BASES = {
 	security: SECURITY_BASE,
 	api: API_BASE,
 	sire: SIRE_BASE,
+	cpe: CPE_BASE,
 } as const;
 
 export const SCOPES = {
 	contribuyente: "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes",
-	gre: "https://api.sunat.gob.pe/v1/contribuyente/gem/comprobantes",
+	gre: "https://api-cpe.sunat.gob.pe",
 	sire: "https://api-sire.sunat.gob.pe",
 } as const;
 
@@ -109,13 +111,13 @@ export interface RestRequestOptions {
 	path: string; // path without /v1 prefix, starts with /contribuyente/...
 	body?: unknown;
 	query?: Record<string, string | number | undefined>;
-	/** Override base URL: defaults to api.sunat.gob.pe; use "sire" for api-sire. */
-	baseHost?: "api" | "sire";
+	/** Override base URL: defaults to api.sunat.gob.pe; "sire" / "cpe" for the dedicated hosts. */
+	baseHost?: "api" | "sire" | "cpe";
 }
 
 export async function callRestApi<T = unknown>(opts: RestRequestOptions): Promise<T> {
 	const token = await getAccessToken(opts.creds);
-	const base = opts.baseHost === "sire" ? SIRE_BASE : API_BASE;
+	const base = opts.baseHost === "sire" ? SIRE_BASE : opts.baseHost === "cpe" ? CPE_BASE : API_BASE;
 	const url = new URL(`${base}${opts.path}`);
 	if (opts.query) {
 		for (const [k, v] of Object.entries(opts.query)) {

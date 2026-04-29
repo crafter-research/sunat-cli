@@ -313,14 +313,173 @@ export function createCpeCommand(): Command {
 		.option("--yes")
 		.action((_, cmd) => notImplemented("nd emit", getFormat(cmd)));
 
-	const guia = cpe.command("guia").description("Guia de Remision (CPE tipo 09) operations.");
+	const gre = cpe.command("gre").description("Guía de Remisión Electrónica (CPE tipo 09) — REST OAuth, NOT SOAP. T0/T2.");
+	cpe
+		.command("guia")
+		.description("Alias for 'cpe gre' — kept for backwards naming.")
+		.allowUnknownOption(true)
+		.helpOption(false)
+		.action(() => {
+			console.error("Use 'sunat cpe gre <verb>' instead. 'cpe guia' is an alias placeholder.");
+			process.exit(1);
+		});
 
-	guia
+	gre
 		.command("emit")
-		.description("Emit a Guia de Remision. T2. STUB — separate BillService endpoint.")
-		.option("--params <json>")
-		.option("--yes")
-		.action((_, cmd) => notImplemented("guia emit", getFormat(cmd)));
+		.description(
+			"Sign + zip + base64 + POST a Guía de Remisión via SUNAT GRE REST API. Async — returns ticket. T2.",
+		)
+		.requiredOption("--params <json>", "JSON payload (run: sunat schema cpe-gre)")
+		.option("--dry-run", "Build + sign locally, do NOT submit")
+		.option("--yes", "Skip T2 confirmation")
+		.option("--wait", "After submit, poll the ticket until completed/rejected")
+		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const { resolveCpeContext } = await import("../../cpe/config.ts");
+				const { signFacturaXml } = await import("../../cpe/sign/xades.ts");
+				const { buildGreUbl, greFilename } = await import("../../cpe/ubl/gre.ts");
+				const { greCredentials, enviarGre, pollGreTicket } = await import("../../sunat-rest/gre.ts");
+				const { resolveOAuthCredentials } = await import("../../cpe/oauth-config.ts").catch(() => ({
+					resolveOAuthCredentials: () => {
+						throw new Error("oauth-config not found");
+					},
+				}));
+
+				const ctx = resolveCpeContext();
+				const input = JSON.parse(opts.params);
+				if (!input.envio || !input.destinatario || !input.items?.length) {
+					outputError("GRE requires destinatario, envio, items. Run: sunat schema cpe-gre", format);
+					return;
+				}
+				input.tipoDoc = input.tipoDoc || "09";
+				input.serie = input.serie || "T001";
+
+				const unsignedXml = buildGreUbl(input, { emisor: ctx.emisor });
+				const { xml: signedXml } = signFacturaXml(unsignedXml, {
+					pfxPath: ctx.certPath,
+					pfxPassword: ctx.certPassword,
+				});
+				const filename = greFilename(ctx.emisor.ruc, input.serie, input.numero);
+
+				if (opts.dryRun) {
+					output(format, { json: { dryRun: true, filename, signedXmlBytes: signedXml.length } });
+					return;
+				}
+
+				if (!opts.yes) {
+					outputError("T2 emission requires --yes flag.", format);
+					return;
+				}
+
+				// Need OAuth credentials (client_id/secret + RUC + SOL pwd)
+				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
+				const clientSecret = process.env.SUNAT_GRE_CLIENT_SECRET || process.env.SUNAT_API_CLIENT_SECRET;
+				if (!clientId || !clientSecret) {
+					outputError(
+						"GRE needs SUNAT_GRE_CLIENT_ID + SUNAT_GRE_CLIENT_SECRET (or SUNAT_API_*) env vars. Get from SOL → Credenciales API SUNAT, URI = 'GRE Emisión de Comprobantes'.",
+						format,
+					);
+					return;
+				}
+				if (!ctx.solUsuario || !ctx.solPassword) {
+					outputError("GRE needs SOL usuario + password (CPE_SOL_USUARIO/PASSWORD env vars).", format);
+					return;
+				}
+				const greCreds = greCredentials({
+					clientId,
+					clientSecret,
+					ruc: ctx.emisor.ruc,
+					solUsuario: ctx.solUsuario,
+					solPassword: ctx.solPassword,
+				});
+
+				const sendResp = await enviarGre({ filename, signedXml }, greCreds);
+				const auditDetails: Record<string, unknown> = {
+					filename,
+					numTicket: sendResp.numTicket,
+				};
+
+				if (!opts.wait) {
+					output(format, {
+						json: {
+							submitted: true,
+							filename,
+							numTicket: sendResp.numTicket,
+							hint: `Poll status with: sunat cpe gre status --ticket ${sendResp.numTicket}`,
+						},
+					});
+					audit({ command: "cpe gre emit", args: input as Record<string, unknown>, result: "success", details: auditDetails });
+					return;
+				}
+
+				const polled = await pollGreTicket({
+					creds: greCreds,
+					numTicket: sendResp.numTicket,
+					timeoutMs: Number.parseInt(opts.timeout, 10),
+				});
+				audit({
+					command: "cpe gre emit",
+					args: input as Record<string, unknown>,
+					result: polled.state === "completed" ? "success" : polled.state === "rejected" ? "error" : "pending",
+					details: { ...auditDetails, ...polled },
+				});
+				output(format, {
+					json: {
+						submitted: true,
+						filename,
+						numTicket: sendResp.numTicket,
+						...polled,
+					},
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	gre
+		.command("status")
+		.description("Poll status of a previously submitted GRE ticket. T0.")
+		.requiredOption("--ticket <id>")
+		.option("--wait")
+		.option("--timeout <ms>", "Polling timeout", "300000")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const { resolveCpeContext } = await import("../../cpe/config.ts");
+				const { greCredentials, consultarGreTicket, pollGreTicket } = await import("../../sunat-rest/gre.ts");
+				const ctx = resolveCpeContext();
+				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
+				const clientSecret = process.env.SUNAT_GRE_CLIENT_SECRET || process.env.SUNAT_API_CLIENT_SECRET;
+				if (!clientId || !clientSecret) {
+					outputError("Missing SUNAT_GRE_CLIENT_ID/SECRET env vars.", format);
+					return;
+				}
+				const greCreds = greCredentials({
+					clientId,
+					clientSecret,
+					ruc: ctx.emisor.ruc,
+					solUsuario: ctx.solUsuario,
+					solPassword: ctx.solPassword,
+				});
+
+				if (opts.wait) {
+					const polled = await pollGreTicket({
+						creds: greCreds,
+						numTicket: opts.ticket,
+						timeoutMs: Number.parseInt(opts.timeout, 10),
+					});
+					output(format, { json: { ticket: opts.ticket, ...polled } });
+					return;
+				}
+
+				const status = await consultarGreTicket(opts.ticket, greCreds);
+				output(format, { json: status });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
 
 	const resumen = cpe.command("resumen").description("Resumen Diario de Boletas operations.");
 
