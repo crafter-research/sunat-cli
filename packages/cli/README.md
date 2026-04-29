@@ -136,6 +136,12 @@ Full shaping rationale + recon dossier + SUNAT debugging notes:
 - Schema introspection at runtime
 - [agentskills.io](https://agentskills.io) compliant SKILL.md
 
+## Limitations & known issues
+
+See [`LIMITATIONS.md`](./LIMITATIONS.md) for the single source of truth:
+what's stubbed, what's blocked by SUNAT WAF, what's verified end-to-end,
+what's pending live verification with real production credentials.
+
 ## License
 
 MIT — [Crafter Station](https://crafterstation.com)

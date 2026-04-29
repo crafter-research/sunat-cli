@@ -314,6 +314,19 @@ sunat schema cpe-nota-credito
 
 Use `sunat schema <resource>` to get machine-readable field definitions before constructing payloads.
 
+## Limitations
+
+Before assuming any feature works end-to-end, check `LIMITATIONS.md` in the
+package root. It tracks: stubbed verbs, SUNAT WAF-blocked endpoints,
+shapes-verified-but-untested-live capabilities, and TUS.IO upload paths
+that need a separate client. **Anything not in LIMITATIONS.md should Just Work**.
+
+Quick markers used there:
+- 🔬 **Verified end-to-end** — confirmed against real SUNAT
+- ⚠️ **Verified shape, untested live** — code matches manual, never executed in prod
+- 🚧 **Shaped, not implemented** — clear "not yet implemented" error
+- ⛔ **Blocked by SUNAT** — WAF / captcha / breaking schema change
+
 ## Output Formats
 
 All commands support `--output <format>`:
