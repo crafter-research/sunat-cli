@@ -570,6 +570,55 @@ export function createCpeCommand(): Command {
 			}
 		});
 
+	cpe
+		.command("consulta")
+		.description("Validate any CPE against SUNAT (mine or vendor's) via REST OAuth. T0.")
+		.requiredOption("--ruc-emisor <ruc>", "RUC of the emisor (issuer)")
+		.requiredOption("--tipo <code>", "01=Factura, 03=Boleta, 07=NC, 08=ND, 09=Guia, 20=Retencion, 40=Percepcion")
+		.requiredOption("--serie <s>", "e.g. F001")
+		.requiredOption("--numero <n>", "Correlativo")
+		.requiredOption("--fecha <YYYY-MM-DD>", "Fecha emision (ISO)")
+		.option("--monto <n>", "Total amount; if provided, must match SUNAT records exactly to 2 decimals")
+		.option("--ruc-consultante <ruc>", "RUC of who is querying (defaults to CPE_EMISOR_RUC env or active profile RUC)")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const { resolveOAuthCredentials } = await import("../../cpe/oauth-config.ts");
+				const { validarComprobante } = await import("../../sunat-rest/consulta-cpe.ts");
+				const creds = resolveOAuthCredentials();
+
+				let rucConsultante = opts.rucConsultante as string | undefined;
+				if (!rucConsultante) {
+					try {
+						const ctx = resolveCpeContext();
+						rucConsultante = ctx.emisor.ruc;
+					} catch {
+						outputError(
+							"--ruc-consultante required (could not resolve from CPE_EMISOR_RUC or active profile)",
+							format,
+						);
+						return;
+					}
+				}
+
+				const result = await validarComprobante(
+					{
+						rucConsultante,
+						rucEmisor: opts.rucEmisor,
+						tipoComprobante: opts.tipo,
+						serie: opts.serie,
+						numero: Number.parseInt(opts.numero, 10),
+						fechaEmision: opts.fecha,
+						monto: opts.monto !== undefined ? Number.parseFloat(opts.monto) : undefined,
+					},
+					creds,
+				);
+				output(format, { json: result });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
 	const cdr = cpe.command("cdr").description("Constancia de Recepcion (CDR) operations.");
 
 	cdr

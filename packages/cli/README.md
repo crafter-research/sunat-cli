@@ -31,6 +31,27 @@ sunat-cli f616 declare --dry-run --json '{"periodo":"2025-03"}'
 sunat-cli api token --output json        # OAuth2 token
 ```
 
+### Padrón Reducido del RUC (offline lookup, no auth)
+
+```bash
+sunat-cli padron sync                  # ~370MB download, refreshes daily
+sunat-cli padron ruc 20131312955       # razon social, estado, condicion
+sunat-cli padron batch --file rucs.csv # batch lookup from CSV
+```
+
+### CPE Consulta Integrada (REST OAuth)
+
+Validate any CPE (mine or vendor's) against SUNAT records.
+
+```bash
+export SUNAT_API_CLIENT_ID=...   # from SOL → Mi RUC → Credenciales API
+export SUNAT_API_CLIENT_SECRET=...
+
+sunat-cli cpe consulta \
+  --ruc-emisor 20131312955 --tipo 01 --serie F001 --numero 1234 \
+  --fecha 2026-04-29 --monto 118
+```
+
 ### Empresas (RUC 20) — CPE
 
 For empresas emitting Factura, Boleta, NC, ND, Guia. Pluggable backend

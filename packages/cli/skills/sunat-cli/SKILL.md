@@ -215,6 +215,44 @@ and prints the CDR. Useful for CI smoke tests and "does my install work?" checks
 
 Full shaping rationale: `src/commands/cpe/RESEARCH.md` in the repo.
 
+### CPE Consulta Integrada (REST OAuth)
+
+Validate any CPE (yours or a vendor's) against SUNAT records. Useful for
+anti-fraud (verify a supplier invoice before paying) or to cross-check your
+own emissions.
+
+Setup once:
+```bash
+# Get client_id + client_secret from SOL → Mi RUC → Credenciales API
+export SUNAT_API_CLIENT_ID=...
+export SUNAT_API_CLIENT_SECRET=...
+```
+
+```bash
+sunat cpe consulta \
+  --ruc-emisor 20131312955 --tipo 01 --serie F001 --numero 1234 \
+  --fecha 2026-04-29 --monto 118
+# Returns: estadoCp (Aceptado/Anulado), estadoRuc (Activo/Baja), condDomiRuc (Habido/No Habido)
+```
+
+### Padrón Reducido del RUC (offline)
+
+Local copy of the SUNAT RUC registry. ~370MB ZIP, ~600MB TXT, ~3.5M entries.
+Refreshes automatically every 24h. No auth, no captcha, no third-party API.
+
+```bash
+sunat padron status                 # see if synced + how stale
+sunat padron sync                   # downloads if missing or >24h old; --force to override
+sunat padron ruc 20131312955        # lookup razon social, estado, condicion, dirección
+echo "20131312955
+20100070970
+20536557858" | sunat padron batch   # batch lookup via stdin
+sunat padron batch --file rucs.csv  # or from CSV (RUC in first column)
+```
+
+First lookup after sync takes 5-15s (streaming scan of 600MB). Batch is one
+scan regardless of N RUCs.
+
 ### API & Schema
 
 ```bash

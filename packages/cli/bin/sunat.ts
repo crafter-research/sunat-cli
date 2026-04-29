@@ -8,6 +8,7 @@ import { createSchemaCommand } from "../src/commands/schema.ts";
 import { createApiCommand } from "../src/commands/api/index.ts";
 import { createLukeaCommand } from "../src/commands/lukea/index.ts";
 import { createCpeCommand } from "../src/commands/cpe/index.ts";
+import { createPadronCommand } from "../src/commands/padron/index.ts";
 
 const program = new Command();
 
@@ -31,5 +32,6 @@ program.addCommand(createF616Command());
 program.addCommand(createApiCommand());
 program.addCommand(createLukeaCommand());
 program.addCommand(createCpeCommand());
+program.addCommand(createPadronCommand());
 
 program.parse();
