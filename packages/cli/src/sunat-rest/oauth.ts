@@ -13,11 +13,19 @@
 
 const SECURITY_BASE = "https://api-seguridad.sunat.gob.pe/v1";
 const API_BASE = "https://api.sunat.gob.pe/v1";
+const SIRE_BASE = "https://api-sire.sunat.gob.pe/v1";
 
 export interface OAuthCredentials {
 	clientId: string;
 	clientSecret: string;
 	scope?: string;
+	/**
+	 * SIRE uses password grant (instead of client_credentials) and requires
+	 * the RUC + SOL_USER + SOL_PASSWORD on top of the client_id/secret.
+	 * When `password` is set, we use the clientessol endpoint variant.
+	 */
+	username?: string; // {RUC}{SOL_USER} concatenated, e.g. "20131312955MODDATOS"
+	password?: string; // SOL password (clave SOL)
 }
 
 interface CachedToken {
@@ -34,15 +42,18 @@ function cacheKey(clientId: string, scope: string): string {
 export const SUNAT_REST_BASES = {
 	security: SECURITY_BASE,
 	api: API_BASE,
+	sire: SIRE_BASE,
 } as const;
 
 export const SCOPES = {
 	contribuyente: "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes",
 	gre: "https://api.sunat.gob.pe/v1/contribuyente/gem/comprobantes",
+	sire: "https://api-sire.sunat.gob.pe",
 } as const;
 
 export async function getAccessToken(creds: OAuthCredentials): Promise<string> {
-	const scope = creds.scope || SCOPES.contribuyente;
+	const isPasswordGrant = !!(creds.username && creds.password);
+	const scope = creds.scope || (isPasswordGrant ? SCOPES.sire : SCOPES.contribuyente);
 	const key = cacheKey(creds.clientId, scope);
 	const cached = tokenCache.get(key);
 
@@ -51,13 +62,20 @@ export async function getAccessToken(creds: OAuthCredentials): Promise<string> {
 		return cached.accessToken;
 	}
 
-	const tokenUrl = `${SECURITY_BASE}/clientesextranet/${encodeURIComponent(creds.clientId)}/oauth2/token/`;
-	const body = new URLSearchParams({
-		grant_type: "client_credentials",
+	const endpoint = isPasswordGrant ? "clientessol" : "clientesextranet";
+	const tokenUrl = `${SECURITY_BASE}/${endpoint}/${encodeURIComponent(creds.clientId)}/oauth2/token/`;
+	const params: Record<string, string> = {
+		grant_type: isPasswordGrant ? "password" : "client_credentials",
 		scope,
 		client_id: creds.clientId,
 		client_secret: creds.clientSecret,
-	});
+	};
+	if (isPasswordGrant) {
+		// SIRE-specific: username = "{RUC}{SOL_USER}" + password = SOL password
+		params.username = creds.username as string;
+		params.password = creds.password as string;
+	}
+	const body = new URLSearchParams(params);
 
 	const resp = await fetch(tokenUrl, {
 		method: "POST",
@@ -91,11 +109,14 @@ export interface RestRequestOptions {
 	path: string; // path without /v1 prefix, starts with /contribuyente/...
 	body?: unknown;
 	query?: Record<string, string | number | undefined>;
+	/** Override base URL: defaults to api.sunat.gob.pe; use "sire" for api-sire. */
+	baseHost?: "api" | "sire";
 }
 
 export async function callRestApi<T = unknown>(opts: RestRequestOptions): Promise<T> {
 	const token = await getAccessToken(opts.creds);
-	const url = new URL(`${API_BASE}${opts.path}`);
+	const base = opts.baseHost === "sire" ? SIRE_BASE : API_BASE;
+	const url = new URL(`${base}${opts.path}`);
 	if (opts.query) {
 		for (const [k, v] of Object.entries(opts.query)) {
 			if (v !== undefined && v !== null) url.searchParams.set(k, String(v));

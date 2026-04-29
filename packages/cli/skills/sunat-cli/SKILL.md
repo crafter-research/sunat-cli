@@ -235,6 +235,54 @@ sunat cpe consulta \
 # Returns: estadoCp (Aceptado/Anulado), estadoRuc (Activo/Baja), condDomiRuc (Habido/No Habido)
 ```
 
+### SIRE — Registro de Ventas (RVIE) y Compras (RCE) electrónicos
+
+**Mandatory monthly filing** for all CPE emisores in Peru since 2024. SIRE
+replaces the old PLE libros and is **the** monthly tax dolor for any
+empresa. This automates the SUNAT portal SIRE workflow end-to-end.
+
+Setup once:
+```bash
+# Get credenciales API SUNAT from SOL → Mi RUC → Credenciales API SUNAT
+# When registering, select URI: "MIGE RCE y RVIE - SIRE"
+export SUNAT_API_CLIENT_ID=...
+export SUNAT_API_CLIENT_SECRET=...
+# SIRE also needs SOL credentials (different OAuth flow vs CPE consulta)
+export SUNAT_RUC=20131312955
+export SUNAT_USER=MODDATOS
+export SUNAT_PASSWORD='clave-sol'
+```
+
+Monthly RVIE (Ventas) workflow:
+```bash
+# 1. See available periodos
+sunat sire ventas periodos
+
+# 2. Download SUNAT's pre-built proposal for the period (async — returns ticket)
+sunat sire ventas propuesta --periodo 202404 --wait --out propuesta-202404.zip
+
+# 3. Review the .zip contents (TXT con todos tus comprobantes)
+
+# 4a. Accept as-is
+sunat sire ventas aceptar --periodo 202404 --yes
+
+# 4b. Or replace with your own (T2): use --reemplazar (shaped, see RESEARCH)
+
+# 5. Download the final RVIE PDF/TXT once accepted
+sunat sire ventas descargar --periodo 202404 --wait --out rvie-202404.zip
+```
+
+Same flow for RCE (Compras):
+```bash
+sunat sire compras periodos
+sunat sire compras propuesta --periodo 202404 --wait --out compras-202404.zip
+sunat sire compras ticket --num 20240100000123 --wait
+```
+
+Polling: `--wait` polls getStatus with backoff (2s/4s/8s/16s/30s, max 5min).
+Without `--wait`, returns the ticket and you poll independently with
+`sunat sire {ventas|compras} ticket --num <id> [--wait]`.
+
 ### Padrón Reducido del RUC (offline)
 
 Local copy of the SUNAT RUC registry. ~370MB ZIP, ~600MB TXT, ~3.5M entries.

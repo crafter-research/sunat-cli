@@ -31,6 +31,29 @@ sunat-cli f616 declare --dry-run --json '{"periodo":"2025-03"}'
 sunat-cli api token --output json        # OAuth2 token
 ```
 
+### SIRE — Registro de Ventas (RVIE) y Compras (RCE)
+
+Mandatory monthly tax filing automation. Replaces the SOL portal SIRE workflow.
+
+```bash
+# Setup (once)
+export SUNAT_API_CLIENT_ID=...   # SOL → Credenciales API SUNAT, URI = "MIGE RCE y RVIE - SIRE"
+export SUNAT_API_CLIENT_SECRET=...
+export SUNAT_RUC=...
+export SUNAT_USER=...
+export SUNAT_PASSWORD=...
+
+# Monthly RVIE (Ventas)
+sunat-cli sire ventas periodos
+sunat-cli sire ventas propuesta --periodo 202404 --wait --out propuesta-202404.zip
+sunat-cli sire ventas aceptar --periodo 202404 --yes
+sunat-cli sire ventas descargar --periodo 202404 --wait --out rvie-202404.zip
+
+# RCE (Compras) — same flow
+sunat-cli sire compras periodos
+sunat-cli sire compras propuesta --periodo 202404 --wait --out compras-202404.zip
+```
+
 ### Padrón Reducido del RUC (offline lookup, no auth)
 
 ```bash
