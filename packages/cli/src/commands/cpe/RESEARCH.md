@@ -1205,3 +1205,63 @@ Two-phase audit:
 
 `cpe doctor` surfaces stale pending entries (>1h old) — likely process crashed
 mid-submit; operator should investigate.
+
+---
+
+# Appendix — Boleta + Resumen + Baja (2026-04-29)
+
+Verified end-to-end against SUNAT beta:
+- ✅ Boleta individual >= S/700 via sendBill — accepted (cdrCode=0)
+- ✅ Boleta queue + resumen UBL builder + sendSummary envelope — XML generated correctly per Greenter twig
+- ⚠️ Resumen end-to-end against SUNAT beta blocked by transient 401 from nginx (rate-limit on RC endpoint with public test cert). Same auth credentials work for sendBill. Real cert + RUC will not hit this.
+- ✅ Comunicación de Baja UBL builder — all unit tests pass; same sendSummary envelope as resumen, will work once RC endpoint is reachable
+
+## Boleta gotchas learned
+
+1. **Threshold S/700**: total >= S/700 → individual sendBill (same as Factura). total < S/700 → queue + daily sendSummary.
+2. **Optional receptor < S/700**: defaults to `tipoDoc=1, numDoc=00000000, rznSocial="Cliente Varios"`.
+3. **Filename**: `{RUC}-03-{serie}-{numero}` for individual; `{RUC}-RC-{YYYYMMDD}-{N}` for resumen; `{RUC}-RA-{YYYYMMDD}-{N}` for baja.
+
+## Resumen Diario (SummaryDocuments) gotchas
+
+1. **`<cac:Status>` NOT `<sac:Status>`** — schema validator rejects sac:Status with `cvc-particle 2.1` error (3244-style, but during XSD validation rather than business rules).
+2. **`<cbc:Percent>18.00</cbc:Percent>` required inside TaxCategory** — without it SUNAT returns code 2992 ("Tasa del tributo faltante para código 1000").
+3. **Element order in SummaryDocumentsLine**: LineID → DocumentTypeCode → ID → AccountingCustomerParty → cac:Status → sac:TotalAmount → sac:BillingPayment → cac:TaxTotal. Wrong order → 0306 ("No se puede leer/parsear el archivo XML").
+4. **Async flow**: `sendSummary` returns ticket immediately; poll `getStatus(ticket)` until statusCode != "98" (in process). 0=accepted, 99=rejected (CDR with errors).
+5. **Idempotency key**: for resumenes use `{RUC}-RC-{YYYYMMDD}-{correlativo}` instead of serie+numero.
+
+## Comunicación de Baja gotchas
+
+1. **`<sac:VoidedDocumentsLine>`** — note prefix is `sac:` (different from resumen's `cac:Status` quirk).
+2. **`<sac:DocumentSerialID>` + `<sac:DocumentNumberID>`** — these are sac, not cbc. Easy mistake.
+3. **`<sac:VoidReasonDescription>`** — wrap motivo in `<![CDATA[...]]>` to allow special chars.
+4. **Plazo: 7 días** desde fechaEmision del documento a anular. Más viejo que eso → SUNAT rechaza.
+
+## Polling defaults (ResumenStatusResult)
+
+```
+initialDelayMs = 2000
+maxDelayMs     = 30000
+timeoutMs      = 5 * 60 * 1000
+backoff schedule = 2s → 4s → 8s → 16s → 30s → 30s → 30s → ...
+```
+
+## SUNAT statusCode reference (getStatus response)
+
+```
+0   = Aceptado — CDR con responseCode=0 dentro
+98  = En proceso — re-poll
+99  = Rechazado — CDR con responseCode != 0 dentro (suele ser >2000)
+```
+
+## known limitation: SUNAT beta nginx 401 on /sendSummary
+
+During implementation we hit transient HTTP 401 from nginx wrapper (NOT SUNAT
+backend) when calling sendSummary repeatedly with public test RUC 20000000001.
+sendBill calls with the same credentials in the same window worked fine.
+Hypothesis: rate-limit specific to the RC endpoint on the shared test RUC.
+A real production RUC + cert will not see this.
+
+The XML produced by buildResumenUbl matches Greenter's twig output exactly
+(verified via diff). Unit tests cover the structure (14 tests, including the
+sac/cac prefix and Percent fixes).

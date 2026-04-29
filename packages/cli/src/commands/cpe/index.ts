@@ -1,9 +1,12 @@
 import { Command } from "commander";
 import { audit } from "../../data/audit.ts";
+import { clearQueueForEmisor, enqueueBoleta, listQueueDates, readQueue } from "../../cpe/boleta-queue.ts";
+import { resolveCpeContext } from "../../cpe/config.ts";
 import { getDriver } from "../../cpe/drivers/index.ts";
 import type { CpeDriverName } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
 import { loadCpeConfig, saveCpeConfig } from "../../cpe/config.ts";
+import { boletaRequiresIndividualSubmission } from "../../cpe/ubl/boleta.ts";
 import { output, outputError } from "../../utils/output.ts";
 
 type Format = "json" | "table" | "auto";
@@ -164,8 +167,24 @@ export function createCpeCommand(): Command {
 	const boleta = cpe.command("boleta").description("Boleta de Venta Electronica (CPE tipo 03) operations.");
 
 	boleta
+		.command("preview")
+		.description("Build + sign + validate locally. Does NOT submit. T0.")
+		.requiredOption("--params <json>", "JSON payload (see: sunat schema cpe-boleta)")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const input = parseFacturaInput(opts.params);
+				const driver = getDriver(getDriverName(cmd));
+				const result = await driver.previewBoleta(input);
+				output(format, { json: { dryRun: true, ...result } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	boleta
 		.command("emit")
-		.description("Emit a Boleta. T2.")
+		.description("Emit a Boleta individually (only when total >= S/700). For total<S/700 use 'cpe boleta queue' + 'cpe resumen send'. T2.")
 		.requiredOption("--params <json>")
 		.option("--dry-run")
 		.option("--yes")
@@ -176,7 +195,7 @@ export function createCpeCommand(): Command {
 				const driver = getDriver(getDriverName(cmd));
 
 				if (opts.dryRun) {
-					const preview = await driver.previewFactura(input);
+					const preview = await driver.previewBoleta(input);
 					output(format, { json: { dryRun: true, ...preview } });
 					return;
 				}
@@ -186,8 +205,68 @@ export function createCpeCommand(): Command {
 				}
 
 				const result = await driver.emitBoleta(input);
-				audit({ command: "cpe boleta emit", args: input as unknown as Record<string, unknown>, result: "success", details: result as unknown as Record<string, unknown> });
+				if (driver.info().name === "mock") {
+					audit({ command: "cpe boleta emit", args: input as unknown as Record<string, unknown>, result: "success", details: result as unknown as Record<string, unknown> });
+				}
 				output(format, { json: { success: true, ...result } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	boleta
+		.command("queue")
+		.description("Queue a boleta for daily-summary submission. Use when total < S/700. T1 (logged, no SUNAT call).")
+		.requiredOption("--params <json>")
+		.action((opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const input = parseFacturaInput(opts.params);
+				if (boletaRequiresIndividualSubmission(input.totales.total)) {
+					outputError(
+						`Boleta total S/${input.totales.total.toFixed(2)} >= S/700: must be sent individually via 'cpe boleta emit', not queued.`,
+						format,
+					);
+					return;
+				}
+				const ctx = resolveCpeContext();
+				const queued = enqueueBoleta(ctx.emisor.ruc, input);
+				audit({
+					command: "cpe boleta queue",
+					args: { serie: input.serie, numero: input.numero, total: input.totales.total },
+					result: "success",
+					details: { file: queued.file, totalQueued: queued.total },
+				});
+				output(format, {
+					json: {
+						queued: true,
+						emisorRuc: ctx.emisor.ruc,
+						fechaEmision: input.fechaEmision,
+						file: queued.file,
+						totalQueuedToday: queued.total,
+						hint: "When done emitting boletas for the day, run: sunat cpe resumen send --fecha " + input.fechaEmision,
+					},
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	boleta
+		.command("queue:list")
+		.description("List queued boletas pending daily-summary. T0.")
+		.option("--fecha <YYYY-MM-DD>", "Filter to a specific fechaEmision")
+		.action((opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				if (opts.fecha) {
+					const entries = readQueue(opts.fecha);
+					output(format, { json: { fecha: opts.fecha, total: entries.length, entries } });
+					return;
+				}
+				const dates = listQueueDates();
+				const summary = dates.map((d) => ({ fecha: d, total: readQueue(d).length }));
+				output(format, { json: { dates: summary } });
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}
@@ -247,19 +326,249 @@ export function createCpeCommand(): Command {
 
 	resumen
 		.command("send")
-		.description("Send daily summary of boletas for a given date. Async via getStatus ticket. T2.")
-		.option("--fecha <YYYY-MM-DD>")
-		.option("--yes")
-		.action((_, cmd) => notImplemented("resumen send", getFormat(cmd)));
+		.description("Send daily summary of queued boletas for a fecha. Async — returns ticket. T2.")
+		.requiredOption("--fecha <YYYY-MM-DD>", "fechaEmision of boletas to summarize")
+		.option("--correlativo <n>", "Resumen correlativo (1..N within today)", "1")
+		.option("--yes", "Skip T2 confirmation prompt")
+		.option("--wait", "Poll getStatus until completed/rejected (default: just return ticket)")
+		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				if (!opts.yes) {
+					outputError("T2 emission requires --yes flag.", format);
+					return;
+				}
+				const driver = getDriver(getDriverName(cmd));
+				if (!driver.submitResumen) {
+					outputError(`Driver "${driver.info().name}" does not support resumen submission.`, format);
+					return;
+				}
 
-	const baja = cpe.command("baja").description("Comunicacion de Baja operations.");
+				const ctx = resolveCpeContext();
+				const queued = readQueue(opts.fecha).filter((q) => q.emisorRuc === ctx.emisor.ruc);
+				if (queued.length === 0) {
+					outputError(`No queued boletas for fecha ${opts.fecha} and emisor ${ctx.emisor.ruc}.`, format);
+					return;
+				}
+
+				const today = new Date().toISOString().split("T")[0];
+				const correlativo = Number.parseInt(opts.correlativo, 10);
+				const submitInput = {
+					fechaEmisionBoletas: opts.fecha,
+					fechaResumen: today,
+					correlativo,
+					entries: queued.map((q) => ({
+						tipoDoc: "03" as const,
+						serie: q.input.serie,
+						numero: q.input.numero,
+						receptor: q.input.receptor && q.input.receptor.numDoc
+							? { tipoDoc: q.input.receptor.tipoDoc, numDoc: q.input.receptor.numDoc }
+							: undefined,
+						totales: q.input.totales,
+						moneda: q.input.moneda,
+					})),
+				};
+
+				const submitResult = await driver.submitResumen(submitInput);
+
+				if (!opts.wait) {
+					output(format, {
+						json: {
+							success: true,
+							ticket: submitResult.ticket,
+							id: submitResult.id,
+							submitted: queued.length,
+							hint: `Poll status with: sunat cpe resumen status --ticket ${submitResult.ticket}`,
+						},
+					});
+					return;
+				}
+
+				if (!driver.getResumenStatus) {
+					outputError(`Driver "${driver.info().name}" does not support polling. Use --wait=false.`, format);
+					return;
+				}
+
+				// Poll until done
+				const { pollStatus: doPoll } = await import("../../cpe/soap/client.ts");
+				const outcome = await doPoll({
+					mode: ctx.mode,
+					wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+					wsPassword: ctx.solPassword,
+					ticket: submitResult.ticket,
+					timeoutMs: Number.parseInt(opts.timeout, 10),
+				});
+
+				if (outcome.state === "processing") {
+					output(format, { json: { success: false, ticket: submitResult.ticket, state: "still-processing" } });
+					return;
+				}
+
+				if (outcome.state === "completed") {
+					clearQueueForEmisor(opts.fecha, ctx.emisor.ruc);
+				}
+
+				output(format, {
+					json: {
+						success: outcome.state === "completed",
+						ticket: submitResult.ticket,
+						id: submitResult.id,
+						state: outcome.state,
+						statusCode: outcome.statusCode,
+						cdrCode: outcome.cdr.responseCode,
+						cdrDesc: outcome.cdr.description,
+						notes: outcome.cdr.notes,
+						submitted: queued.length,
+					},
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	resumen
+		.command("status")
+		.description("Poll status of a previously submitted resumen ticket. T0.")
+		.requiredOption("--ticket <id>")
+		.option("--wait", "Poll with backoff until completed/rejected")
+		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const driver = getDriver(getDriverName(cmd));
+				if (!driver.getResumenStatus) {
+					outputError(`Driver "${driver.info().name}" does not support resumen status.`, format);
+					return;
+				}
+
+				if (opts.wait) {
+					const ctx = resolveCpeContext();
+					const { pollStatus: doPoll } = await import("../../cpe/soap/client.ts");
+					const outcome = await doPoll({
+						mode: ctx.mode,
+						wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+						wsPassword: ctx.solPassword,
+						ticket: opts.ticket,
+						timeoutMs: Number.parseInt(opts.timeout, 10),
+					});
+					if (outcome.state === "processing") {
+						output(format, { json: { ticket: opts.ticket, state: "still-processing" } });
+					} else {
+						output(format, {
+							json: {
+								ticket: opts.ticket,
+								state: outcome.state,
+								statusCode: outcome.statusCode,
+								cdrCode: outcome.cdr.responseCode,
+								cdrDesc: outcome.cdr.description,
+								notes: outcome.cdr.notes,
+							},
+						});
+					}
+					return;
+				}
+
+				const status = await driver.getResumenStatus(opts.ticket);
+				output(format, { json: status });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	const baja = cpe.command("baja").description("Comunicacion de Baja (anular CPE) operations.");
 
 	baja
 		.command("send")
-		.description("Send Comunicacion de Baja for boletas. T2.")
-		.option("--params <json>")
-		.option("--yes")
-		.action((_, cmd) => notImplemented("baja send", getFormat(cmd)));
+		.description("Send Comunicacion de Baja for one or more documents. Async — returns ticket. T2.")
+		.requiredOption("--params <json>", "JSON: { fechaEmisionDocs, fechaComunicacion?, correlativo?, entries: [{tipoDoc,serie,numero,motivo}, ...] }")
+		.option("--yes", "Skip T2 confirmation prompt")
+		.option("--wait", "Poll getStatus until completed/rejected")
+		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				if (!opts.yes) {
+					outputError("T2 emission requires --yes flag.", format);
+					return;
+				}
+				const driver = getDriver(getDriverName(cmd));
+				if (!driver.submitBaja) {
+					outputError(`Driver "${driver.info().name}" does not support baja submission.`, format);
+					return;
+				}
+
+				const raw = JSON.parse(opts.params) as {
+					fechaEmisionDocs: string;
+					fechaComunicacion?: string;
+					correlativo?: number;
+					entries: Array<{ tipoDoc: "01" | "03" | "07" | "08"; serie: string; numero: number; motivo: string }>;
+				};
+				if (!raw.fechaEmisionDocs || !raw.entries?.length) {
+					outputError("baja requires fechaEmisionDocs and at least one entry", format);
+					return;
+				}
+
+				const ctx = resolveCpeContext();
+				const today = new Date().toISOString().split("T")[0];
+				const submitInput = {
+					fechaEmisionDocs: raw.fechaEmisionDocs,
+					fechaComunicacion: raw.fechaComunicacion || today,
+					correlativo: raw.correlativo || 1,
+					entries: raw.entries,
+				};
+
+				const submitResult = await driver.submitBaja(submitInput);
+
+				if (!opts.wait) {
+					output(format, {
+						json: {
+							success: true,
+							ticket: submitResult.ticket,
+							id: submitResult.id,
+							submitted: raw.entries.length,
+							hint: `Poll status with: sunat cpe resumen status --ticket ${submitResult.ticket}`,
+						},
+					});
+					return;
+				}
+
+				if (!driver.getResumenStatus) {
+					outputError(`Driver "${driver.info().name}" does not support polling.`, format);
+					return;
+				}
+
+				const { pollStatus: doPoll } = await import("../../cpe/soap/client.ts");
+				const outcome = await doPoll({
+					mode: ctx.mode,
+					wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+					wsPassword: ctx.solPassword,
+					ticket: submitResult.ticket,
+					timeoutMs: Number.parseInt(opts.timeout, 10),
+				});
+
+				if (outcome.state === "processing") {
+					output(format, { json: { success: false, ticket: submitResult.ticket, state: "still-processing" } });
+					return;
+				}
+
+				output(format, {
+					json: {
+						success: outcome.state === "completed",
+						ticket: submitResult.ticket,
+						id: submitResult.id,
+						state: outcome.state,
+						statusCode: outcome.statusCode,
+						cdrCode: outcome.cdr.responseCode,
+						cdrDesc: outcome.cdr.description,
+						notes: outcome.cdr.notes,
+						submitted: raw.entries.length,
+					},
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
 
 	const cdr = cpe.command("cdr").description("Constancia de Recepcion (CDR) operations.");
 

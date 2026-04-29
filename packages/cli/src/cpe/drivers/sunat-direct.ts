@@ -3,10 +3,15 @@ import { resolveCpeContext } from "../config.ts";
 import { findCachedResult, findStalePendings, idempotencyKey, logFailure, logPending, logSuccess } from "../idempotency.ts";
 import { signFacturaXml } from "../sign/xades.ts";
 import { loadPfx } from "../sign/cert-loader.ts";
-import { sendBill, SUNAT_ENDPOINTS_FAC } from "../soap/client.ts";
+import { getStatus, pollStatus, sendBill, sendSummary, SUNAT_ENDPOINTS_FAC } from "../soap/client.ts";
+import { bajaFilenameRA, buildBajaUbl } from "../ubl/baja.ts";
+import { boletaFilename, boletaRequiresIndividualSubmission, buildBoletaUbl } from "../ubl/boleta.ts";
 import { buildFacturaUbl, facturaFilename } from "../ubl/factura.ts";
-import { validateFactura } from "../validation/reglas.ts";
+import { buildResumenUbl, resumenFilename } from "../ubl/resumen.ts";
+import { validateBoleta, validateFactura } from "../validation/reglas.ts";
 import type {
+	BajaSubmitInput,
+	BajaSubmitResult,
 	BoletaInput,
 	CpeDriver,
 	CpeResult,
@@ -16,6 +21,9 @@ import type {
 	NotaCreditoInput,
 	NotaDebitoInput,
 	PreviewResult,
+	ResumenStatusResult,
+	ResumenSubmitInput,
+	ResumenSubmitResult,
 } from "./types.ts";
 
 export class SunatDirectDriver implements CpeDriver {
@@ -169,8 +177,79 @@ export class SunatDirectDriver implements CpeDriver {
 		}
 	}
 
-	async emitBoleta(_input: BoletaInput): Promise<CpeResult> {
-		throw new Error("sunat-direct: boleta not yet implemented (factura only in this milestone). Use --driver mock.");
+	async previewBoleta(input: BoletaInput): Promise<PreviewResult> {
+		const ctx = resolveCpeContext();
+		const errors = validateBoleta(input);
+		if (errors.length > 0) {
+			return {
+				xml: "",
+				hash: "",
+				wouldSend: false,
+				validacion: { ok: false, errors: errors.map((e) => `[${e.code}] ${e.field}: ${e.message}`) },
+			};
+		}
+		const unsigned = buildBoletaUbl(input, { emisor: ctx.emisor });
+		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
+		const hash = `sha256:${await sha256Hex(signed.xml)}`;
+		return { xml: signed.xml, hash, wouldSend: true, validacion: { ok: true, errors: [] } };
+	}
+
+	async emitBoleta(input: BoletaInput): Promise<CpeResult> {
+		const ctx = resolveCpeContext();
+		const errors = validateBoleta(input);
+		if (errors.length > 0) {
+			throw new Error(`Validation failed: ${errors.map((e) => `[${e.code}] ${e.message}`).join("; ")}`);
+		}
+
+		// Boletas below S/700 must be sent in a daily summary (sendSummary).
+		// Above the threshold, they go individually via sendBill — same path as factura.
+		if (!boletaRequiresIndividualSubmission(input.totales.total)) {
+			throw new Error(
+				`Boleta total S/${input.totales.total.toFixed(2)} < S/700: must be sent via daily summary. Use 'sunat cpe boleta queue' + 'sunat cpe resumen send' (coming in next phase). Or set --force-individual to override (not recommended; SUNAT may reject).`,
+			);
+		}
+
+		const idemKey = { emisorRuc: ctx.emisor.ruc, tipo: "03" as const, serie: input.serie, numero: input.numero };
+
+		const cached = findCachedResult(idemKey);
+		if (cached) return cached;
+
+		const unsigned = buildBoletaUbl(input, { emisor: ctx.emisor });
+		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
+		const filename = boletaFilename(ctx.emisor.ruc, input.serie, input.numero);
+		const hash = `sha256:${await sha256Hex(signed.xml)}`;
+
+		const auditArgs = { serie: input.serie, numero: input.numero, total: input.totales.total };
+		logPending(idemKey, "cpe boleta emit", auditArgs);
+
+		try {
+			const soapResult = await sendBill({
+				mode: ctx.mode,
+				wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+				wsPassword: ctx.solPassword,
+				xml: signed.xml,
+				filename,
+			});
+
+			const result: CpeResult = {
+				id: idempotencyKey(idemKey),
+				serie: input.serie,
+				numero: input.numero,
+				hash,
+				status: soapResult.cdr.accepted ? "accepted" : "rejected",
+				cdrCode: soapResult.cdr.responseCode,
+				cdrDesc: soapResult.cdr.description,
+				xml: signed.xml,
+				ts: new Date().toISOString(),
+			};
+
+			logSuccess(idemKey, "cpe boleta emit", auditArgs, result);
+			return result;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logFailure(idemKey, "cpe boleta emit", auditArgs, msg);
+			throw err;
+		}
 	}
 
 	async emitNotaCredito(_input: NotaCreditoInput): Promise<CpeResult> {
@@ -179,6 +258,162 @@ export class SunatDirectDriver implements CpeDriver {
 
 	async emitNotaDebito(_input: NotaDebitoInput): Promise<CpeResult> {
 		throw new Error("sunat-direct: nota de debito not yet implemented. Use --driver mock.");
+	}
+
+	async submitResumen(input: ResumenSubmitInput): Promise<ResumenSubmitResult> {
+		const ctx = resolveCpeContext();
+		if (input.entries.length === 0) {
+			throw new Error("Cannot submit empty resumen — at least one boleta entry required");
+		}
+
+		const filename = resumenFilename(ctx.emisor.ruc, input.fechaResumen, input.correlativo);
+		const idemId = `${ctx.emisor.ruc}-RC-${input.fechaResumen.replace(/-/g, "")}-${input.correlativo}`;
+		const idemKey = {
+			emisorRuc: ctx.emisor.ruc,
+			tipo: "01" as const, // Resumen ID for idempotency lookup; not a CPE tipoDoc
+			serie: `RC-${input.fechaResumen.replace(/-/g, "")}`,
+			numero: input.correlativo,
+		};
+
+		const cached = findCachedResult(idemKey);
+		if (cached) {
+			return {
+				id: idemId,
+				ticket: (cached as unknown as { ticket?: string }).ticket || "",
+				status: cached.status === "accepted" ? "accepted" : cached.status === "rejected" ? "rejected" : "submitted",
+				cdrCode: cached.cdrCode,
+				cdrDesc: cached.cdrDesc,
+				xml: cached.xml,
+				ts: cached.ts,
+			};
+		}
+
+		const unsigned = buildResumenUbl(input, { emisor: ctx.emisor });
+		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
+
+		const auditArgs = {
+			fechaEmisionBoletas: input.fechaEmisionBoletas,
+			fechaResumen: input.fechaResumen,
+			correlativo: input.correlativo,
+			entryCount: input.entries.length,
+		};
+		logPending(idemKey, "cpe resumen send", auditArgs);
+
+		try {
+			const summaryResp = await sendSummary({
+				mode: ctx.mode,
+				wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+				wsPassword: ctx.solPassword,
+				xml: signed.xml,
+				filename,
+			});
+
+			const result: ResumenSubmitResult = {
+				id: idemId,
+				ticket: summaryResp.ticket,
+				status: "submitted",
+				xml: signed.xml,
+				ts: new Date().toISOString(),
+			};
+
+			logSuccess(
+				idemKey,
+				"cpe resumen send",
+				auditArgs,
+				{
+					id: idemId,
+					serie: idemKey.serie,
+					numero: input.correlativo,
+					hash: signed.cert.serialNumber,
+					status: "pending",
+					cdrCode: undefined,
+					cdrDesc: `ticket=${summaryResp.ticket}`,
+					xml: signed.xml,
+					ts: result.ts,
+				} as unknown as never,
+			);
+
+			return result;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			logFailure(idemKey, "cpe resumen send", auditArgs, msg);
+			throw err;
+		}
+	}
+
+	async getResumenStatus(ticket: string): Promise<ResumenStatusResult> {
+		const ctx = resolveCpeContext();
+		const outcome = await getStatus({
+			mode: ctx.mode,
+			wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+			wsPassword: ctx.solPassword,
+			ticket,
+		});
+
+		if (outcome.state === "processing") {
+			return { ticket, state: "processing", statusCode: outcome.statusCode };
+		}
+
+		return {
+			ticket,
+			state: outcome.state,
+			statusCode: outcome.statusCode,
+			cdrCode: outcome.cdr.responseCode,
+			cdrDesc: outcome.cdr.description,
+			notes: outcome.cdr.notes,
+		};
+	}
+
+	async pollResumen(ticket: string, opts?: { timeoutMs?: number; onTick?: (n: number, s: string) => void }): Promise<ResumenStatusResult> {
+		const ctx = resolveCpeContext();
+		const outcome = await pollStatus({
+			mode: ctx.mode,
+			wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+			wsPassword: ctx.solPassword,
+			ticket,
+			timeoutMs: opts?.timeoutMs,
+			onTick: opts?.onTick,
+		});
+		if (outcome.state === "processing") {
+			return { ticket, state: "processing", statusCode: outcome.statusCode };
+		}
+		return {
+			ticket,
+			state: outcome.state,
+			statusCode: outcome.statusCode,
+			cdrCode: outcome.cdr.responseCode,
+			cdrDesc: outcome.cdr.description,
+			notes: outcome.cdr.notes,
+		};
+	}
+
+	async submitBaja(input: BajaSubmitInput): Promise<BajaSubmitResult> {
+		const ctx = resolveCpeContext();
+		if (input.entries.length === 0) {
+			throw new Error("Cannot submit empty baja — at least one document required");
+		}
+
+		const filename = bajaFilenameRA(ctx.emisor.ruc, input.fechaComunicacion, input.correlativo);
+		const idemId = `${ctx.emisor.ruc}-RA-${input.fechaComunicacion.replace(/-/g, "")}-${input.correlativo}`;
+
+		const unsigned = buildBajaUbl(input, { emisor: ctx.emisor });
+		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
+
+		const summaryResp = await sendSummary({
+			mode: ctx.mode,
+			wsUsername: `${ctx.emisor.ruc}${ctx.solUsuario}`,
+			wsPassword: ctx.solPassword,
+			xml: signed.xml,
+			filename,
+		});
+
+		return {
+			id: idemId,
+			ticket: summaryResp.ticket,
+			status: "submitted",
+			xml: signed.xml,
+			ts: new Date().toISOString(),
+		};
 	}
 }
 

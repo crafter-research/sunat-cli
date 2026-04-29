@@ -44,6 +44,16 @@ export class MockDriver implements CpeDriver {
 		};
 	}
 
+	async previewBoleta(input: BoletaInput): Promise<PreviewResult> {
+		const xml = this.renderUblStub(input, "03");
+		return {
+			xml,
+			hash: this.hash(xml),
+			wouldSend: true,
+			validacion: { ok: true, errors: [] },
+		};
+	}
+
 	async emitFactura(input: FacturaInput): Promise<CpeResult> {
 		return this.fakeSubmit(input, "01");
 	}
