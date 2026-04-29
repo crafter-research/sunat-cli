@@ -22,24 +22,104 @@ const sunatTheme = {
 
 const features = [
 	{
-		title: "RHE Emission",
-		desc: "Emit Recibos por Honorarios in batch. 12 months in one command.",
+		title: "CPE Emission (Factura, Boleta, NC, ND)",
+		desc: "UBL 2.1 + XAdES-BES + SOAP directo a SUNAT. End-to-end verified against beta.",
+		code: '$ sunat-cli cpe factura emit \\\n  --params \'{"serie":"F001",...}\' --yes',
+	},
+	{
+		title: "GRE Remitente (Guía Modal 02)",
+		desc: "REST API + JWT. Tracker idempotente, retries con backoff.",
+		code: "$ sunat-cli cpe gre emit \\\n  --params @guia.json --yes",
+	},
+	{
+		title: "SIRE RVIE + RCE",
+		desc: "Propuesta de ventas/compras, ticket polling, descarga ZIP, importar via TUS 1.0.0.",
+		code: "$ sunat-cli sire rvie propuesta \\\n  --periodo 202504 --yes",
+	},
+	{
+		title: "Resumen Diario + Baja",
+		desc: "Boletas <S/700 batched, comunicación de baja con ticket polling.",
+		code: "$ sunat-cli cpe resumen send \\\n  --fecha 2026-04-29 --yes",
+	},
+	{
+		title: "RHE + F616 (personas naturales)",
+		desc: "Browser automation sin CAPTCHA. RHE en batch, F616 mensual via CDP raw.",
 		code: "$ sunat-cli rhe emit --batch ./data.csv",
 	},
 	{
-		title: "F616 Declaration",
-		desc: "Monthly 4ta categoria declarations via CDP automation.",
-		code: '$ sunat-cli f616 declare \\\n  --json \'{"periodo":"03/2025"}\'',
-	},
-	{
 		title: "Schema Introspection",
-		desc: "Agents self-serve field definitions at runtime.",
-		code: "$ sunat-cli schema rhe\n# Returns JSON schema of all fields",
+		desc: "Agents self-serve field definitions at runtime. 25+ schemas exposed.",
+		code: "$ sunat-cli schema cpe-factura\n# Returns JSON schema of all fields",
 	},
 	{
-		title: "OAuth2 Verification",
-		desc: "Verify emissions via SUNAT REST API.",
-		code: "$ sunat-cli api token\n# JWT valid for 1 hour",
+		title: "Padrón RUC + Consulta CPE",
+		desc: "REST OAuth2 client_credentials. Padrón sync incremental, lookup local sub-ms.",
+		code: "$ sunat-cli api consulta \\\n  --tipo 01 --serie F001 --numero 123",
+	},
+	{
+		title: "Tipo de Cambio SBS",
+		desc: "Scrape diario, cache local, fallback a fecha hábil previa.",
+		code: "$ sunat-cli tipo-cambio --fecha hoy\n# {compra: 3.752, venta: 3.758}",
+	},
+];
+
+const coverage = [
+	{ domain: "REST APIs (Consulta CPE, Padrón, Tipo Cambio)", pct: 90, color: "green", status: "shipped" },
+	{ domain: "RHE + F616 (personas naturales)", pct: 95, color: "green", status: "shipped" },
+	{ domain: "CPE Factura / Boleta / NC / ND", pct: 85, color: "green", status: "shipped" },
+	{ domain: "Resumen Diario + Comunicación de Baja", pct: 80, color: "green", status: "shipped" },
+	{ domain: "SIRE (RVIE Ventas + RCE Compras)", pct: 70, color: "yellow", status: "shipped, partial" },
+	{ domain: "GRE Remitente + Transportista", pct: 50, color: "yellow", status: "modal 02 only" },
+	{ domain: "CPE void T3 (intent-token)", pct: 30, color: "orange", status: "shaped" },
+	{ domain: "Drivers (mock, sunat-direct, facturador, PSE/OSE)", pct: 40, color: "orange", status: "2 of 5" },
+	{ domain: "Producción end-to-end (live)", pct: 10, color: "red", status: "untested" },
+];
+
+const overallAgentReady = Math.round(
+	coverage.reduce((sum, c) => sum + c.pct, 0) / coverage.length,
+);
+
+const roadmap = [
+	{
+		when: "Now",
+		label: "P0",
+		color: "var(--red)",
+		items: [
+			{ n: 10, t: "cpe void T3 — intent-token flow + safety rail", area: "cpe" },
+		],
+	},
+	{
+		when: "Next",
+		label: "P1",
+		color: "#D93F0B",
+		items: [
+			{ n: 11, t: "GRE modal 01 (transporte público) + Transportista doc 31", area: "rest" },
+			{ n: 12, t: "Drivers nubefact + apisperu (PSE/OSE adapters)", area: "driver" },
+			{ n: 18, t: "Live verification — production submissions", area: "verify" },
+		],
+	},
+	{
+		when: "Later",
+		label: "P2",
+		color: "#FBCA04",
+		items: [
+			{ n: 13, t: "Driver facturador (Java wrapper, contained)", area: "driver" },
+			{ n: 14, t: "SIRE reportes complementarios (resumen, inconsistencias, CAR)", area: "sire" },
+			{ n: 15, t: "sqlite index for padrón (sub-ms RUC lookups)", area: "rest" },
+			{ n: 16, t: "CI smoke jobs with Chrome + agent-browser", area: "infra" },
+			{ n: 17, t: "TUS auto-resume on partial upload failure", area: "sire" },
+		],
+	},
+	{
+		when: "Backlog",
+		label: "P3",
+		color: "#0E8A16",
+		items: [
+			{ n: 19, t: "Catálogos SUNAT cacheados (Cat 02, 03, 06, 51)", area: "cpe" },
+			{ n: 20, t: "Audit log rotation", area: "infra" },
+			{ n: 21, t: "Keychain integration (macOS, Linux secret-service)", area: "infra" },
+			{ n: 22, t: "Multi-RUC profile testing + multi-emisor support", area: "cpe" },
+		],
 	},
 ];
 
@@ -50,17 +130,17 @@ const featureHtmls = await Promise.all(
 const heroCode = `# Install globally
 $ bun add -g @crafter/sunat-cli
 
-# Login to SUNAT (zero CAPTCHA)
-$ sunat-cli login
-✓ Logged in to SOL
+# Introspect schema (agents self-serve)
+$ sunat-cli schema cpe-factura --output json
+{ "command": "cpe factura emit", "fields": {...} }
 
 # Always dry-run first
-$ sunat-cli rhe emit --batch ./data.csv --dry-run
-{ "dryRun": true, "input": {...}, "status": "would-emit" }
+$ sunat-cli cpe factura preview --params @factura.json
+{ "dryRun": true, "hash": "sha256:...", "validacion": {"ok": true} }
 
-# Ship it — 19 RHEs in one batch
-$ sunat-cli rhe emit --batch ./data.csv
-✓ 19 RHEs emitted`;
+# Ship it — UBL 2.1 + XAdES + SOAP, end-to-end
+$ sunat-cli cpe factura emit --params @factura.json --yes
+✓ Aceptado · CDR 0000 · F001-1234`;
 
 const heroCodeHtml = await codeToHtml(heroCode, { lang: "bash", theme: sunatTheme });
 
@@ -74,10 +154,10 @@ const principles = [
 ];
 
 const stats = [
+	{ value: `${overallAgentReady}%`, label: "Agent-ready" },
+	{ value: "9", label: "SUNAT domains" },
+	{ value: "283", label: "Tests passing" },
 	{ value: "0", label: "CAPTCHAs" },
-	{ value: "19", label: "RHEs / batch" },
-	{ value: "3", label: "Portals cracked" },
-	{ value: "1h", label: "Token TTL" },
 ];
 ---
 
@@ -198,7 +278,7 @@ const stats = [
 			.features { padding: 80px 24px; background: var(--bg-alt); }
 			.section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red); margin-bottom: 8px; }
 			.section-title { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 40px; }
-			.features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+			.features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 			.feature-card {
 				background: white; border: 1px solid var(--border); border-radius: 12px;
 				padding: 24px; transition: border-color 200ms, box-shadow 200ms;
@@ -212,6 +292,96 @@ const stats = [
 				line-height: 1.7 !important; margin: 0 !important;
 			}
 			.feature-code :global(code) { font-family: 'JetBrains Mono', monospace !important; }
+
+			/* Coverage */
+			.coverage { padding: 80px 24px; }
+			.coverage-headline {
+				display: flex; align-items: baseline; gap: 16px;
+				margin-bottom: 8px; flex-wrap: wrap;
+			}
+			.coverage-pct {
+				font-size: 56px; font-weight: 700; color: var(--blue);
+				letter-spacing: -0.04em; line-height: 1;
+			}
+			.coverage-pct .accent { color: var(--red); }
+			.coverage-sub {
+				font-size: 14px; color: var(--text-2); max-width: 640px;
+				line-height: 1.7; margin-bottom: 32px;
+			}
+			.coverage-table {
+				display: grid; gap: 14px; max-width: 880px;
+			}
+			.cov-row {
+				display: grid; grid-template-columns: 1fr 200px 90px;
+				gap: 16px; align-items: center; padding: 12px 0;
+				border-bottom: 1px solid var(--border);
+			}
+			.cov-row:last-child { border-bottom: none; }
+			.cov-domain { font-size: 14px; font-weight: 500; color: var(--text); }
+			.cov-status {
+				font-size: 11px; color: var(--text-3); text-transform: uppercase;
+				letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace;
+			}
+			.cov-bar {
+				height: 8px; background: var(--bg-alt); border-radius: 999px;
+				overflow: hidden; position: relative;
+			}
+			.cov-fill {
+				height: 100%; border-radius: 999px;
+				transition: width 600ms ease-out;
+			}
+			.cov-fill.green { background: linear-gradient(90deg, #16A34A, #22C55E); }
+			.cov-fill.yellow { background: linear-gradient(90deg, #CA8A04, #EAB308); }
+			.cov-fill.orange { background: linear-gradient(90deg, #EA580C, #F97316); }
+			.cov-fill.red { background: linear-gradient(90deg, #B91C1C, #DC2626); }
+			.cov-pct {
+				font-family: 'JetBrains Mono', monospace; font-size: 13px;
+				font-weight: 600; color: var(--text); text-align: right;
+			}
+
+			/* Roadmap */
+			.roadmap { padding: 80px 24px; background: var(--bg-alt); }
+			.roadmap-grid {
+				display: grid; grid-template-columns: repeat(4, 1fr);
+				gap: 16px;
+			}
+			.roadmap-col {
+				background: white; border: 1px solid var(--border);
+				border-radius: 12px; padding: 20px;
+				display: flex; flex-direction: column; min-height: 240px;
+			}
+			.roadmap-head {
+				display: flex; align-items: baseline; justify-content: space-between;
+				padding-bottom: 12px; margin-bottom: 12px;
+				border-bottom: 1px solid var(--border);
+			}
+			.roadmap-when { font-size: 14px; font-weight: 700; color: var(--text); }
+			.roadmap-pill {
+				font-size: 10px; font-weight: 700; padding: 3px 8px;
+				border-radius: 4px; color: white; letter-spacing: 0.06em;
+				font-family: 'JetBrains Mono', monospace;
+			}
+			.roadmap-list {
+				list-style: none; padding: 0; margin: 0;
+				display: flex; flex-direction: column; gap: 10px;
+			}
+			.roadmap-item {
+				font-size: 12.5px; line-height: 1.5; color: var(--text-2);
+				padding-left: 14px; position: relative;
+			}
+			.roadmap-item::before {
+				content: "›"; position: absolute; left: 0;
+				color: var(--text-3); font-family: 'JetBrains Mono', monospace;
+			}
+			.roadmap-item a {
+				color: var(--text-2); text-decoration: none;
+				border-bottom: 1px dashed transparent;
+			}
+			.roadmap-item a:hover { color: var(--blue); border-bottom-color: var(--blue); }
+			.roadmap-area {
+				display: inline-block; font-family: 'JetBrains Mono', monospace;
+				font-size: 10px; color: var(--text-3); margin-left: 4px;
+			}
 
 			/* Agent DX */
 			.agent-dx { padding: 80px 24px; background: var(--blue); color: white; }
@@ -240,6 +410,10 @@ const stats = [
 				.stat:nth-child(2) { border-right: none; }
 				.stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--border); }
 				.nav-links a:not(.nav-cta) { display: none; }
+				.coverage-pct { font-size: 40px; }
+				.cov-row { grid-template-columns: 1fr 60px; gap: 8px; }
+				.cov-row .cov-bar { grid-column: 1 / -1; order: 3; }
+				.roadmap-grid { grid-template-columns: 1fr; }
 			}
 		</style>
 	</head>
@@ -249,8 +423,9 @@ const stats = [
 				<a href="#" class="nav-brand">sunat<span>/</span>cli</a>
 				<div class="nav-links">
 					<a href="#features">Features</a>
+					<a href="#coverage">Coverage</a>
+					<a href="#roadmap">Roadmap</a>
 					<a href="#agent-dx">Agent DX</a>
-					<a href="/legal">Legal</a>
 					<a href="https://github.com/crafter-research/sunat-cli" class="nav-cta">GitHub</a>
 				</div>
 			</div>
@@ -262,12 +437,12 @@ const stats = [
 					<div>
 						<div class="hero-badge">
 							<span class="dot"></span>
-							<span class="mono">crafter station / gov-tech</span>
+							<span class="mono">crafter station / gov-tech · v0.1.6</span>
 						</div>
-						<h1>Automate SUNAT<br/>with <span class="accent">one CLI</span></h1>
+						<h1>Mapping SUNAT,<br/>making it <span class="accent">agent-ready</span></h1>
 						<p class="hero-desc">
-							Agent-first CLI for Peru's tax authority. Emit RHE, declare F616,
-							verify via OAuth2 API. Built for AI agents as primary consumers.
+							Agent-first CLI for Peru's tax authority. CPE emission (UBL 2.1 + XAdES + SOAP),
+							SIRE filing, GRE shipping notices, REST OAuth APIs, RHE/F616 — all under one binary.
 						</p>
 						<div class="hero-actions">
 							<a href="https://github.com/crafter-research/sunat-cli" class="btn btn-primary">Get started</a>
@@ -303,6 +478,64 @@ const stats = [
 							<h3 class="feature-title">{f.title}</h3>
 							<p class="feature-desc">{f.desc}</p>
 							<div class="feature-code" set:html={featureHtmls[i]} />
+						</div>
+					))}
+				</div>
+			</div>
+		</section>
+
+		<section class="coverage" id="coverage">
+			<div class="container">
+				<p class="section-label mono">Coverage</p>
+				<div class="coverage-headline">
+					<div class="coverage-pct">
+						{overallAgentReady}<span class="accent">%</span>
+					</div>
+					<h2 class="section-title" style="margin-bottom: 0;">SUNAT mapped & agent-ready</h2>
+				</div>
+				<p class="coverage-sub">
+					Per-domain breakdown of how much of each SUNAT surface is wrapped, validated against
+					the beta endpoint, and exposed as an agent-callable command. Green = shipped & verified.
+					Yellow = partial. Orange/Red = shaped or needs production credentials.
+				</p>
+				<div class="coverage-table">
+					{coverage.map((c) => (
+						<div class="cov-row">
+							<div>
+								<div class="cov-domain">{c.domain}</div>
+								<div class="cov-status">{c.status}</div>
+							</div>
+							<div class="cov-bar">
+								<div class={`cov-fill ${c.color}`} style={`width: ${c.pct}%`}></div>
+							</div>
+							<div class="cov-pct">{c.pct}%</div>
+						</div>
+					))}
+				</div>
+			</div>
+		</section>
+
+		<section class="roadmap" id="roadmap">
+			<div class="container">
+				<p class="section-label mono">Roadmap</p>
+				<h2 class="section-title">What's shipping next</h2>
+				<div class="roadmap-grid">
+					{roadmap.map((col) => (
+						<div class="roadmap-col">
+							<div class="roadmap-head">
+								<span class="roadmap-when">{col.when}</span>
+								<span class="roadmap-pill" style={`background: ${col.color}`}>{col.label}</span>
+							</div>
+							<ul class="roadmap-list">
+								{col.items.map((item) => (
+									<li class="roadmap-item">
+										<a href={`https://github.com/crafter-research/sunat-cli/issues/${item.n}`}>
+											#{item.n} · {item.t}
+										</a>
+										<span class="roadmap-area">[{item.area}]</span>
+									</li>
+								))}
+							</ul>
 						</div>
 					))}
 				</div>
