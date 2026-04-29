@@ -12,7 +12,7 @@ audience: empresas con RUC 20 (B2B), no personas naturales 4ta
 
 ## Overview
 
-Peru obliga emision electronica de comprobantes (CPE) desde 2014, masivamente desde 2018. Hay **3 vias oficiales** para emitir: SEE-Del Contribuyente (sistemas propios), SEE-OSE/PSE (intermediarios), y **SEE-SFS (Facturador SUNAT)** — la app Java gratuita oficial. El Facturador es el rincon mas hostil del stack: Java 8u202 obligatorio, sin auth, sin GC, sin API, configuracion via folders `/DATA` y `/CERT`. Todo wrapper que se le ponga encima es producto. Christian + Carlos llevan 10 anios corriendo uno. Mercado: crecio 11.9% en 2025, millones de contribuyentes obligados.
+Peru obliga emision electronica de comprobantes (CPE) desde 2014, masivamente desde 2018. Hay **3 vias oficiales** para emitir: SEE-Del Contribuyente (sistemas propios), SEE-OSE/PSE (intermediarios), y **SEE-SFS (Facturador SUNAT)** — la app Java gratuita oficial. El Facturador es el rincon mas hostil del stack: Java 8u202 obligatorio, sin auth, sin GC, sin API, configuracion via folders `/DATA` y `/CERT`. Todo wrapper que se le ponga encima es producto. Mercado: crecio 11.9% en 2025, millones de contribuyentes obligados.
 
 ---
 
@@ -79,7 +79,7 @@ El contribuyente desarrolla su propio sistema, genera XML UBL 2.1, firma, envia 
 ### 2. SEE-Facturador SUNAT (SEE-SFS) — **ESTE ES EL TARGET**
 App Java gratuita oficial de SUNAT (`cpe.sunat.gob.pe/sistema_emision/facturador_sunat`). Lee archivos `.txt`/`.json`/`.xml` desde carpeta `DATA/`, lee certificado desde `CERT/`, genera XML UBL 2.1, firma, envia. Diseñado para medianos/pequenios contribuyentes.
 
-**Limitaciones documentadas y reales (lo que dice Christian)**:
+**Limitaciones documentadas y reales (segun operadores con experiencia)**:
 - Java 8u202 obligatorio (versiones modernas rompen). JDK 1.8+ teorico, en practica solo 8u202.
 - Sin auth (cualquiera con acceso al folder puede emitir).
 - Lentisimo: arranque ~10s, emision ~3-8s por documento.
@@ -87,7 +87,7 @@ App Java gratuita oficial de SUNAT (`cpe.sunat.gob.pe/sistema_emision/facturador
 - Sin API: la integracion es por archivos en disco (`DATA/IN/`, `DATA/OUT/`, `DATA/RECHAZO/`).
 - Sin soporte multi-empresa real (un proceso por RUC).
 - Configuracion en `.properties` con flags ocultos.
-- No hace garbage collecting (Christian dixit).
+- No hace garbage collecting (reporte de operadores).
 - Documentacion: PDFs con manual de instalacion + estructura de archivo plano. Cero docs para devs.
 
 **Lo que SI hace bien**: gratis, oficial, no necesita acreditacion adicional, todos los CPE soportados (incluyendo guia de remision desde 2024), valida y firma localmente antes de enviar.
@@ -132,7 +132,7 @@ App Java gratuita oficial de SUNAT (`cpe.sunat.gob.pe/sistema_emision/facturador
 - Mas focus en **POS retail** (tiendas fisicas) que en API. Software all-in-one con integracion contable.
 - Pricing: ~S/100-300/mes segun plan
 - Tiene API pero documentacion enfocada a partners de retail, no a developers/agents
-- No relevante para target Christian
+- No relevante para el target de este wrapper
 
 ### Defontana (ERP)
 
@@ -203,7 +203,7 @@ Sintetizado de stackoverflow/foros/blog posts:
 
 Lo que falta en TODO el ecosystem actual:
 
-| Capability | Nubefact | Apisperu | Facturador SUNAT | sunat-cpe-api (lo que Christian podria hacer) |
+| Capability | Nubefact | Apisperu | Facturador SUNAT | sunat-cpe-api (target de este wrapper) |
 |------------|----------|----------|------------------|-----------------------------------------------|
 | `--json` in/out | parcial | si | NO | si |
 | Schema introspection (`schema invoice`) | NO | NO | NO | si |
@@ -241,7 +241,7 @@ Lo que falta en TODO el ecosystem actual:
 
 ## Screenshots / References
 
-No se tomaron screenshots — Phase 1 fue research-only por restriccion de tiempo (modo full-auto, 30min). Si Christian quiere profundizar en UI del Facturador o de Nubefact, segunda pasada con `agent-browser`.
+No se tomaron screenshots — Phase 1 fue research-only por restriccion de tiempo (modo full-auto, 30min). Si se quiere profundizar en UI del Facturador o de Nubefact, segunda pasada con `agent-browser`.
 
 ## Sources
 
@@ -313,7 +313,7 @@ Toda empresa peruana con RUC 20 esta obligada a emitir CPE electronico. Las opci
 **Kill criteria**:
 - Si SUNAT migra a REST + OAuth en los proximos 12 meses, el wrapper SOAP pierde valor (poco probable, pero check).
 - Si Greenter saca version Node oficial con masa critica, mejor contribuir alli.
-- Si Christian decide que el target real es **OSS lib + paid API hosting** (modelo Greenter + Lycet), el shape cambia hacia "lib + API saas".
+- Si el operador decide que el target real es **OSS lib + paid API hosting** (modelo Greenter + Lycet), el shape cambia hacia "lib + API saas".
 
 ## Command Surface
 
@@ -530,7 +530,7 @@ curl http://localhost:4848/v1/factura/emit -d @invoice.json
 
 | Driver | Cost | Uso |
 |--------|------|-----|
-| `facturador` | gratis (Java oficial) | Wrap del Facturador SUNAT containerizado (lo que Christian ya tiene) |
+| `facturador` | gratis (Java oficial) | Wrap del Facturador SUNAT containerizado (existing operator wrappers) |
 | `sunat-direct` | gratis (SOAP directo) | Cliente SOAP nativo TypeScript a `e-factura.sunat.gob.pe`. Sin Java, sin Facturador. Necesita firma XAdES-BES propia. |
 | `nubefact` | S/70/mes | Apunta a API Nubefact si el cliente prefiere OSE acreditado |
 | `apisperu` | S/0-X/mes | Apunta a API Apisperu |
@@ -564,14 +564,14 @@ Selectable via `cpe driver set <name>` o env `CPE_DRIVER`. Cambia el backend, NO
 2. **PFX vs PEM**: el Facturador acepta PFX (PKCS#12). El driver sunat-direct podria aceptar ambos.
 3. **Catalogos SUNAT**: ¿hay endpoint para descargarlos automaticamente o hay que parsear los Excels publicados? — Parece que hay que mantener cache local actualizado manualmente.
 4. **Retencion/Percepcion**: schemas y validaciones especificas, no urgent para MVP.
-5. **Modelo de monetizacion** (de Christian): ¿OSS lib gratuita + API saas hosted? ¿Cobrar por driver Nubefact/Apisperu como "wrapper"? ¿Proporcionar OSS y monetizar soporte? Decision de Christian, no del shape.
-6. **Nombre real**: `sunat-cpe-api` es working name. Christian podria llamarlo `cpe.dev`, `facele-api`, `peru-invoice`, `cpe-cli`. El shape no depende del nombre.
-7. **Distribucion**: npm (`@christian/sunat-cpe-api`)? GitHub releases con binarios? Docker image? — Las tres, en ese orden.
+5. **Modelo de monetizacion**: ¿OSS lib gratuita + API saas hosted? ¿Cobrar por driver Nubefact/Apisperu como "wrapper"? ¿Proporcionar OSS y monetizar soporte? Decision del operador, no del shape.
+6. **Nombre real**: `sunat-cpe-api` es working name. Podria llamarse `cpe.dev`, `facele-api`, `peru-invoice`, `cpe-cli`. El shape no depende del nombre.
+7. **Distribucion**: npm? GitHub releases con binarios? Docker image? — Las tres, en ese orden.
 8. **MCP server features**: ¿incluir tools para read-only catalogos directamente? Si.
 
 ## Diferenciacion vs sunat-cli (Hunter)
 
-| Eje | sunat-cli (Hunter) | sunat-cpe-api (Christian) |
+| Eje | sunat-cli (Hunter) | sunat-cpe-api (target wrapper) |
 |-----|--------------------|---------------------------|
 | Audiencia | Personas naturales (RUC 10) | Empresas (RUC 20) |
 | Documentos | RHE (recibo honorarios), F616 (PDT 4ta), Anual | Factura, Boleta, NC, ND, Guia, RET, PERC |
@@ -582,7 +582,7 @@ Selectable via `cpe driver set <name>` o env `CPE_DRIVER`. Cambia el backend, NO
 | Stack tipico cliente | freelancer Peru | empresa con ERP / fintech / app que factura |
 | Co-existencia | Complementarios. Mismo "agent-first SUNAT" pero target distinto. | |
 
-Pueden compartir: catalogos SUNAT cacheados, validador RUC publico, schema introspection pattern, audit JSONL format. Si Christian + Hunter quieren, salen de un monorepo `@crafter/sunat-*` con `sunat-shared` como base. **Decision de ambos**, no del shape.
+Pueden compartir: catalogos SUNAT cacheados, validador RUC publico, schema introspection pattern, audit JSONL format. Si las partes quieren, salen de un monorepo `@crafter/sunat-*` con `sunat-shared` como base. **Decision de ambos**, no del shape.
 
 ## Estimacion concreta MVP (6 weeks)
 
@@ -650,7 +650,7 @@ sunat-cpe-api/
 │   │   └── void-flow.ts
 │   ├── drivers/                  # backend abstraction
 │   │   ├── types.ts              # interface CpeDriver
-│   │   ├── facturador.ts         # wraps Christian's containerized Facturador
+│   │   ├── facturador.ts         # wraps containerized Facturador (operator-provided)
 │   │   ├── sunat-direct.ts       # native SOAP client
 │   │   ├── nubefact.ts
 │   │   ├── apisperu.ts
@@ -823,7 +823,7 @@ Standard CS biome config (single quotes, 2 spaces, trailing comma, ordered impor
 
 | Driver | Auth |
 |--------|------|
-| `facturador` | Lee `~/.cpe/certs/{ruc}.pfx` + clave SOL via env. Spawnea Facturador Java (path configurable) o llama API del container Christian. |
+| `facturador` | Lee `~/.cpe/certs/{ruc}.pfx` + clave SOL via env. Spawnea Facturador Java (path configurable) o llama API del container del operador. |
 | `sunat-direct` | WS-Security UsernameToken con RUC+user+pwd + cert para firma XAdES |
 | `nubefact` | API token de Nubefact en env `CPE_NUBEFACT_TOKEN` |
 | `apisperu` | JWT bearer en env `CPE_APISPERU_TOKEN`, refresh con login si expira |
@@ -940,10 +940,10 @@ jobs:
       - run: ./dist/cpe doctor --json
 ```
 
-## Open scaffold decisions (Christian decide)
+## Open scaffold decisions
 
 - License: MIT (max adopcion, sin lock-in) vs BSL (OSS pero con clausula comercial 4 anios) vs propietario.
-- Naming: `@crafter/sunat-cpe-api`, `@christian/cpe`, `@cpe.dev/cli`, `peru-cpe`. Vote depende de quien firma el repo.
+- Naming: `@crafter/sunat-cpe-api`, `@cpe.dev/cli`, `peru-cpe`. Vote depende de quien firma el repo.
 - Mono vs split: ¿`packages/core` + `packages/cli` + `packages/mcp`? Para MVP, mono. Split despues si hay traccion.
 - Servidor opcional: ¿`cpe serve` se compila en el mismo binario o sale como `@crafter/sunat-cpe-server` separado? Mismo binario para MVP.
 ---
