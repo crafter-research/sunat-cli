@@ -24,14 +24,14 @@ If you hit something that's not documented here, open an issue.
 | Driver | Factura | Boleta | NC/ND | Guia | Resumen Diario | Comunicación Baja |
 |--------|---------|--------|-------|------|----------------|-------------------|
 | `mock` | 🔬 | 🔬 | 🔬 | 🚧 | 🚧 | 🚧 |
-| `sunat-direct` | 🔬 | 🔬 (≥S/700 individual) | 🚧 | 🚧 | ⚠️ XML verified, send blocked by WAF on test RUC | ⚠️ XML verified, untested live |
+| `sunat-direct` | 🔬 | 🔬 (≥S/700 individual) | 🔬 | ⚠️ via REST `cpe gre` (PR #7) | ⚠️ XML verified, send blocked by WAF on test RUC | ⚠️ XML verified, untested live |
 | `facturador` | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 |
 | `nubefact` | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 |
 | `apisperu` | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 | 🚧 |
 
 ### Active limitations
 
-- **NC, ND** — driver methods throw "not yet implemented" errors. UBL builders shaped in `src/cpe/ubl/`, signer + SOAP infra reusable. Estimated 1 day each. **Future PR**.
+- **NC, ND** — ✅ shipped in PR #9 as `sunat cpe nc emit` and `sunat cpe nd emit` (sunat-direct driver). UBL builders for `CreditNote-2` / `DebitNote-2` schemas, full validation against Catálogo 09 (NC) and Catálogo 10 (ND), reuses XAdES signer + SOAP `sendBill` from PR #1. **Verified end-to-end against SUNAT beta 2026-04-29** (FC01-555 and FD01-777 both `cdrCode=0` Aceptado).
 - **Guía de Remisión Electrónica (GRE)** — ✅ shipped in PR #7 as `sunat cpe gre emit|status` (REST OAuth, NOT SOAP). Reuses XAdES signer. **However**:
   - ⚠️ Untested live (needs SUNAT_GRE_CLIENT_ID/SECRET from SOL menu URI = "GRE Emisión de Comprobantes")
   - 🚧 Only modTraslado=02 (transporte privado, emisor moves goods). Modal 01 (transporte público / carrier party) → next PR
@@ -50,6 +50,8 @@ If you hit something that's not documented here, open an issue.
 
 - ✅ `cpe factura emit --driver sunat-direct` → `cdrCode=0` Aceptado
 - ✅ `cpe boleta emit --driver sunat-direct` (≥S/700) → `cdrCode=0` Aceptado
+- ✅ `cpe nc emit --driver sunat-direct` → `cdrCode=0` Aceptado (FC01-555, PR #9)
+- ✅ `cpe nd emit --driver sunat-direct` → `cdrCode=0` Aceptado (FD01-777, PR #9)
 - ✅ Idempotency cache (re-emit same serie+numero returns cached CDR)
 
 ---

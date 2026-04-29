@@ -308,10 +308,38 @@ export function createCpeCommand(): Command {
 
 	nd
 		.command("emit")
-		.description("Emit a Nota de Debito. T2. STUB.")
+		.description("Emit a Nota de Debito. T2.")
 		.requiredOption("--params <json>")
+		.option("--dry-run")
 		.option("--yes")
-		.action((_, cmd) => notImplemented("nd emit", getFormat(cmd)));
+		.action(async (opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const input = parseNotaInput(opts.params);
+				const driver = getDriver(getDriverName(cmd));
+
+				if (opts.dryRun) {
+					const preview = await driver.previewFactura(input);
+					output(format, { json: { dryRun: true, ...preview } });
+					return;
+				}
+				if (!opts.yes) {
+					outputError("T2 emission requires --yes flag.", format);
+					return;
+				}
+
+				const result = await driver.emitNotaDebito(input);
+				audit({
+					command: "cpe nd emit",
+					args: input as unknown as Record<string, unknown>,
+					result: "success",
+					details: result as unknown as Record<string, unknown>,
+				});
+				output(format, { json: { success: true, ...result } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
 
 	const gre = cpe.command("gre").description("Guía de Remisión Electrónica (CPE tipo 09) — REST OAuth, NOT SOAP. T0/T2.");
 	cpe
