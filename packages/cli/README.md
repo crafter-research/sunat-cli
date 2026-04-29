@@ -18,6 +18,10 @@ bun add -g @crafter/sunat-cli
 
 ## Usage
 
+Two namespaces, by RUC type:
+
+### Personas naturales (RUC 10) — RHE + F616
+
 ```bash
 sunat-cli login                          # Auth (no CAPTCHA)
 sunat-cli schema rhe                     # Introspect fields
@@ -26,6 +30,46 @@ sunat-cli rhe emit --batch ./data.csv    # Batch emit
 sunat-cli f616 declare --dry-run --json '{"periodo":"2025-03"}'
 sunat-cli api token --output json        # OAuth2 token
 ```
+
+### Empresas (RUC 20) — CPE
+
+For empresas emitting Factura, Boleta, NC, ND, Guia. Pluggable backend
+via `--driver mock|sunat-direct|facturador|nubefact|apisperu`.
+
+| Driver | Status | Notes |
+|--------|--------|-------|
+| `mock` | ✅ wired | Default. In-memory, deterministic. Use for dev/agents/tests. |
+| `sunat-direct` | ✅ verified end-to-end | Native SOAP + XAdES-BES TS. Factura only. Hits `e-beta.sunat.gob.pe` directly. CDR responseCode=0 (Aceptado) confirmed 2026-04-29. |
+| `facturador` | shaped | Will wrap containerized Java Facturador SUNAT. |
+| `nubefact`, `apisperu` | shaped | OSE/PSE adapters. |
+
+```bash
+# Mock (no setup)
+sunat-cli cpe doctor
+sunat-cli cpe factura preview --params '{...}'
+sunat-cli cpe factura emit --params '...' --yes
+
+# sunat-direct (real SUNAT beta or prod)
+sunat-cli cpe profile set --name beta --ruc 20131312955 \
+  --razon-social "ACME SAC" --mode beta --cert-path /abs/cert.pfx \
+  --sol-usuario MODATOS1 --default
+export CPE_PROFILE=beta CPE_CERT_PASSWORD=... CPE_SOL_PASSWORD=...
+sunat-cli cpe --driver sunat-direct doctor
+sunat-cli cpe --driver sunat-direct factura emit --params '...' --yes
+
+# Quick smoke test against SUNAT beta with public Greenter test cert
+bun smoke:sunat
+```
+
+Trust ladder: T0 read/preview, T2 emit (requires `--yes`), T3 void (requires
+`--intent-token` from `cpe void prepare`).
+
+Idempotency: every emit is keyed by `RUC-tipo-serie-numero`. Re-running with the
+same key returns the cached CDR without re-submitting to SUNAT. Audit log lives
+in `~/.sunat/audit/YYYY-MM-DD.jsonl` (two-phase: pending → success/error).
+
+Full shaping rationale + recon dossier + SUNAT debugging notes:
+`src/commands/cpe/RESEARCH.md`.
 
 ## Design
 

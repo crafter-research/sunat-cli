@@ -29,13 +29,26 @@
 	},
 	"scripts": {
 		"dev": "bun run bin/sunat.ts",
-		"check": "biome check --write ."
+		"check": "biome check --write .",
+		"test": "bun test",
+		"test:unit": "bun test tests/unit",
+		"test:e2e": "bun test tests/e2e",
+		"smoke:sunat": "bash scripts/smoke-sunat.sh"
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
-		"commander": "^14.0.3"
+		"@xmldom/xmldom": "^0.9.10",
+		"commander": "^14.0.3",
+		"fast-xml-parser": "^5.7.2",
+		"node-forge": "^1.4.0",
+		"xml-crypto": "^6.1.2",
+		"yauzl": "^3.3.0",
+		"yazl": "^3.3.1"
 	},
 	"devDependencies": {
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"@types/node-forge": "^1.3.14",
+		"@types/yauzl": "^2.10.3",
+		"@types/yazl": "^3.3.1"
 	}
 }

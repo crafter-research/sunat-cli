@@ -1,0 +1,34 @@
+{
+	"command": "cpe boleta emit",
+	"description": "Emit a Boleta de Venta Electronica (CPE tipo 03) for B2C consumer sales. Trust level T2.",
+	"audience": "Empresa emisora con RUC 20 vendiendo a consumidor final.",
+	"fields": {
+		"receptor": {
+			"type": "object",
+			"required": false,
+			"description": "For boletas <S/700, receptor can be omitted ('Cliente Varios').",
+			"properties": {
+				"tipoDoc": { "type": "enum", "values": ["1", "0", "4", "7"], "description": "1=DNI most common, 0=No domiciliado" },
+				"numDoc": { "type": "string" },
+				"rznSocial": { "type": "string" }
+			}
+		},
+		"items": { "type": "array", "required": true, "description": "See 'cpe schema cpe.factura' for item shape." },
+		"totales": { "type": "object", "required": true },
+		"moneda": { "type": "enum", "values": ["PEN", "USD"], "default": "PEN" },
+		"serie": { "type": "string", "pattern": "^B[0-9A-Z]{3}$", "description": "Boleta serie, e.g. B001" },
+		"numero": { "type": "integer", "min": 1 },
+		"fechaEmision": { "type": "date", "format": "YYYY-MM-DD", "default": "today" }
+	},
+	"flags": {
+		"--dry-run": "Preview only",
+		"--yes": "Skip confirmation",
+		"--driver <name>": "Override active driver"
+	},
+	"trust": "T2",
+	"safety": [
+		"Boletas are sent via daily summary (resumen diario) the day after emission, not individually.",
+		"Use 'cpe resumen send --fecha YYYY-MM-DD' to ship the day's batch."
+	],
+	"status": "STUB — driver=mock works."
+}
