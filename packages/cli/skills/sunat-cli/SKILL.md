@@ -266,7 +266,12 @@ sunat sire ventas propuesta --periodo 202404 --wait --out propuesta-202404.zip
 # 4a. Accept as-is
 sunat sire ventas aceptar --periodo 202404 --yes
 
-# 4b. Or replace with your own (T2): use --reemplazar (shaped, see RESEARCH)
+# 4b. Or replace SUNAT's proposal with your own .zip (T2, TUS.IO upload)
+sunat sire ventas reemplazar --periodo 202404 --file mi-propuesta.zip --yes --wait
+
+# 4c. Or import additional comprobantes not in the proposal
+sunat sire ventas importar --periodo 202404 --file extra.zip --tipo propuesta --yes --wait
+# --tipo: propuesta | preliminar | ajustes | ajustes-anteriores
 
 # 5. Download the final RVIE PDF/TXT once accepted
 sunat sire ventas descargar --periodo 202404 --wait --out rvie-202404.zip

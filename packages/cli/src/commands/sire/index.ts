@@ -1,9 +1,12 @@
 import { Command } from "commander";
 import { writeFileSync } from "fs";
 import { audit } from "../../data/audit.ts";
+import { readFileSync as readFile, statSync as fileStat } from "fs";
+import { basename } from "path";
 import {
 	COD_LIBRO,
 	type CodLibro,
+	type SireUploadKind,
 	aceptarPropuestaRvie,
 	consultarTicket,
 	descargarArchivo,
@@ -12,6 +15,7 @@ import {
 	listarPeriodos,
 	pollTicket,
 	sireCredentials,
+	sireUpload,
 } from "../../sunat-rest/sire.ts";
 import { output, outputError } from "../../utils/output.ts";
 
@@ -181,6 +185,150 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}
 		});
+
+	const uploadCommand = sub
+		.command("reemplazar")
+		.description(
+			"Reemplazar la propuesta SUNAT con un archivo .zip propio (TUS.IO upload, async). T2.",
+		)
+		.requiredOption("--periodo <YYYYMM>", "Periodo tributario, e.g. 202404")
+		.requiredOption("--file <path>", "Path to the .zip file to upload (must contain a .txt per SUNAT spec)")
+		.option("--filename <name>", "Override filename announced to SUNAT (defaults to basename of --file)")
+		.option("--yes", "Skip T2 confirmation prompt")
+		.option("--wait", "After upload, poll the resulting ticket until completed/error")
+		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
+		.option("--chunk-size <bytes>", "TUS chunk size (default 8388608 = 8MB)", "8388608")
+		.action(async (opts, cmd) => uploadAction(cmd, opts, "reemplazoPropuesta"));
+
+	sub
+		.command("importar")
+		.description(
+			"Importar nuevos comprobantes (TUS.IO upload, async). T2. " +
+				"--tipo controls the destination: propuesta | preliminar | ajustes | ajustes-anteriores",
+		)
+		.requiredOption("--periodo <YYYYMM>")
+		.requiredOption("--file <path>", "Path to the .zip file to upload")
+		.requiredOption(
+			"--tipo <kind>",
+			"propuesta | preliminar | ajustes | ajustes-anteriores",
+		)
+		.option("--filename <name>")
+		.option("--yes")
+		.option("--wait")
+		.option("--timeout <ms>", "Polling timeout", "300000")
+		.option("--chunk-size <bytes>", "TUS chunk size", "8388608")
+		.action(async (opts, cmd) => {
+			const tipoMap: Record<string, SireUploadKind> = {
+				propuesta: "importarPropuestaCp",
+				preliminar: "importarPreliminarCp",
+				ajustes: "ajustesPosteriores",
+				"ajustes-anteriores": "ajustesPosterioresAnteriores",
+			};
+			const kind = tipoMap[opts.tipo];
+			if (!kind) {
+				outputError(`--tipo must be one of: ${Object.keys(tipoMap).join(", ")}`, getFormat(cmd));
+				return;
+			}
+			await uploadAction(cmd, opts, kind);
+		});
+
+	async function uploadAction(
+		cmd: Command,
+		opts: { periodo: string; file: string; filename?: string; yes?: boolean; wait?: boolean; timeout: string; chunkSize: string },
+		kind: SireUploadKind,
+	): Promise<void> {
+		const format = getFormat(cmd);
+		try {
+			if (!opts.yes) {
+				outputError("T2 — requires --yes. This uploads a .zip to SUNAT and modifies your SIRE state.", format);
+				return;
+			}
+
+			const stat = fileStat(opts.file);
+			if (!stat.isFile()) {
+				outputError(`--file must be a regular file: ${opts.file}`, format);
+				return;
+			}
+			if (stat.size === 0) {
+				outputError(`--file is empty: ${opts.file}`, format);
+				return;
+			}
+			if (stat.size > 6 * 1024 * 1024 * 1024) {
+				outputError(`--file exceeds SUNAT 6GB limit: ${stat.size} bytes`, format);
+				return;
+			}
+
+			const data = readFile(opts.file);
+			const filename = opts.filename || basename(opts.file);
+			const creds = resolveSireCreds();
+
+			let lastLog = 0;
+			const result = await sireUpload(
+				{
+					kind,
+					codLibro,
+					perTributario: opts.periodo,
+					filename,
+					data,
+					chunkSize: Number.parseInt(opts.chunkSize, 10),
+					onProgress: (uploaded, total) => {
+						const now = Date.now();
+						if (format !== "json" && now - lastLog > 1000) {
+							const pct = Math.round((uploaded / total) * 100);
+							const mb = (uploaded / 1024 / 1024).toFixed(1);
+							const totalMb = (total / 1024 / 1024).toFixed(1);
+							process.stderr.write(`\r  uploading: ${mb}/${totalMb} MB (${pct}%)`);
+							lastLog = now;
+						}
+					},
+				},
+				creds,
+			);
+			if (format !== "json") process.stderr.write("\n");
+
+			audit({
+				command: `sire ${libroAlias} ${kind === "reemplazoPropuesta" ? "reemplazar" : "importar"}`,
+				args: { periodo: opts.periodo, file: opts.file, kind },
+				result: "success",
+				details: { numTicket: result.numTicket, bytesSent: result.bytesSent },
+			});
+
+			if (!opts.wait || !result.numTicket) {
+				output(format, {
+					json: {
+						uploaded: true,
+						bytesSent: result.bytesSent,
+						numTicket: result.numTicket || null,
+						uploadUrl: result.uploadUrl,
+						hint: result.numTicket
+							? `Poll status with: sunat sire ${libroAlias} ticket --num ${result.numTicket}`
+							: "No ticket extracted from upload location. Inspect uploadUrl + run consultaestadotickets manually.",
+					},
+				});
+				return;
+			}
+
+			const polled = await pollTicket({
+				creds,
+				numTicket: result.numTicket,
+				timeoutMs: Number.parseInt(opts.timeout, 10),
+			});
+			output(format, {
+				json: {
+					uploaded: true,
+					bytesSent: result.bytesSent,
+					numTicket: result.numTicket,
+					uploadUrl: result.uploadUrl,
+					...polled,
+				},
+			});
+		} catch (err) {
+			outputError(err instanceof Error ? err.message : String(err), format);
+		}
+	}
+
+	// Suppress unused-var warning for uploadCommand (commander chains side-effects).
+	void uploadCommand;
 
 	if (libroAlias === "ventas") {
 		sub
