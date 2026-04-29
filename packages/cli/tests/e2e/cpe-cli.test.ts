@@ -221,18 +221,62 @@ describe("sunat cpe — E2E", () => {
 		expect(combined).toContain("not implemented");
 	});
 
-	test("cpe resumen send returns shaped-not-implemented stub error", async () => {
+	test("cpe resumen send requires --fecha flag", async () => {
 		const result = await runCli(["-o", "json", "cpe", "resumen", "send"]);
 		expect(result.exitCode).toBe(1);
 		const combined = result.stdout + result.stderr;
-		expect(combined).toContain("not implemented");
+		expect(combined).toContain("--fecha");
 	});
 
-	test("cpe baja send returns shaped-not-implemented stub error", async () => {
+	test("cpe resumen send without --yes errors clearly (T2 gate)", async () => {
+		const result = await runCli(["-o", "json", "cpe", "resumen", "send", "--fecha", "2026-04-29"]);
+		expect(result.exitCode).toBe(1);
+		const combined = result.stdout + result.stderr;
+		expect(combined).toContain("--yes");
+	});
+
+	test("cpe resumen status requires --ticket flag", async () => {
+		const result = await runCli(["-o", "json", "cpe", "resumen", "status"]);
+		expect(result.exitCode).toBe(1);
+		const combined = result.stdout + result.stderr;
+		expect(combined).toContain("--ticket");
+	});
+
+	test("cpe baja send requires --params flag", async () => {
 		const result = await runCli(["-o", "json", "cpe", "baja", "send"]);
 		expect(result.exitCode).toBe(1);
 		const combined = result.stdout + result.stderr;
-		expect(combined).toContain("not implemented");
+		expect(combined).toContain("--params");
+	});
+
+	test("cpe baja send without --yes errors clearly (T2 gate)", async () => {
+		const result = await runCli([
+			"-o",
+			"json",
+			"cpe",
+			"baja",
+			"send",
+			"--params",
+			'{"fechaEmisionDocs":"2026-04-29","entries":[{"tipoDoc":"03","serie":"B001","numero":1,"motivo":"x"}]}',
+		]);
+		expect(result.exitCode).toBe(1);
+		const combined = result.stdout + result.stderr;
+		expect(combined).toContain("--yes");
+	});
+
+	test("cpe boleta queue rejects boletas >= S/700 (must use emit individual)", async () => {
+		const params = JSON.stringify({
+			receptor: { tipoDoc: "1", numDoc: "12345678", rznSocial: "X" },
+			items: [{ codigo: "P", descripcion: "X", cantidad: 1, unidad: "NIU", valorUnitario: 1000, igvPct: 18 }],
+			totales: { valorVenta: 1000, igv: 180, total: 1180 },
+			serie: "B001",
+			numero: 999,
+			fechaEmision: new Date().toISOString().split("T")[0],
+		});
+		const result = await runCli(["-o", "json", "cpe", "boleta", "queue", "--params", params]);
+		expect(result.exitCode).toBe(1);
+		const combined = result.stdout + result.stderr;
+		expect(combined).toContain("S/700");
 	});
 
 	test("cpe cdr get returns shaped-not-implemented stub error", async () => {

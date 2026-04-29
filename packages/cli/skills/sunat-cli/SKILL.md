@@ -119,9 +119,47 @@ sunat cpe nc emit --params '...' --yes
 
 **Drivers** (`--driver <name>` or `$CPE_DRIVER`):
 - `mock` (default): in-memory, deterministic, no network. Use for dev/agents/tests.
-- `sunat-direct`: native SOAP + XAdES-BES TS client. **Factura only** as of v0.2.0. Hits SUNAT beta or prod directly. No middleware fee. Requires X.509 cert (PFX) + Clave SOL.
+- `sunat-direct`: native SOAP + XAdES-BES TS client. **Factura + Boleta + Resumen + Baja** as of v0.3.0. Hits SUNAT beta or prod directly. No middleware fee. Requires X.509 cert (PFX) + Clave SOL.
 - `facturador`: SHAPED, NOT IMPLEMENTED. Will wrap a containerized Facturador SUNAT (Java).
 - `nubefact`, `apisperu`: SHAPED, NOT IMPLEMENTED. Adapters to existing PSE/OSE APIs.
+
+### Boleta de Venta (CPE tipo 03)
+
+Threshold S/700 dictates path:
+- **>= S/700**: individual via `cpe boleta emit` (sendBill, sync, returns CDR immediately)
+- **< S/700**: queue locally, then daily summary
+
+```bash
+# Individual boleta (>= S/700) — same flow as factura
+sunat cpe boleta emit --params '{...}' --yes
+
+# Boleta < S/700 — queue first
+sunat cpe boleta queue --params '{...}'
+sunat cpe boleta queue:list                   # list all pending dates
+sunat cpe boleta queue:list --fecha 2026-04-29 # entries for one date
+
+# At end of day (or next day, plazo 7 days), send the resumen
+sunat cpe --driver sunat-direct resumen send --fecha 2026-04-29 --correlativo 1 --yes --wait
+# Returns ticket; --wait polls getStatus until CDR (max 5min)
+
+# Or fire-and-forget
+sunat cpe --driver sunat-direct resumen send --fecha 2026-04-29 --correlativo 1 --yes
+sunat cpe --driver sunat-direct resumen status --ticket 1234567890123 --wait
+```
+
+### Comunicación de Baja (anular CPE post-emisión)
+
+Plazo 7 días desde fechaEmision del documento a anular.
+
+```bash
+sunat cpe --driver sunat-direct baja send --params '{
+  "fechaEmisionDocs": "2026-04-29",
+  "entries": [
+    { "tipoDoc": "03", "serie": "B001", "numero": 100, "motivo": "Anulacion por error en datos" }
+  ]
+}' --yes --wait
+# Returns ticket; --wait polls until CDR
+```
 
 ### Setting up sunat-direct (real SUNAT submission)
 

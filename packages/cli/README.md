@@ -39,7 +39,7 @@ via `--driver mock|sunat-direct|facturador|nubefact|apisperu`.
 | Driver | Status | Notes |
 |--------|--------|-------|
 | `mock` | ✅ wired | Default. In-memory, deterministic. Use for dev/agents/tests. |
-| `sunat-direct` | ✅ verified end-to-end | Native SOAP + XAdES-BES TS. Factura only. Hits `e-beta.sunat.gob.pe` directly. CDR responseCode=0 (Aceptado) confirmed 2026-04-29. |
+| `sunat-direct` | ✅ verified end-to-end | Native SOAP + XAdES-BES TS. Factura + Boleta (individual + resumen diario) + Comunicación de Baja. Hits `e-beta.sunat.gob.pe` directly. CDR responseCode=0 (Aceptado) confirmed 2026-04-29. |
 | `facturador` | shaped | Will wrap containerized Java Facturador SUNAT. |
 | `nubefact`, `apisperu` | shaped | OSE/PSE adapters. |
 
@@ -57,8 +57,20 @@ export CPE_PROFILE=beta CPE_CERT_PASSWORD=... CPE_SOL_PASSWORD=...
 sunat-cli cpe --driver sunat-direct doctor
 sunat-cli cpe --driver sunat-direct factura emit --params '...' --yes
 
-# Quick smoke test against SUNAT beta with public Greenter test cert
-bun smoke:sunat
+# Quick smoke tests against SUNAT beta with public Greenter test cert
+bun smoke:sunat   # Factura individual end-to-end
+bun smoke:boleta  # Boleta >= S/700 individual end-to-end
+
+# Boleta workflow (>= S/700 individual, < S/700 daily summary)
+sunat-cli cpe boleta emit --params '...' --yes
+sunat-cli cpe boleta queue --params '...'
+sunat-cli cpe --driver sunat-direct resumen send --fecha 2026-04-29 --yes --wait
+
+# Comunicación de Baja (anular CPE)
+sunat-cli cpe --driver sunat-direct baja send --params '{
+  "fechaEmisionDocs":"2026-04-29",
+  "entries":[{"tipoDoc":"03","serie":"B001","numero":100,"motivo":"x"}]
+}' --yes --wait
 ```
 
 Trust ladder: T0 read/preview, T2 emit (requires `--yes`), T3 void (requires

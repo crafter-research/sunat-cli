@@ -86,6 +86,62 @@ export interface CpeResult {
 	ts: string;
 }
 
+export interface ResumenSubmitInput {
+	fechaEmisionBoletas: string;
+	fechaResumen: string;
+	correlativo: number;
+	entries: Array<{
+		tipoDoc: "03" | "07" | "08";
+		serie: string;
+		numero: number;
+		receptor?: { tipoDoc: string; numDoc: string };
+		totales: { valorVenta: number; igv: number; total: number };
+		moneda: "PEN" | "USD";
+		status?: "1" | "2" | "3";
+	}>;
+}
+
+export interface ResumenSubmitResult {
+	id: string;
+	ticket: string;
+	status: "submitted" | "accepted" | "rejected" | "processing";
+	cdrCode?: string;
+	cdrDesc?: string;
+	xml?: string;
+	ts: string;
+}
+
+export interface ResumenStatusResult {
+	ticket: string;
+	state: "processing" | "completed" | "rejected";
+	statusCode: string;
+	cdrCode?: string;
+	cdrDesc?: string;
+	notes?: string[];
+}
+
+export interface BajaSubmitInput {
+	fechaEmisionDocs: string;
+	fechaComunicacion: string;
+	correlativo: number;
+	entries: Array<{
+		tipoDoc: "01" | "03" | "07" | "08";
+		serie: string;
+		numero: number;
+		motivo: string;
+	}>;
+}
+
+export interface BajaSubmitResult {
+	id: string;
+	ticket: string;
+	status: "submitted" | "accepted" | "rejected" | "processing";
+	cdrCode?: string;
+	cdrDesc?: string;
+	xml?: string;
+	ts: string;
+}
+
 export interface PreviewResult {
 	xml: string;
 	hash: string;
@@ -97,8 +153,12 @@ export interface CpeDriver {
 	info(): DriverInfo;
 	doctor(): Promise<DoctorReport>;
 	previewFactura(input: FacturaInput): Promise<PreviewResult>;
+	previewBoleta(input: BoletaInput): Promise<PreviewResult>;
 	emitFactura(input: FacturaInput): Promise<CpeResult>;
 	emitBoleta(input: BoletaInput): Promise<CpeResult>;
 	emitNotaCredito(input: NotaCreditoInput): Promise<CpeResult>;
 	emitNotaDebito(input: NotaDebitoInput): Promise<CpeResult>;
+	submitResumen?(input: ResumenSubmitInput): Promise<ResumenSubmitResult>;
+	getResumenStatus?(ticket: string): Promise<ResumenStatusResult>;
+	submitBaja?(input: BajaSubmitInput): Promise<BajaSubmitResult>;
 }
