@@ -1,5 +1,6 @@
 {
 	"name": "sunat-cli-monorepo",
 	"private": true,
-	"workspaces": ["packages/*"]
+	"workspaces": ["packages/*"],
+	"packageManager": "bun@1.3.11"
 }

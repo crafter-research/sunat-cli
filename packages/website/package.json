@@ -9,6 +9,7 @@
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^5.0.2",
+		"@vercel/analytics": "^2.0.1",
 		"astro": "^6.0.8",
 		"shiki": "^4.0.2"
 	},
