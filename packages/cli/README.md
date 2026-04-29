@@ -76,7 +76,22 @@ sunat-cli cpe gre emit --params '{
 sunat-cli cpe gre status --ticket 20240100000001 --wait
 ```
 
+### Tipo de Cambio oficial SUNAT (USD/PEN)
+
+```bash
+sunat-cli tipo-cambio                       # today's USD/PEN
+sunat-cli tipo-cambio --fecha 2026-04-15    # historical, immutable
+sunat-cli tipo-cambio cached --fecha 2026-04-15
+```
+
+Scrapes the SUNAT portal via agent-browser (WAF blocks direct fetch).
+Cached forever per date.
+
 ### Padrón Reducido del RUC (offline lookup, no auth)
+
+```bash
+sunat-cli padron ruc-online 20131312955   # single RUC via portal (no sync needed)
+```
 
 ```bash
 sunat-cli padron sync                  # ~370MB download, refreshes daily
