@@ -36,6 +36,7 @@
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
+		"@xmldom/xmldom": "^0.9.10",
 		"commander": "^14.0.3",
 		"fast-xml-parser": "^5.7.2",
 		"node-forge": "^1.4.0",

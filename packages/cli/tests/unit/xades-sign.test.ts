@@ -73,8 +73,8 @@ describe("XAdES-BES sign", () => {
 		const { xml } = signFacturaXml(unsigned, { pfxPath, pfxPassword: PFX_PASSWORD });
 		expect(xml).toContain("<ds:SignatureValue>");
 		expect(xml).toContain("<ds:DigestValue>");
-		expect(xml).toContain("<X509Certificate>");
-		expect(xml).toMatch(/<X509Certificate>[A-Za-z0-9+/=]+<\/X509Certificate>/);
+		expect(xml).toContain("X509Certificate>");
+		expect(xml).toMatch(/X509Certificate>[A-Za-z0-9+/=]+<\/(ds:)?X509Certificate>/);
 	});
 
 	test("signed XML uses RSA-SHA1 (SUNAT requirement)", () => {
