@@ -31,7 +31,15 @@ If you hit something that's not documented here, open an issue.
 
 ### Active limitations
 
-- **NC, ND, Guía de Remisión** — driver methods throw "not yet implemented" errors. UBL builders shaped in `src/cpe/ubl/`, signer + SOAP infra reusable. Estimated 1 day each. **Future PR**.
+- **NC, ND** — driver methods throw "not yet implemented" errors. UBL builders shaped in `src/cpe/ubl/`, signer + SOAP infra reusable. Estimated 1 day each. **Future PR**.
+- **Guía de Remisión Electrónica (GRE)** — ✅ shipped in PR #7 as `sunat cpe gre emit|status` (REST OAuth, NOT SOAP). Reuses XAdES signer. **However**:
+  - ⚠️ Untested live (needs SUNAT_GRE_CLIENT_ID/SECRET from SOL menu URI = "GRE Emisión de Comprobantes")
+  - 🚧 Only modTraslado=02 (transporte privado, emisor moves goods). Modal 01 (transporte público / carrier party) → next PR
+  - 🚧 No `BuyerCustomerParty` (when distinto del destinatario)
+  - 🚧 No `SellerSupplierParty` (tercero/proveedor)
+  - 🚧 No `AdditionalDocumentReference` (factura previa, etc)
+  - 🚧 GRE Transportista (tipo doc 31) — different schema, not implemented
+  - 🚧 Multiple choferes — schema accepts loop, only one supported in PR #7
 - **`sunat cpe void` (T3)** — intent-token flow shaped, command stubbed. Voiding is currently done via Comunicación de Baja (`sunat cpe baja send`) for boletas or NC for facturas. **Future PR**.
 - **Resumen Diario `sendSummary` against SUNAT beta** — XML structure 100% verified against Greenter twig template; unit tests cover all 14 structural assertions. **However**, the actual SUNAT beta nginx wrapper returns transient HTTP 401 on the `/sendSummary` path with the public test RUC `20000000001`. `sendBill` calls in the same window work fine. Hypothesis: rate-limit specific to the RC endpoint on the shared test RUC. **Production cert + RUC will not see this.** Documented in `src/commands/cpe/RESEARCH.md` appendix.
 - **Drivers `facturador`, `nubefact`, `apisperu`** — `getDriver()` returns a clear "shaped but not implemented" error. The `facturador` driver requires coordination with Christian Pasquel's containerized Java Facturador. The other two are PSE/OSE adapters; useful when the user wants to keep their existing OSE while gaining the CLI UX.

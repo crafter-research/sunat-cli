@@ -215,6 +215,54 @@ and prints the CDR. Useful for CI smoke tests and "does my install work?" checks
 
 Full shaping rationale: `src/commands/cpe/RESEARCH.md` in the repo.
 
+### Guía de Remisión Electrónica (REST OAuth)
+
+GRE is the SUNAT 2022 spec for tracking goods in transit (CPE tipo 09).
+Different from Factura/Boleta: REST API (not SOAP), DespatchAdvice schema
+(not Invoice), distinct OAuth credentials (URI = "GRE Emisión de Comprobantes"
+in SOL → Credenciales API SUNAT).
+
+Setup once:
+```bash
+# GRE-specific OAuth (separate from CPE consulta credentials)
+export SUNAT_GRE_CLIENT_ID=...
+export SUNAT_GRE_CLIENT_SECRET=...
+# Plus the same SOL creds used by sunat-direct
+export CPE_SOL_USUARIO=MODDATOS
+export CPE_SOL_PASSWORD='clave-sol'
+```
+
+```bash
+# Submit (sign + zip + base64 + POST + optional polling)
+sunat cpe gre emit --params '{
+  "tipoDoc": "09",
+  "serie": "T001",
+  "numero": 1,
+  "fechaEmision": "2026-04-29",
+  "destinatario": {"tipoDoc":"6","numDoc":"20100070970","rznSocial":"CLIENTE SAC"},
+  "envio": {
+    "codTraslado": "01",
+    "modTraslado": "02",
+    "fecTraslado": "2026-04-29",
+    "pesoTotal": 100, "undPesoTotal": "KGM", "numBultos": 2,
+    "chofer": {"tipoDoc":"1","nroDoc":"12345678","nombres":"JUAN","apellidos":"PEREZ","licencia":"Q12345678"},
+    "vehiculo": {"placa": "ABC-123"},
+    "partida": {"ubigeo":"150101","direccion":"AV LIMA 123"},
+    "llegada": {"ubigeo":"150114","direccion":"AV ALIVERTI 456"}
+  },
+  "items": [{"codigo":"P001","descripcion":"Caja cervezas","cantidad":10,"unidad":"NIU"}]
+}' --yes --wait
+
+# Independent status check
+sunat cpe gre status --ticket 20240100000001 --wait
+```
+
+Async response codes:
+- `0001` Aceptado
+- `0002` Anulado
+- `0003` Rechazado
+- `0098` En proceso (poll again)
+
 ### CPE Consulta Integrada (REST OAuth)
 
 Validate any CPE (yours or a vendor's) against SUNAT records. Useful for

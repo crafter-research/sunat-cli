@@ -214,11 +214,26 @@ describe("sunat cpe — E2E", () => {
 		expect(combined).toContain("not implemented");
 	});
 
-	test("cpe guia emit returns shaped-not-implemented stub error", async () => {
-		const result = await runCli(["-o", "json", "cpe", "guia", "emit"]);
+	test("cpe gre --help lists emit + status verbs", async () => {
+		const result = await runCli(["cpe", "gre", "--help"]);
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain("emit");
+		expect(result.stdout).toContain("status");
+		expect(result.stdout).toContain("REST");
+	});
+
+	test("cpe gre emit requires --params flag", async () => {
+		const result = await runCli(["-o", "json", "cpe", "gre", "emit"]);
 		expect(result.exitCode).toBe(1);
 		const combined = result.stdout + result.stderr;
-		expect(combined).toContain("not implemented");
+		expect(combined).toContain("--params");
+	});
+
+	test("cpe guia (legacy alias) prints redirect notice", async () => {
+		const result = await runCli(["-o", "json", "cpe", "guia"]);
+		expect(result.exitCode).toBe(1);
+		const combined = result.stdout + result.stderr;
+		expect(combined).toContain("cpe gre");
 	});
 
 	test("cpe resumen send requires --fecha flag", async () => {
