@@ -152,5 +152,31 @@ export function createPadronCommand(): Command {
 			}
 		});
 
+	padron
+		.command("ruc-online")
+		.description(
+			"Lookup a single RUC by driving the SUNAT portal via agent-browser " +
+				"(slow ~5-10s, no padrón sync needed). For batch use 'padron ruc/batch' instead. T0.",
+		)
+		.argument("<ruc>", "11-digit RUC")
+		.action(async (ruc, _opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				if (!/^\d{11}$/.test(ruc)) {
+					outputError(`Invalid RUC: '${ruc}'. Must be 11 digits.`, format);
+					return;
+				}
+				const { consultarRucPortal } = await import("../../sunat-rest/ruc-portal.ts");
+				const entry = await consultarRucPortal(ruc);
+				if (!entry) {
+					output(format, { json: { ruc, found: false, source: "sunat-portal" } });
+					return;
+				}
+				output(format, { json: { found: true, ...entry } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
 	return padron;
 }

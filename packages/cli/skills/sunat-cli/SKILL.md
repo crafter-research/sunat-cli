@@ -336,6 +336,27 @@ Polling: `--wait` polls getStatus with backoff (2s/4s/8s/16s/30s, max 5min).
 Without `--wait`, returns the ticket and you poll independently with
 `sunat sire {ventas|compras} ticket --num <id> [--wait]`.
 
+### Tipo de Cambio oficial SUNAT
+
+```bash
+sunat tipo-cambio                       # today's USD/PEN
+sunat tipo-cambio --fecha 2026-04-15    # historical (immutable)
+sunat tipo-cambio --force               # bypass cache
+sunat tipo-cambio cached --fecha 2026-04-15  # cache-only, no scrape
+```
+
+Scrapes the official SUNAT portal via agent-browser (WAF blocks direct
+fetch). Cached forever per date in `~/.sunat/cache/tipo-cambio.jsonl`
+since SUNAT TCs are immutable.
+
+### Padrón RUC online (single lookup, no padrón sync)
+
+```bash
+sunat padron ruc-online 20131312955   # ~5-10s, drives SUNAT portal via browser
+```
+
+For batch: always use `sunat padron ruc/batch` (offline padrón, instantaneous).
+
 ### Padrón Reducido del RUC (offline)
 
 Local copy of the SUNAT RUC registry. ~370MB ZIP, ~600MB TXT, ~3.5M entries.

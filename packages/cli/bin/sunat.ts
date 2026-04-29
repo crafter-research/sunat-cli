@@ -10,6 +10,7 @@ import { createLukeaCommand } from "../src/commands/lukea/index.ts";
 import { createCpeCommand } from "../src/commands/cpe/index.ts";
 import { createPadronCommand } from "../src/commands/padron/index.ts";
 import { createSireCommand } from "../src/commands/sire/index.ts";
+import { createTipoCambioCommand } from "../src/commands/tipo-cambio.ts";
 
 const program = new Command();
 
@@ -35,5 +36,6 @@ program.addCommand(createLukeaCommand());
 program.addCommand(createCpeCommand());
 program.addCommand(createPadronCommand());
 program.addCommand(createSireCommand());
+program.addCommand(createTipoCambioCommand());
 
 program.parse();

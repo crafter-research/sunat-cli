@@ -59,13 +59,14 @@ If you hit something that's not documented here, open an issue.
 ### Padrón RUC
 
 - ✅ **Local padrón download + lookup** — verified end-to-end (PR #3 smoke test).
-- ⛔ **Padrón puntual via portal `e-consultaruc.sunat.gob.pe`** — the form now requires a `numRnd` token + reCAPTCHA. Plain HTTP POSTs return 404. Workaround would need `agent-browser` automation (same pattern as RHE/F616 already use). **Local padrón is strictly better for batch/scriptable use anyway** — instantaneous after sync, no network roundtrip per RUC.
+- ⚠️ **`padron ruc-online` via SUNAT portal** (PR #8) — agent-browser drives `e-consultaruc.sunat.gob.pe` (bypasses the `numRnd` + reCAPTCHA gate that broke direct fetch). Pure parser unit-tested with 7 fixture cases. Live scraping untested in CI (no Chrome) — verify post-merge by running `sunat padron ruc-online 20131312955`. **For batch use always prefer local padrón** (`padron ruc/batch`) — `ruc-online` is ~5-10s per RUC.
 
 ### Tipo de Cambio
 
-- ⛔ **SUNAT `e-consulta.sunat.gob.pe/cl-at-ittipcam/tcS01Alias`** — blocked by WAF, returns "Request Rejected".
-- ⛔ **SBS `sbs.gob.pe`** — also blocked by WAF.
-- 🚧 **`sunat tipo-cambio` command** — not implemented. Future PR with `agent-browser` driver.
+- ⚠️ **`sunat tipo-cambio` via SUNAT portal** (PR #8) — agent-browser scrapes `e-consulta.sunat.gob.pe/cl-at-ittipcam/tcS01Alias` (the WAF blocks direct fetch but allows headless Chrome via DevTools). Pure parser unit-tested with 7 fixture cases. Cache: `~/.sunat/cache/tipo-cambio.jsonl` keyed by ISO date (immutable per date, cached forever).
+- ⛔ **SBS `sbs.gob.pe`** — also blocked by WAF, NOT bypassed in PR #8 (SUNAT's own TC is the legally-valid one for tax purposes anyway).
+- 🚧 **Live scraping untested in CI** (no Chrome). Verify post-merge by running `sunat tipo-cambio` and confirm a reasonable USD/PEN value comes back.
+- 🚧 **No automatic fallback** — if SUNAT changes the table layout, the parser returns null. The error message hints at running with debug to inspect the snapshot. Future PR could add a third-party fallback (with explicit user opt-in via env var).
 
 ### Consulta CPE Integrada
 
