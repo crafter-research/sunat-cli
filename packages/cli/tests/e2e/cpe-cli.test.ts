@@ -188,11 +188,23 @@ describe("sunat cpe — E2E", () => {
 		expect(combined).toContain("not implemented");
 	});
 
-	test("cpe --driver sunat-direct errors with clear unimplemented message", async () => {
-		const result = await runCli(["-o", "json", "cpe", "--driver", "sunat-direct", "doctor"]);
-		expect(result.exitCode).toBe(1);
-		const combined = result.stdout + result.stderr;
-		expect(combined).toContain("not implemented");
+	test("cpe --driver sunat-direct doctor reports config_resolved=false without env", async () => {
+		const proc = Bun.spawn(["bun", "run", CLI, "-o", "json", "cpe", "--driver", "sunat-direct", "doctor"], {
+			stdout: "pipe",
+			stderr: "pipe",
+			env: {
+				...process.env,
+				CPE_DRIVER: undefined,
+				CPE_EMISOR_RUC: undefined,
+				CPE_EMISOR_RAZON_SOCIAL: undefined,
+				CPE_PROFILE: undefined,
+			} as Record<string, string | undefined>,
+		});
+		const stdout = await new Response(proc.stdout).text();
+		await proc.exited;
+		const json = JSON.parse(stdout) as { ok: boolean; checks: Array<{ name: string; ok: boolean }> };
+		expect(json.ok).toBe(false);
+		expect(json.checks.find((c) => c.name === "config_resolved")?.ok).toBe(false);
 	});
 
 	test("cpe nd emit returns shaped-not-implemented stub error", async () => {

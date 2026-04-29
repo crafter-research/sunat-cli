@@ -34,20 +34,34 @@ sunat-cli api token --output json        # OAuth2 token
 ### Empresas (RUC 20) — CPE
 
 For empresas emitting Factura, Boleta, NC, ND, Guia. Pluggable backend
-via `--driver mock|facturador|sunat-direct|nubefact|apisperu` (only `mock`
-is wired today; others are shaped — see `src/commands/cpe/RESEARCH.md`).
+via `--driver mock|sunat-direct|facturador|nubefact|apisperu`.
+
+| Driver | Status | Notes |
+|--------|--------|-------|
+| `mock` | ✅ wired | Default. In-memory, deterministic. Use for dev/agents/tests. |
+| `sunat-direct` | ✅ Factura only | Native SOAP + XAdES-BES TS. Hits SUNAT beta or prod directly. |
+| `facturador` | shaped | Will wrap containerized Java Facturador SUNAT. |
+| `nubefact`, `apisperu` | shaped | OSE/PSE adapters. |
 
 ```bash
-sunat-cli cpe doctor                       # Health check active driver
-sunat-cli schema cpe-factura               # Introspect Factura fields
-sunat-cli cpe factura preview --params '{"receptor":{...},"items":[...],"totales":{...},"serie":"F001","numero":1234}'
+# Mock (no setup)
+sunat-cli cpe doctor
+sunat-cli cpe factura preview --params '{...}'
 sunat-cli cpe factura emit --params '...' --yes
-sunat-cli cpe boleta emit --params '...' --yes
-sunat-cli cpe nc emit --params '...' --yes
+
+# sunat-direct (real SUNAT beta or prod)
+sunat-cli cpe profile set --name beta --ruc 20131312955 \
+  --razon-social "ACME SAC" --mode beta --cert-path /abs/cert.pfx \
+  --sol-usuario MODATOS1 --default
+export CPE_PROFILE=beta CPE_CERT_PASSWORD=... CPE_SOL_PASSWORD=...
+sunat-cli cpe --driver sunat-direct doctor
+sunat-cli cpe --driver sunat-direct factura emit --params '...' --yes
 ```
 
 Trust ladder: T0 read/preview, T2 emit (requires `--yes`), T3 void (requires
 `--intent-token` from `cpe void prepare`).
+
+Full shaping rationale + recon dossier: `src/commands/cpe/RESEARCH.md`.
 
 ## Design
 

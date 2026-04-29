@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { getDriver, MockDriver } from "../../src/cpe/drivers/index.ts";
+import { getDriver, MockDriver, SunatDirectDriver } from "../../src/cpe/drivers/index.ts";
 
-const STUB_DRIVERS = ["facturador", "sunat-direct", "nubefact", "apisperu"] as const;
+const STUB_DRIVERS = ["facturador", "nubefact", "apisperu"] as const;
 
 describe("getDriver", () => {
 	const original = process.env.CPE_DRIVER;
@@ -35,6 +35,11 @@ describe("getDriver", () => {
 		process.env.CPE_DRIVER = "facturador";
 		const d = getDriver("mock");
 		expect(d).toBeInstanceOf(MockDriver);
+	});
+
+	test('"sunat-direct" returns SunatDirectDriver instance', () => {
+		const d = getDriver("sunat-direct");
+		expect(d).toBeInstanceOf(SunatDirectDriver);
 	});
 
 	for (const name of STUB_DRIVERS) {

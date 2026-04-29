@@ -3,6 +3,7 @@ import { audit } from "../../data/audit.ts";
 import { getDriver } from "../../cpe/drivers/index.ts";
 import type { CpeDriverName } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
+import { loadCpeConfig, saveCpeConfig } from "../../cpe/config.ts";
 import { output, outputError } from "../../utils/output.ts";
 
 type Format = "json" | "table" | "auto";
@@ -276,6 +277,60 @@ export function createCpeCommand(): Command {
 		.argument("[verb]", "set | list")
 		.argument("[name]", "Driver name")
 		.action((_, _opts, cmd) => notImplemented("driver set/list", getFormat(cmd)));
+
+	const profile = cpe.command("profile").description("Manage CPE emisor profiles for sunat-direct. T1.");
+
+	profile
+		.command("set")
+		.description("Save an emisor profile to ~/.sunat/cpe.json")
+		.requiredOption("--name <name>", "Profile name (e.g. 'default', 'beta', 'prod')")
+		.requiredOption("--ruc <ruc>", "Emisor RUC 20")
+		.requiredOption("--razon-social <text>", "Razon social")
+		.option("--nombre-comercial <text>")
+		.option("--ubigeo <code>", "INEI ubigeo, e.g. 150101")
+		.option("--direccion <text>")
+		.option("--mode <beta|prod>", "SUNAT environment", "beta")
+		.option("--cert-path <path>", "Absolute path to PFX file")
+		.option("--sol-usuario <user>", "SOL usuario (no password — use env)")
+		.option("--default", "Set as default profile")
+		.action((opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const config = loadCpeConfig();
+				config.profiles[opts.name] = {
+					emisor: {
+						ruc: opts.ruc,
+						razonSocial: opts.razonSocial,
+						nombreComercial: opts.nombreComercial,
+						ubigeo: opts.ubigeo,
+						direccion: opts.direccion,
+						codigoPais: "PE",
+					},
+					mode: opts.mode === "prod" ? "prod" : "beta",
+					driver: "sunat-direct",
+					certPath: opts.certPath,
+					solUsuario: opts.solUsuario,
+				};
+				if (opts.default) config.defaultProfile = opts.name;
+				saveCpeConfig(config);
+				output(format, { json: { ok: true, profile: opts.name, isDefault: !!opts.default } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	profile
+		.command("list")
+		.description("List configured profiles")
+		.action((_, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const config = loadCpeConfig();
+				output(format, { json: { defaultProfile: config.defaultProfile || null, profiles: config.profiles } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
 
 	return cpe;
 }
