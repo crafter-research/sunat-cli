@@ -74,11 +74,26 @@ All endpoints follow Manual de Servicios Web Api SIRE Ventas v22 (March 2024) at
 ### Active limitations
 
 - ⚠️ **Never tested against real SIRE.** Same reason as Consulta CPE: needs real RUC with SIRE credentials + active billing periods. The Greenter test RUC `20000000001` has no RVIE history. When you run the first time with your own creds + a periodo with data, `propuesta --wait --out X.zip` should give you the working ZIP.
-- 🚧 **`reemplazar propuesta` + `importar comprobantes` (propuesta/preliminar/ajustes)** — not implemented. These use **TUS.IO resumable upload protocol**. SUNAT's own manual notes "deben ser desarrollados en JAVA". Needs a TUS.IO client in TS. **Estimated next PR (#5)**.
+- ⚠️ **`reemplazar propuesta` + `importar comprobantes`** (PR #6) — TUS.IO 1.0.0 client implemented in TS (`src/sunat-rest/tus.ts`), 15 unit tests cover POST/PATCH/HEAD + chunking + metadata base64 encoding. Wired as `sunat sire {ventas|compras} {reemplazar|importar --tipo X}`. **However, ticket extraction from the upload Location URL is best-effort**: SUNAT's response shape varies and the manual is ambiguous. If `numTicket` comes back empty, the upload itself succeeded but the operator must poll `consultaestadotickets` manually using `perTributario` + `codProceso`. To verify in prod: upload a tiny test ZIP first with `--wait` and check whether the ticket round-trips.
 - 🚧 **Reportes complementarios** (resumen, inconsistencias, CAR, casillas, reporte de exportadores, reporte de cumplimiento, reporte estadístico) — same async ticket pattern as `propuesta`. Easy adds when needed.
 - 🚧 **Tipo de cambio masivo** — JSON POST endpoint, easy add.
 - 🚧 **Eliminar comprobantes** (propuesta / preliminar / reemplazo) — same shape, low priority.
 - ⚠️ **CORS warning from SUNAT** — "los servicios del API SIRE no deben ser consumidos desde un cliente Web". CLI is server-side, not affected. Don't try to call these from a browser bundle.
+
+### TUS.IO implementation notes (PR #6)
+
+- **TUS spec version**: `1.0.0`
+- **Chunk size**: default 8 MB, override with `--chunk-size <bytes>`. Configured per upload.
+- **File size limit**: 6 GB enforced client-side per SUNAT spec (Manual error 1346)
+- **Metadata encoding**: keys uncoded, values base64. SUNAT-required keys: `filename, filetype, perTributario, codOrigenEnvio (=2), codProceso, codTipoCorrelativo (=01), nomArchivoImportacion, codLibro`
+- **codProceso values** (Anexo I — Indicador de carga masiva):
+  - `1` = Importar CP propuesta
+  - `3` = Reemplazo de la propuesta
+  - `4` = Importar CP preliminar
+  - `6` = Cargar Ajustes posteriores
+  - `7` = Cargar Ajustes posteriores anteriores a la vigencia
+- **Resumability**: TUS supports HEAD-then-resume on partial uploads, but PR #6 does not implement automatic retry-from-last-offset on network errors. If a large upload fails mid-flight, re-run the whole command. Future PR can add resumption.
+- **Why we ignored SUNAT's "JAVA required" note**: SUNAT only ships Java samples. The TUS protocol itself is HTTP-only, language-agnostic. Verified by spec review.
 
 ---
 

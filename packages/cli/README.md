@@ -49,6 +49,12 @@ sunat-cli sire ventas propuesta --periodo 202404 --wait --out propuesta-202404.z
 sunat-cli sire ventas aceptar --periodo 202404 --yes
 sunat-cli sire ventas descargar --periodo 202404 --wait --out rvie-202404.zip
 
+# Replace SUNAT's proposal with your own .zip (TUS.IO upload, chunked 8MB)
+sunat-cli sire ventas reemplazar --periodo 202404 --file mi-propuesta.zip --yes --wait
+
+# Import extra comprobantes (--tipo: propuesta | preliminar | ajustes | ajustes-anteriores)
+sunat-cli sire ventas importar --periodo 202404 --file extra.zip --tipo propuesta --yes --wait
+
 # RCE (Compras) — same flow
 sunat-cli sire compras periodos
 sunat-cli sire compras propuesta --periodo 202404 --wait --out compras-202404.zip
