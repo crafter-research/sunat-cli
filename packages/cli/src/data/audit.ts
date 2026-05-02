@@ -25,6 +25,11 @@ export interface AuditPruneResult {
 	prunedPaths: string[];
 }
 
+export interface AuditListOptions {
+	ruc?: string;
+	limit?: number;
+}
+
 const MONTHLY_AUDIT_FILE = /^(\d{4}-\d{2})\.jsonl$/;
 const LEGACY_DAILY_AUDIT_FILE = /^(\d{4}-\d{2})-\d{2}\.jsonl$/;
 const ARCHIVED_AUDIT_FILE = /^(\d{4}-\d{2})\.jsonl\.gz$/;
@@ -143,6 +148,24 @@ export function* iterateActiveAuditEntries(): Generator<AuditEntry> {
 			} catch {}
 		}
 	}
+}
+
+export function listAuditEntries(options: AuditListOptions = {}): AuditEntry[] {
+	const entries = [...iterateActiveAuditEntries()];
+	const filtered = options.ruc ? entries.filter((entry) => auditEntryRuc(entry) === options.ruc) : entries;
+	const sorted = filtered.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+	return options.limit === undefined ? sorted : sorted.slice(0, options.limit);
+}
+
+export function auditEntryRuc(entry: AuditEntry): string | undefined {
+	const argsRuc = entry.args.emisorRuc;
+	if (typeof argsRuc === "string") return argsRuc;
+	const detailsRuc = entry.details?.emisorRuc;
+	if (typeof detailsRuc === "string") return detailsRuc;
+	const id = entry.details?.id;
+	if (typeof id !== "string") return undefined;
+	const match = /^(\d{11})-/.exec(id);
+	return match?.[1];
 }
 
 export function compactAuditLogs(options: { olderThanMonths?: number; now?: Date } = {}): AuditCompactResult {

@@ -45,6 +45,25 @@ export function saveCpeConfig(config: CpeConfig): void {
 	writeFileSync(CPE_CONFIG_FILE, JSON.stringify(config, null, 2));
 }
 
+export interface CpeAuditContext {
+	profileName?: string;
+	emisorRuc?: string;
+}
+
+export function activeCpeProfileName(config: CpeConfig = loadCpeConfig(), profileName?: string): string | undefined {
+	return profileName || process.env.CPE_PROFILE || config.defaultProfile;
+}
+
+export function resolveCpeAuditContext(profileName?: string): CpeAuditContext {
+	const config = loadCpeConfig();
+	const name = activeCpeProfileName(config, profileName);
+	const profile = name ? config.profiles[name] : undefined;
+	return {
+		profileName: name,
+		emisorRuc: process.env.CPE_EMISOR_RUC || profile?.emisor.ruc,
+	};
+}
+
 export interface ResolvedCpeContext {
 	emisor: CpeEmisor;
 	mode: "beta" | "prod";
@@ -56,12 +75,13 @@ export interface ResolvedCpeContext {
 
 export function resolveCpeContext(profileName?: string): ResolvedCpeContext {
 	const config = loadCpeConfig();
-	const name = profileName || process.env.CPE_PROFILE || config.defaultProfile;
+	const name = activeCpeProfileName(config, profileName);
 	const profile = name ? config.profiles[name] : undefined;
 
 	const emisorRuc = process.env.CPE_EMISOR_RUC || profile?.emisor.ruc;
 	const emisorRznSocial = process.env.CPE_EMISOR_RAZON_SOCIAL || profile?.emisor.razonSocial;
-	if (!emisorRuc) throw new Error("Emisor RUC not configured. Set CPE_EMISOR_RUC env var or run 'sunat cpe profile set'.");
+	if (!emisorRuc)
+		throw new Error("Emisor RUC not configured. Set CPE_EMISOR_RUC env var or run 'sunat cpe profile set'.");
 	if (!emisorRznSocial) throw new Error("Emisor razonSocial not configured. Set CPE_EMISOR_RAZON_SOCIAL env var.");
 
 	const mode = (process.env.CPE_MODE || profile?.mode || "beta") as "beta" | "prod";

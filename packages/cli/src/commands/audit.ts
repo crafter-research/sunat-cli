@@ -1,10 +1,12 @@
 import { Command } from "commander";
 import {
 	archivedAuditRecoveryPath,
+	auditEntryRuc,
 	compactAuditLogs,
 	DEFAULT_AUTO_COMPACT_AFTER_MONTHS,
 	DEFAULT_RECOMMENDED_ARCHIVE_MONTHS,
 	listArchivedAuditMonths,
+	listAuditEntries,
 	pruneArchivedAuditLogs,
 } from "../data/audit.ts";
 import { output, outputError } from "../utils/output.ts";
@@ -28,8 +30,45 @@ function parseMonths(value: string): number {
 	return months;
 }
 
+function parseLimit(value: string): number {
+	const limit = Number(value);
+	if (!Number.isInteger(limit) || limit < 1) throw new Error(`Invalid limit: "${value}". Expected a positive integer`);
+	return limit;
+}
+
 export function createAuditCommand(): Command {
 	const audit = new Command("audit").description("Manage local audit log rotation and archives.");
+
+	audit
+		.command("list")
+		.description("List active audit entries.")
+		.option("--ruc <ruc>", "Filter by emisor RUC")
+		.option("--limit <n>", "Maximum entries to return", "50")
+		.action((opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const limit = parseLimit(opts.limit);
+				const entries = listAuditEntries({ ruc: opts.ruc, limit });
+				output(format, {
+					json: { entries, count: entries.length, ruc: opts.ruc || null },
+					table: {
+						headers: ["Timestamp", "RUC", "Command", "Result", "ID"],
+						rows:
+							entries.length > 0
+								? entries.map((entry) => [
+										entry.timestamp,
+										auditEntryRuc(entry) || "-",
+										entry.command,
+										entry.result,
+										typeof entry.details?.id === "string" ? entry.details.id : "-",
+									])
+								: [["-", opts.ruc || "-", "-", "-", "no audit entries"]],
+					},
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
 
 	audit
 		.command("compact")
