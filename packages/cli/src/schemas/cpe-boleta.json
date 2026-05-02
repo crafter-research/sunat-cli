@@ -8,7 +8,11 @@
 			"required": false,
 			"description": "For boletas <S/700, receptor can be omitted ('Cliente Varios').",
 			"properties": {
-				"tipoDoc": { "type": "enum", "values": ["1", "0", "4", "7"], "description": "1=DNI most common, 0=No domiciliado" },
+				"tipoDoc": {
+					"type": "enum",
+					"values": ["0", "1", "4", "6", "7", "A", "B", "C", "D", "E"],
+					"description": "SUNAT Catalog 06. Unknown runtime values warn, not error."
+				},
 				"numDoc": { "type": "string" },
 				"rznSocial": { "type": "string" }
 			}
@@ -16,6 +20,7 @@
 		"items": { "type": "array", "required": true, "description": "See 'cpe schema cpe.factura' for item shape." },
 		"totales": { "type": "object", "required": true },
 		"moneda": { "type": "enum", "values": ["PEN", "USD"], "default": "PEN" },
+		"tipoOperacion": { "type": "string", "default": "0101", "description": "SUNAT Catalog 51" },
 		"serie": { "type": "string", "pattern": "^B[0-9A-Z]{3}$", "description": "Boleta serie, e.g. B001" },
 		"numero": { "type": "integer", "min": 1 },
 		"fechaEmision": { "type": "date", "format": "YYYY-MM-DD", "default": "today" }

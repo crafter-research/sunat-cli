@@ -1,11 +1,20 @@
 import { Command } from "commander";
 import { readFileSync } from "fs";
-import { join, dirname } from "path";
+import { dirname, join } from "path";
+import { getCpeCatalogosSchema } from "../cpe/catalogos/index.ts";
 import { outputJSON } from "../utils/output.ts";
 
 const SCHEMAS_DIR = join(dirname(import.meta.dir), "schemas");
 
-const AVAILABLE_SCHEMAS = ["rhe", "f616", "login", "cpe-factura", "cpe-boleta", "cpe-nota-credito"] as const;
+const AVAILABLE_SCHEMAS = [
+	"rhe",
+	"f616",
+	"login",
+	"cpe-factura",
+	"cpe-boleta",
+	"cpe-nota-credito",
+	"cpe-catalogos",
+] as const;
 
 export function createSchemaCommand(): Command {
 	return new Command("schema")
@@ -33,6 +42,11 @@ export function createSchemaCommand(): Command {
 					},
 					flags: { "--nueva-plataforma": "Login to Nueva Plataforma (requires reCAPTCHA)" },
 				});
+				return;
+			}
+
+			if (resource === "cpe-catalogos") {
+				outputJSON(getCpeCatalogosSchema());
 				return;
 			}
 

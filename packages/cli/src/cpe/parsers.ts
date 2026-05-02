@@ -17,6 +17,7 @@ export function parseFacturaInput(payload: string): FacturaInput {
 		serie: (raw.serie as string) || "F001",
 		numero: (raw.numero as number) || 1,
 		fechaEmision: (raw.fechaEmision as string) || todayIso(),
+		tipoOperacion: (raw.tipoOperacion as string) || "0101",
 	};
 }
 

@@ -32,7 +32,7 @@ export interface DoctorReport {
 }
 
 export interface Receptor {
-	tipoDoc: "1" | "4" | "6" | "7" | "0";
+	tipoDoc: string;
 	numDoc: string;
 	rznSocial: string;
 	direccion?: string;
@@ -61,6 +61,7 @@ export interface FacturaInput {
 	serie: string;
 	numero: number;
 	fechaEmision: string;
+	tipoOperacion?: string;
 }
 
 export type BoletaInput = FacturaInput;
@@ -147,6 +148,7 @@ export interface PreviewResult {
 	hash: string;
 	wouldSend: boolean;
 	validacion: { ok: boolean; errors: string[] };
+	catalogCoverage?: import("../catalogos/types.ts").CatalogCoverageReport;
 }
 
 export interface CpeDriver {

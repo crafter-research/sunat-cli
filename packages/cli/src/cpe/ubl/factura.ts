@@ -13,8 +13,8 @@
 import type { FacturaInput } from "../drivers/types.ts";
 import {
 	type EmisorCtx,
-	NS,
 	escapeXml,
+	NS,
 	renderCacSignature,
 	renderEmisorParty,
 	renderInvoiceLine,
@@ -44,10 +44,10 @@ export function buildFacturaUbl(input: FacturaInput, ctx: FacturaContext): strin
     </ext:UBLExtensions>
     <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
     <cbc:CustomizationID>2.0</cbc:CustomizationID>
-    <cbc:ProfileID schemeName="SUNAT:Identificador de Tipo de Operacion" schemeAgencyName="PE:SUNAT" schemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo51">0101</cbc:ProfileID>
+    <cbc:ProfileID schemeName="SUNAT:Identificador de Tipo de Operacion" schemeAgencyName="PE:SUNAT" schemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo51">${escapeXml(input.tipoOperacion || "0101")}</cbc:ProfileID>
     <cbc:ID>${escapeXml(id)}</cbc:ID>
     <cbc:IssueDate>${input.fechaEmision}</cbc:IssueDate>
-    <cbc:InvoiceTypeCode listID="0101" listAgencyName="PE:SUNAT" listName="Tipo de Documento" listURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01">01</cbc:InvoiceTypeCode>
+    <cbc:InvoiceTypeCode listID="${escapeXml(input.tipoOperacion || "0101")}" listAgencyName="PE:SUNAT" listName="Tipo de Documento" listURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01">01</cbc:InvoiceTypeCode>
     <cbc:DocumentCurrencyCode>${input.moneda}</cbc:DocumentCurrencyCode>
 ${renderCacSignature(emisor)}
 ${renderEmisorParty(emisor)}

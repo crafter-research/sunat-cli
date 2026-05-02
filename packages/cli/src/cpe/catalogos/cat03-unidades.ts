@@ -1,0 +1,33 @@
+import type { SunatCatalog } from "./types.ts";
+
+export const CAT_03_UNIDADES: SunatCatalog = {
+	id: "03",
+	name: "Tipo de unidad de medida comercial",
+	source: "SUNAT Catalogo 03 references UN/ECE Rec 20",
+	entries: [
+		{ code: "NIU", description: "Numero de unidades internacionales" },
+		{ code: "ZZ", description: "Unidad de medida acordada entre dos partes" },
+		{ code: "KGM", description: "Kilogramo" },
+		{ code: "GRM", description: "Gramo" },
+		{ code: "TNE", description: "Tonelada metrica" },
+		{ code: "MTR", description: "Metro" },
+		{ code: "CMT", description: "Centimetro" },
+		{ code: "MMT", description: "Milimetro" },
+		{ code: "MTK", description: "Metro cuadrado" },
+		{ code: "LTR", description: "Litro" },
+		{ code: "MLT", description: "Mililitro" },
+		{ code: "MTQ", description: "Metro cubico" },
+		{ code: "DZN", description: "Docena" },
+		{ code: "BX", description: "Caja" },
+		{ code: "BG", description: "Bolsa" },
+		{ code: "BO", description: "Botella" },
+		{ code: "PK", description: "Paquete" },
+		{ code: "HUR", description: "Hora" },
+		{ code: "DAY", description: "Dia" },
+		{ code: "MON", description: "Mes" },
+		{ code: "KWH", description: "Kilowatt hora" },
+		{ code: "C62", description: "Unidad" },
+		{ code: "EA", description: "Cada uno" },
+		{ code: "E48", description: "Unidad de servicio" },
+	],
+};

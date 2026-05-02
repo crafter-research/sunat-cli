@@ -76,6 +76,18 @@ describe("sunat cpe — E2E", () => {
 		expect(json.fields.totales).toBeDefined();
 	});
 
+	test("schema cpe-catalogos returns cached SUNAT catalogs", async () => {
+		const result = await runCli(["-o", "json", "schema", "cpe-catalogos"]);
+		expect(result.exitCode).toBe(0);
+		const json = parseJson<{ catalogos: Record<string, { total: number; entries: Array<{ code: string }> }> }>(
+			result.stdout,
+		);
+		expect(json.catalogos["02"].total).toBeGreaterThan(0);
+		expect(json.catalogos["03"].entries.some((entry) => entry.code === "KGM")).toBe(true);
+		expect(json.catalogos["06"].entries.some((entry) => entry.code === "6")).toBe(true);
+		expect(json.catalogos["51"].entries.some((entry) => entry.code === "0101")).toBe(true);
+	});
+
 	test("schema cpe-boleta and cpe-nota-credito are listed", async () => {
 		for (const name of ["cpe-boleta", "cpe-nota-credito"]) {
 			const result = await runCli(["-o", "json", "schema", name]);
@@ -87,11 +99,18 @@ describe("sunat cpe — E2E", () => {
 	test("cpe factura preview (T0) returns dryRun=true with deterministic hash", async () => {
 		const result = await runCli(["-o", "json", "cpe", "factura", "preview", "--params", JSON.stringify(validFactura)]);
 		expect(result.exitCode).toBe(0);
-		const json = parseJson<{ dryRun: boolean; hash: string; xml: string; validacion: { ok: boolean } }>(result.stdout);
+		const json = parseJson<{
+			dryRun: boolean;
+			hash: string;
+			xml: string;
+			validacion: { ok: boolean };
+			catalogCoverage?: { unknown: Array<{ field: string }> };
+		}>(result.stdout);
 		expect(json.dryRun).toBe(true);
 		expect(json.hash.startsWith("sha256:")).toBe(true);
 		expect(json.xml).toContain("F001");
 		expect(json.validacion.ok).toBe(true);
+		expect(json.catalogCoverage?.unknown.some((warning) => warning.field === "items[0].codigo")).toBe(true);
 	});
 
 	test("cpe factura emit --dry-run does not require --yes", async () => {
@@ -157,16 +176,7 @@ describe("sunat cpe — E2E", () => {
 	});
 
 	test("cpe nc emit requires refSerie/refNumero/tipoNota", async () => {
-		const result = await runCli([
-			"-o",
-			"json",
-			"cpe",
-			"nc",
-			"emit",
-			"--params",
-			JSON.stringify(validFactura),
-			"--yes",
-		]);
+		const result = await runCli(["-o", "json", "cpe", "nc", "emit", "--params", JSON.stringify(validFactura), "--yes"]);
 		expect(result.exitCode).toBe(1);
 		const combined = result.stdout + result.stderr;
 		expect(combined).toContain("refSerie");
