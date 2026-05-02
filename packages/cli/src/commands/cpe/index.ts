@@ -8,6 +8,7 @@ import type { CpeDriverName } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
 import { loadCpeConfig, saveCpeConfig } from "../../cpe/config.ts";
 import { boletaRequiresIndividualSubmission } from "../../cpe/ubl/boleta.ts";
+import { resolveSecret } from "../../data/keychain.ts";
 import { output, outputError } from "../../utils/output.ts";
 
 type Format = "json" | "table" | "auto";
@@ -408,16 +409,16 @@ export function createCpeCommand(): Command {
 
 				// Need OAuth credentials (client_id/secret + RUC + SOL pwd)
 				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
-				const clientSecret = process.env.SUNAT_GRE_CLIENT_SECRET || process.env.SUNAT_API_CLIENT_SECRET;
+				const clientSecret = resolveSecret(["SUNAT_GRE_CLIENT_SECRET", "SUNAT_API_CLIENT_SECRET"]);
 				if (!clientId || !clientSecret) {
 					outputError(
-						"GRE needs SUNAT_GRE_CLIENT_ID + SUNAT_GRE_CLIENT_SECRET (or SUNAT_API_*) env vars. Get from SOL → Credenciales API SUNAT, URI = 'GRE Emisión de Comprobantes'.",
+						"GRE needs SUNAT_GRE_CLIENT_ID + SUNAT_GRE_CLIENT_SECRET (or SUNAT_API_*) env vars/keychain secrets. Get from SOL → Credenciales API SUNAT, URI = 'GRE Emisión de Comprobantes'.",
 						format,
 					);
 					return;
 				}
 				if (!ctx.solUsuario || !ctx.solPassword) {
-					outputError("GRE needs SOL usuario + password (CPE_SOL_USUARIO/PASSWORD env vars).", format);
+					outputError("GRE needs SOL usuario + password (CPE_SOL_USUARIO env var plus CPE_SOL_PASSWORD/SUNAT_PASSWORD env var or keychain secret).", format);
 					return;
 				}
 				const greCreds = greCredentials({
@@ -484,9 +485,9 @@ export function createCpeCommand(): Command {
 				const { greCredentials, consultarGreTicket, pollGreTicket } = await import("../../sunat-rest/gre.ts");
 				const ctx = resolveCpeContext();
 				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
-				const clientSecret = process.env.SUNAT_GRE_CLIENT_SECRET || process.env.SUNAT_API_CLIENT_SECRET;
+				const clientSecret = resolveSecret(["SUNAT_GRE_CLIENT_SECRET", "SUNAT_API_CLIENT_SECRET"]);
 				if (!clientId || !clientSecret) {
-					outputError("Missing SUNAT_GRE_CLIENT_ID/SECRET env vars.", format);
+					outputError("Missing SUNAT_GRE_CLIENT_ID env var and SUNAT_GRE_CLIENT_SECRET/SUNAT_API_CLIENT_SECRET env var or keychain secret.", format);
 					return;
 				}
 				const greCreds = greCredentials({

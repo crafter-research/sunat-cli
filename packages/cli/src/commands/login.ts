@@ -3,6 +3,7 @@ import { loadConfig, saveConfig, ensureDirs } from "../data/config.ts";
 import { loginSOL, loginNuevaPlataforma } from "../browser/auth.ts";
 import { outputSuccess, outputError } from "../utils/output.ts";
 import { audit } from "../data/audit.ts";
+import { resolveSecret } from "../data/keychain.ts";
 import { isSkillInstalled, installSkill } from "../utils/skill.ts";
 import * as p from "@clack/prompts";
 
@@ -17,14 +18,14 @@ async function getOrPromptCredentials(opts: LoginOpts, isTTY: boolean): Promise<
 	const config = loadConfig();
 	let ruc = opts.ruc || process.env.SUNAT_RUC || config.ruc;
 	let usuario = opts.user || process.env.SUNAT_USER || config.usuario;
-	let password = opts.password || process.env.SUNAT_PASSWORD;
+	let password = opts.password || resolveSecret(["SUNAT_PASSWORD"]);
 
 	if (ruc && usuario && password) {
 		return { ruc, usuario, password };
 	}
 
 	if (!isTTY) {
-		throw new Error("Missing credentials. Pass --ruc, --user, --password flags or set SUNAT_RUC, SUNAT_USER, SUNAT_PASSWORD env vars");
+		throw new Error("Missing credentials. Pass --ruc, --user, --password flags, set SUNAT_RUC, SUNAT_USER, SUNAT_PASSWORD env vars, or store SUNAT_PASSWORD with sunat keychain set");
 	}
 
 	p.intro("sunat login -- first time setup");

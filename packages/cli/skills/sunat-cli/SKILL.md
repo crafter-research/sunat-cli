@@ -15,7 +15,8 @@ Three ways to provide credentials (priority order):
 
 1. **Inline flags** (agent-friendly): `sunat-cli login --ruc 10XXXXXXXXX --user XXXXXXXX --password XXXXXX`
 2. **Env vars**: `SUNAT_RUC`, `SUNAT_USER`, `SUNAT_PASSWORD`
-3. **Interactive prompts**: just run `sunat-cli login` and it asks step by step
+3. **OS keychain**: `sunat keychain set SUNAT_PASSWORD --value '...'`
+4. **Interactive prompts**: just run `sunat-cli login` and it asks step by step
 
 ```bash
 sunat-cli login --ruc 10123456789 --user MYUSER --password MYPASS
@@ -24,6 +25,20 @@ sunat-cli whoami
 ```
 
 RUC and usuario are saved to `~/.sunat/config.json` after first login. Password is never stored.
+
+Secrets resolve as env var → OS keychain → clear error. Env vars always win, which keeps CI predictable.
+
+```bash
+sunat keychain set CPE_CERT_PASSWORD --value 'your-pfx-password'
+sunat keychain set CPE_SOL_PASSWORD --value 'your-clave-sol'
+sunat keychain set SUNAT_API_CLIENT_SECRET --value 'your-client-secret'
+sunat keychain get CPE_CERT_PASSWORD
+sunat keychain list
+sunat keychain clear CPE_CERT_PASSWORD
+```
+
+macOS stores secrets through `security add-generic-password -s sunat-cli -a <KEY> -w <VALUE>`.
+Linux stores secrets through `secret-tool` / libsecret.
 
 ### RHE (Recibo por Honorarios)
 
@@ -171,10 +186,14 @@ Returns `cdrCode=0` (Aceptado) end-to-end.
 sunat cpe profile set --name beta --ruc 20131312955 --razon-social "ACME SAC" \
   --mode beta --cert-path /abs/path/to/cert.pfx --sol-usuario MODATOS1 --default
 
-# 2. Set sensitive vars (NEVER commit)
+# 2. Set sensitive vars or keychain secrets (NEVER commit)
 export CPE_PROFILE=beta
 export CPE_CERT_PASSWORD='your-pfx-password'
 export CPE_SOL_PASSWORD='your-clave-sol'
+
+# Keychain alternative for local machines
+sunat keychain set CPE_CERT_PASSWORD --value 'your-pfx-password'
+sunat keychain set CPE_SOL_PASSWORD --value 'your-clave-sol'
 
 # 3. Verify
 sunat cpe --driver sunat-direct doctor

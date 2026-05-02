@@ -7,11 +7,12 @@
  */
 
 import type { OAuthCredentials } from "../sunat-rest/oauth.ts";
+import { missingSecretMessage, resolveSecret } from "../data/keychain.ts";
 
 export function resolveOAuthCredentials(): OAuthCredentials {
 	const clientId = process.env.SUNAT_API_CLIENT_ID;
-	const clientSecret = process.env.SUNAT_API_CLIENT_SECRET;
+	const clientSecret = resolveSecret(["SUNAT_API_CLIENT_SECRET"]);
 	if (!clientId) throw new Error("SUNAT_API_CLIENT_ID env var missing. Get from SOL → Mi RUC → Credenciales API.");
-	if (!clientSecret) throw new Error("SUNAT_API_CLIENT_SECRET env var missing.");
+	if (!clientSecret) throw new Error(missingSecretMessage(["SUNAT_API_CLIENT_SECRET"], "SUNAT_API_CLIENT_SECRET"));
 	return { clientId, clientSecret };
 }

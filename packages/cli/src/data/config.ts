@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import { missingSecretMessage, resolveSecret } from "./keychain.ts";
 
 const SUNAT_DIR = join(process.env.HOME || "", ".sunat");
 const CONFIG_FILE = join(SUNAT_DIR, "config.json");
@@ -35,11 +36,11 @@ export function getCredentials(): { ruc: string; usuario: string; password: stri
 	const config = loadConfig();
 	const ruc = process.env.SUNAT_RUC || config.ruc;
 	const usuario = process.env.SUNAT_USER || config.usuario;
-	const password = process.env.SUNAT_PASSWORD;
+	const password = resolveSecret(["SUNAT_PASSWORD"]);
 
 	if (!ruc) throw new Error("RUC not configured. Set SUNAT_RUC env var or run: sunat config set ruc <value>");
 	if (!usuario) throw new Error("Usuario not configured. Set SUNAT_USER env var or run: sunat config set usuario <value>");
-	if (!password) throw new Error("Password not configured. Set SUNAT_PASSWORD env var");
+	if (!password) throw new Error(missingSecretMessage(["SUNAT_PASSWORD"], "Password"));
 
 	return { ruc, usuario, password };
 }
@@ -47,10 +48,10 @@ export function getCredentials(): { ruc: string; usuario: string; password: stri
 export function getApiCredentials(): { clientId: string; clientSecret: string } {
 	const config = loadConfig();
 	const clientId = process.env.SUNAT_API_CLIENT_ID || config.apiClientId;
-	const clientSecret = process.env.SUNAT_API_CLIENT_SECRET || config.apiClientSecret;
+	const clientSecret = resolveSecret(["SUNAT_API_CLIENT_SECRET"]);
 
 	if (!clientId || !clientSecret) {
-		throw new Error("API credentials not configured. Set SUNAT_API_CLIENT_ID and SUNAT_API_CLIENT_SECRET env vars");
+		throw new Error("API credentials not configured. Set SUNAT_API_CLIENT_ID env var and SUNAT_API_CLIENT_SECRET env var or keychain secret");
 	}
 
 	return { clientId, clientSecret };

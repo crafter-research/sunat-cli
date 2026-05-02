@@ -3,6 +3,7 @@ import { writeFileSync } from "fs";
 import { audit } from "../../data/audit.ts";
 import { readFileSync as readFile, statSync as fileStat } from "fs";
 import { basename } from "path";
+import { missingSecretMessage, resolveSecret } from "../../data/keychain.ts";
 import {
 	COD_LIBRO,
 	type CodLibro,
@@ -33,15 +34,15 @@ function getFormat(cmd: Command): Format {
 
 function resolveSireCreds(): ReturnType<typeof sireCredentials> {
 	const clientId = process.env.SUNAT_API_CLIENT_ID;
-	const clientSecret = process.env.SUNAT_API_CLIENT_SECRET;
+	const clientSecret = resolveSecret(["SUNAT_API_CLIENT_SECRET"]);
 	const ruc = process.env.SUNAT_RUC || process.env.CPE_EMISOR_RUC;
 	const solUsuario = process.env.SUNAT_USER || process.env.CPE_SOL_USUARIO;
-	const solPassword = process.env.SUNAT_PASSWORD || process.env.CPE_SOL_PASSWORD;
+	const solPassword = resolveSecret(["SUNAT_PASSWORD", "CPE_SOL_PASSWORD"]);
 	if (!clientId) throw new Error("SUNAT_API_CLIENT_ID env var missing (from SOL → Credenciales API SUNAT, MIGE RCE y RVIE - SIRE)");
-	if (!clientSecret) throw new Error("SUNAT_API_CLIENT_SECRET env var missing");
+	if (!clientSecret) throw new Error(missingSecretMessage(["SUNAT_API_CLIENT_SECRET"], "SUNAT_API_CLIENT_SECRET"));
 	if (!ruc) throw new Error("SUNAT_RUC env var missing");
 	if (!solUsuario) throw new Error("SUNAT_USER env var missing (SOL usuario, NOT the password)");
-	if (!solPassword) throw new Error("SUNAT_PASSWORD env var missing (Clave SOL)");
+	if (!solPassword) throw new Error(missingSecretMessage(["SUNAT_PASSWORD", "CPE_SOL_PASSWORD"], "Clave SOL"));
 	return sireCredentials({ clientId, clientSecret, ruc, solUsuario, solPassword });
 }
 
