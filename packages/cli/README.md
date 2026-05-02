@@ -159,7 +159,10 @@ Trust ladder: T0 read/preview, T2 emit (requires `--yes`), T3 void (requires
 
 Idempotency: every emit is keyed by `RUC-tipo-serie-numero`. Re-running with the
 same key returns the cached CDR without re-submitting to SUNAT. Audit log lives
-in `~/.sunat/audit/YYYY-MM-DD.jsonl` (two-phase: pending → success/error).
+in `~/.sunat/audit/YYYY-MM.jsonl` (two-phase: pending → success/error). Older
+months can be compacted into `~/.sunat/audit/archive/YYYY-MM.jsonl.gz` with
+`sunat-cli audit compact`, and archived months can be removed manually with
+`sunat-cli audit prune --before YYYY-MM`.
 
 Full shaping rationale + recon dossier + SUNAT debugging notes:
 `src/commands/cpe/RESEARCH.md`.

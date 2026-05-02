@@ -13,10 +13,7 @@
  * operator can investigate (likely a crash mid-submit).
  */
 
-import { existsSync, readFileSync, readdirSync } from "fs";
-import { join } from "path";
-import { audit } from "../data/audit.ts";
-import { paths } from "../data/config.ts";
+import { audit, iterateActiveAuditEntries } from "../data/audit.ts";
 import type { CpeResult } from "./drivers/types.ts";
 
 export type CpeTipo = "01" | "03" | "07" | "08" | "09";
@@ -84,7 +81,12 @@ export function logPending(key: IdempotencyKey, command: string, args: Record<st
 	});
 }
 
-export function logSuccess(key: IdempotencyKey, command: string, args: Record<string, unknown>, result: CpeResult): void {
+export function logSuccess(
+	key: IdempotencyKey,
+	command: string,
+	args: Record<string, unknown>,
+	result: CpeResult,
+): void {
 	audit({
 		command,
 		args,
@@ -110,19 +112,5 @@ export function logFailure(key: IdempotencyKey, command: string, args: Record<st
 }
 
 function* iterateAudit(): Generator<AuditEntry> {
-	const dir = paths.auditDir;
-	if (!existsSync(dir)) return;
-	const files = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort();
-	for (const file of files) {
-		const path = join(dir, file);
-		const content = readFileSync(path, "utf-8");
-		for (const line of content.split("\n")) {
-			if (!line.trim()) continue;
-			try {
-				yield JSON.parse(line) as AuditEntry;
-			} catch {
-				// skip malformed line
-			}
-		}
-	}
+	yield* iterateActiveAuditEntries();
 }

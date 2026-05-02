@@ -12,12 +12,12 @@ import { paths } from "../../src/data/config.ts";
 
 const TEST_RUC = "29999999999";
 const TEST_TAG = "TEST_IDEMPOTENCY";
-const today = () => new Date().toISOString().split("T")[0];
+const currentMonth = () => new Date().toISOString().slice(0, 7);
 let auditFile: string;
 
 beforeAll(() => {
 	mkdirSync(paths.auditDir, { recursive: true });
-	auditFile = join(paths.auditDir, `${today()}.jsonl`);
+	auditFile = join(paths.auditDir, `${currentMonth()}.jsonl`);
 });
 
 afterAll(() => {
