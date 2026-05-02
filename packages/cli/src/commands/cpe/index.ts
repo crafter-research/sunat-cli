@@ -1,12 +1,14 @@
 import { Command } from "commander";
 import { audit } from "../../data/audit.ts";
 import { clearQueueForEmisor, enqueueBoleta, listQueueDates, readQueue } from "../../cpe/boleta-queue.ts";
+import { buildCatalogCoverageReport, hasCatalogWarnings } from "../../cpe/catalogos/index.ts";
 import { resolveCpeContext } from "../../cpe/config.ts";
 import { getDriver } from "../../cpe/drivers/index.ts";
 import type { CpeDriverName } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
 import { loadCpeConfig, saveCpeConfig } from "../../cpe/config.ts";
 import { boletaRequiresIndividualSubmission } from "../../cpe/ubl/boleta.ts";
+import { resolveSecret } from "../../data/keychain.ts";
 import { output, outputError } from "../../utils/output.ts";
 
 type Format = "json" | "table" | "auto";
@@ -85,6 +87,8 @@ export function createCpeCommand(): Command {
 				const input = parseFacturaInput(opts.params);
 				const driver = getDriver(getDriverName(cmd));
 				const result = await driver.previewFactura(input);
+				const catalogCoverage = buildCatalogCoverageReport(input);
+				if (hasCatalogWarnings(catalogCoverage)) result.catalogCoverage = catalogCoverage;
 				audit({ command: "cpe factura preview", args: input as unknown as Record<string, unknown>, result: "dry-run", details: { hash: result.hash } });
 				output(format, { json: { dryRun: true, ...result } });
 			} catch (err) {
@@ -106,6 +110,8 @@ export function createCpeCommand(): Command {
 
 				if (opts.dryRun) {
 					const preview = await driver.previewFactura(input);
+					const catalogCoverage = buildCatalogCoverageReport(input);
+					if (hasCatalogWarnings(catalogCoverage)) preview.catalogCoverage = catalogCoverage;
 					audit({ command: "cpe factura emit", args: input as unknown as Record<string, unknown>, result: "dry-run" });
 					output(format, { json: { dryRun: true, ...preview } });
 					return;
@@ -403,16 +409,16 @@ export function createCpeCommand(): Command {
 
 				// Need OAuth credentials (client_id/secret + RUC + SOL pwd)
 				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
-				const clientSecret = process.env.SUNAT_GRE_CLIENT_SECRET || process.env.SUNAT_API_CLIENT_SECRET;
+				const clientSecret = resolveSecret(["SUNAT_GRE_CLIENT_SECRET", "SUNAT_API_CLIENT_SECRET"]);
 				if (!clientId || !clientSecret) {
 					outputError(
-						"GRE needs SUNAT_GRE_CLIENT_ID + SUNAT_GRE_CLIENT_SECRET (or SUNAT_API_*) env vars. Get from SOL → Credenciales API SUNAT, URI = 'GRE Emisión de Comprobantes'.",
+						"GRE needs SUNAT_GRE_CLIENT_ID + SUNAT_GRE_CLIENT_SECRET (or SUNAT_API_*) env vars/keychain secrets. Get from SOL → Credenciales API SUNAT, URI = 'GRE Emisión de Comprobantes'.",
 						format,
 					);
 					return;
 				}
 				if (!ctx.solUsuario || !ctx.solPassword) {
-					outputError("GRE needs SOL usuario + password (CPE_SOL_USUARIO/PASSWORD env vars).", format);
+					outputError("GRE needs SOL usuario + password (CPE_SOL_USUARIO env var plus CPE_SOL_PASSWORD/SUNAT_PASSWORD env var or keychain secret).", format);
 					return;
 				}
 				const greCreds = greCredentials({
@@ -479,9 +485,9 @@ export function createCpeCommand(): Command {
 				const { greCredentials, consultarGreTicket, pollGreTicket } = await import("../../sunat-rest/gre.ts");
 				const ctx = resolveCpeContext();
 				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
-				const clientSecret = process.env.SUNAT_GRE_CLIENT_SECRET || process.env.SUNAT_API_CLIENT_SECRET;
+				const clientSecret = resolveSecret(["SUNAT_GRE_CLIENT_SECRET", "SUNAT_API_CLIENT_SECRET"]);
 				if (!clientId || !clientSecret) {
-					outputError("Missing SUNAT_GRE_CLIENT_ID/SECRET env vars.", format);
+					outputError("Missing SUNAT_GRE_CLIENT_ID env var and SUNAT_GRE_CLIENT_SECRET/SUNAT_API_CLIENT_SECRET env var or keychain secret.", format);
 					return;
 				}
 				const greCreds = greCredentials({
