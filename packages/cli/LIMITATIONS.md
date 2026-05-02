@@ -125,7 +125,7 @@ These predate the agent-first refactor and use the older agent-browser scraping 
 
 - **Production submissions** never tested. Always use `--mode beta` (or its equivalent) until you've manually verified one production emission.
 - **Stress / rate-limit tests** never run. SUNAT WAF behavior under load is unknown.
-- **Multi-RUC** — config file supports profiles, but never tested with multiple active RUCs in the same process.
+- **Live Multi-RUC SUNAT submissions** — profile switching is covered by local E2E tests, but real SUNAT beta/prod runs across multiple RUCs still need manual QA.
 - **Cert expiry** — `cpe doctor` warns at <30 days. Never tested with an actually-expired cert.
 
 ### Environment

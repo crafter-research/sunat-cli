@@ -1,7 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 
 const CLI = join(import.meta.dir, "..", "..", "bin", "sunat.ts");
+const tempHomes: string[] = [];
 
 const validFactura = {
 	receptor: { tipoDoc: "6", numDoc: "20123456789", rznSocial: "ACME SAC" },
@@ -28,9 +31,32 @@ async function runCli(args: string[]): Promise<CliResult> {
 	return { stdout, stderr, exitCode };
 }
 
+async function runCliWithEnv(args: string[], env: Record<string, string | undefined>): Promise<CliResult> {
+	const proc = Bun.spawn(["bun", "run", CLI, ...args], {
+		stdout: "pipe",
+		stderr: "pipe",
+		env: { ...process.env, ...env },
+	});
+	const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+	const exitCode = await proc.exited;
+	return { stdout, stderr, exitCode };
+}
+
 function parseJson<T = unknown>(stdout: string): T {
 	return JSON.parse(stdout) as T;
 }
+
+function createTempHome(): string {
+	const home = mkdtempSync(join(tmpdir(), "sunat-cpe-test-"));
+	tempHomes.push(home);
+	return home;
+}
+
+afterEach(() => {
+	for (const home of tempHomes.splice(0)) {
+		rmSync(home, { recursive: true, force: true });
+	}
+});
 
 describe("sunat cpe — E2E", () => {
 	test("--help lists cpe namespace", async () => {
@@ -137,6 +163,65 @@ describe("sunat cpe — E2E", () => {
 		expect(json.cdrCode).toBe("0000");
 		expect(json.serie).toBe("F001");
 		expect(json.numero).toBe(1234);
+	});
+
+	test("emits facturas under two active profiles in one process and filters audit by RUC", async () => {
+		const home = createTempHome();
+		const script = `
+process.env.HOME = ${JSON.stringify(home)};
+process.env.CPE_DRIVER = "mock";
+delete process.env.CPE_PROFILE;
+delete process.env.CPE_EMISOR_RUC;
+const { createCpeCommand } = await import(${JSON.stringify(join(import.meta.dir, "..", "..", "src", "commands", "cpe", "index.ts"))});
+async function run(args) {
+	const command = createCpeCommand();
+	command.exitOverride();
+	await command.parseAsync(args, { from: "user" });
+}
+const base = ${JSON.stringify(validFactura)};
+await run(["profile", "set", "--name", "alpha", "--ruc", "20111111111", "--razon-social", "ALPHA SAC", "--mode", "beta"]);
+await run(["profile", "set", "--name", "beta", "--ruc", "20222222222", "--razon-social", "BETA SAC", "--mode", "beta"]);
+await run(["profile", "use", "alpha"]);
+await run(["factura", "emit", "--params", JSON.stringify({ ...base, serie: "F101", numero: 1 }), "--yes"]);
+await run(["profile", "use", "beta"]);
+await run(["factura", "emit", "--params", JSON.stringify({ ...base, serie: "F101", numero: 1 }), "--yes"]);
+`;
+		const proc = Bun.spawn(["bun", "--eval", script], {
+			stdout: "pipe",
+			stderr: "pipe",
+			env: { ...process.env, HOME: home, CPE_DRIVER: "mock" },
+		});
+		const [, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+		expect(await proc.exited).toBe(0);
+		expect(stderr).toBe("");
+
+		const month = new Date().toISOString().slice(0, 7);
+		const entries = readFileSync(join(home, ".sunat", "audit", `${month}.jsonl`), "utf-8")
+			.trim()
+			.split("\n")
+			.map(
+				(line) =>
+					JSON.parse(line) as { command: string; result: string; details?: { id?: string; emisorRuc?: string } },
+			)
+			.filter((entry) => entry.command === "cpe factura emit" && entry.result === "success");
+
+		expect(entries.map((entry) => entry.details?.emisorRuc).sort()).toEqual(["20111111111", "20222222222"]);
+		expect(entries.map((entry) => entry.details?.id).sort()).toEqual([
+			"20111111111-01-F101-1",
+			"20222222222-01-F101-1",
+		]);
+
+		const alphaAudit = await runCliWithEnv(["-o", "json", "audit", "list", "--ruc", "20111111111"], {
+			HOME: home,
+			CPE_DRIVER: "mock",
+		});
+		expect(alphaAudit.exitCode).toBe(0);
+		const alphaJson = parseJson<{ count: number; entries: Array<{ details?: { emisorRuc?: string; id?: string } }> }>(
+			alphaAudit.stdout,
+		);
+		expect(alphaJson.count).toBe(1);
+		expect(alphaJson.entries[0]?.details?.emisorRuc).toBe("20111111111");
+		expect(alphaJson.entries[0]?.details?.id).toBe("20111111111-01-F101-1");
 	});
 
 	test("cpe boleta emit --yes succeeds via mock", async () => {

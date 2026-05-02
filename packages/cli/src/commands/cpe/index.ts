@@ -1,15 +1,24 @@
 import { Command } from "commander";
 import { audit } from "../../data/audit.ts";
 import { clearQueueForEmisor, enqueueBoleta, listQueueDates, readQueue } from "../../cpe/boleta-queue.ts";
-import { resolveCpeContext } from "../../cpe/config.ts";
+import { loadCpeConfig, resolveCpeAuditContext, resolveCpeContext, saveCpeConfig } from "../../cpe/config.ts";
 import { getDriver } from "../../cpe/drivers/index.ts";
 import type { CpeDriverName } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
-import { loadCpeConfig, saveCpeConfig } from "../../cpe/config.ts";
 import { boletaRequiresIndividualSubmission } from "../../cpe/ubl/boleta.ts";
 import { output, outputError } from "../../utils/output.ts";
 
 type Format = "json" | "table" | "auto";
+
+function mockAuditDetails(
+	tipo: "01" | "03" | "07" | "08",
+	input: { serie: string; numero: number },
+	result: Record<string, unknown>,
+): Record<string, unknown> {
+	const context = resolveCpeAuditContext();
+	const id = context.emisorRuc ? `${context.emisorRuc}-${tipo}-${input.serie}-${input.numero}` : result.id;
+	return { ...result, id, ...context };
+}
 
 function getFormat(cmd: Command): Format {
 	let parent: Command | null = cmd;
@@ -131,7 +140,7 @@ export function createCpeCommand(): Command {
 						command: "cpe factura emit",
 						args: input as unknown as Record<string, unknown>,
 						result: "success",
-						details: result as unknown as Record<string, unknown>,
+						details: mockAuditDetails("01", input, result as unknown as Record<string, unknown>),
 					});
 				}
 				output(format, { json: { success: true, ...result } });
@@ -206,7 +215,12 @@ export function createCpeCommand(): Command {
 
 				const result = await driver.emitBoleta(input);
 				if (driver.info().name === "mock") {
-					audit({ command: "cpe boleta emit", args: input as unknown as Record<string, unknown>, result: "success", details: result as unknown as Record<string, unknown> });
+					audit({
+						command: "cpe boleta emit",
+						args: input as unknown as Record<string, unknown>,
+						result: "success",
+						details: mockAuditDetails("03", input, result as unknown as Record<string, unknown>),
+					});
 				}
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
@@ -297,7 +311,15 @@ export function createCpeCommand(): Command {
 				}
 
 				const result = await driver.emitNotaCredito(input);
-				audit({ command: "cpe nc emit", args: input as unknown as Record<string, unknown>, result: "success", details: result as unknown as Record<string, unknown> });
+				audit({
+					command: "cpe nc emit",
+					args: input as unknown as Record<string, unknown>,
+					result: "success",
+					details:
+						driver.info().name === "mock"
+							? mockAuditDetails("07", input, result as unknown as Record<string, unknown>)
+							: (result as unknown as Record<string, unknown>),
+				});
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
@@ -333,7 +355,10 @@ export function createCpeCommand(): Command {
 					command: "cpe nd emit",
 					args: input as unknown as Record<string, unknown>,
 					result: "success",
-					details: result as unknown as Record<string, unknown>,
+					details:
+						driver.info().name === "mock"
+							? mockAuditDetails("08", input, result as unknown as Record<string, unknown>)
+							: (result as unknown as Record<string, unknown>),
 				});
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
@@ -879,6 +904,32 @@ export function createCpeCommand(): Command {
 			try {
 				const config = loadCpeConfig();
 				output(format, { json: { defaultProfile: config.defaultProfile || null, profiles: config.profiles } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	profile
+		.command("use")
+		.description("Set the active CPE profile")
+		.argument("<name>", "Profile name")
+		.action((name, _opts, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const config = loadCpeConfig();
+				if (!config.profiles[name]) {
+					outputError(`CPE profile "${name}" not found. Run: sunat cpe profile list`, format);
+					return;
+				}
+				config.defaultProfile = name;
+				saveCpeConfig(config);
+				output(format, {
+					json: {
+						ok: true,
+						activeProfile: name,
+						emisorRuc: config.profiles[name].emisor.ruc,
+					},
+				});
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}
