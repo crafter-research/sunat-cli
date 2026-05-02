@@ -77,7 +77,7 @@ export function logPending(key: IdempotencyKey, command: string, args: Record<st
 		command,
 		args,
 		result: "pending",
-		details: { id: idempotencyKey(key), stage: "pre-submit" },
+		details: { id: idempotencyKey(key), emisorRuc: key.emisorRuc, stage: "pre-submit" },
 	});
 }
 
@@ -93,6 +93,7 @@ export function logSuccess(
 		result: "success",
 		details: {
 			id: idempotencyKey(key),
+			emisorRuc: key.emisorRuc,
 			hash: result.hash,
 			status: result.status,
 			cdrCode: result.cdrCode,
@@ -107,7 +108,7 @@ export function logFailure(key: IdempotencyKey, command: string, args: Record<st
 		command,
 		args,
 		result: "error",
-		details: { id: idempotencyKey(key), error },
+		details: { id: idempotencyKey(key), emisorRuc: key.emisorRuc, error },
 	});
 }
 
