@@ -10,6 +10,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { paths } from "../data/config.ts";
+import { missingSecretMessage, resolveSecret } from "../data/keychain.ts";
 
 export interface CpeEmisor {
 	ruc: string;
@@ -66,14 +67,14 @@ export function resolveCpeContext(profileName?: string): ResolvedCpeContext {
 
 	const mode = (process.env.CPE_MODE || profile?.mode || "beta") as "beta" | "prod";
 	const certPath = process.env.CPE_CERT_PATH || profile?.certPath;
-	const certPassword = process.env.CPE_CERT_PASSWORD;
+	const certPassword = resolveSecret(["CPE_CERT_PASSWORD"]);
 	const solUsuario = process.env.CPE_SOL_USUARIO || process.env.SUNAT_USER || profile?.solUsuario;
-	const solPassword = process.env.CPE_SOL_PASSWORD || process.env.SUNAT_PASSWORD;
+	const solPassword = resolveSecret(["CPE_SOL_PASSWORD", "SUNAT_PASSWORD"]);
 
 	if (!certPath) throw new Error("Certificate not configured. Set CPE_CERT_PATH env var (path to .pfx).");
-	if (!certPassword) throw new Error("Certificate password missing. Set CPE_CERT_PASSWORD env var.");
+	if (!certPassword) throw new Error(missingSecretMessage(["CPE_CERT_PASSWORD"], "Certificate password"));
 	if (!solUsuario) throw new Error("SOL user missing. Set CPE_SOL_USUARIO or SUNAT_USER env var.");
-	if (!solPassword) throw new Error("SOL password missing. Set CPE_SOL_PASSWORD or SUNAT_PASSWORD env var.");
+	if (!solPassword) throw new Error(missingSecretMessage(["CPE_SOL_PASSWORD", "SUNAT_PASSWORD"], "SOL password"));
 
 	return {
 		emisor: {
