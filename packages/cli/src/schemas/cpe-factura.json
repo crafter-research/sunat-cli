@@ -10,8 +10,8 @@
 			"properties": {
 				"tipoDoc": {
 					"type": "enum",
-					"values": ["1", "4", "6", "7", "0"],
-					"description": "1=DNI, 4=Carnet ext, 6=RUC, 7=Pasaporte, 0=No domiciliado"
+					"values": ["0", "1", "4", "6", "7", "A", "B", "C", "D", "E"],
+					"description": "SUNAT Catalog 06. Unknown runtime values warn, not error."
 				},
 				"numDoc": { "type": "string", "description": "Document number" },
 				"rznSocial": { "type": "string", "description": "Legal name" },
@@ -42,6 +42,7 @@
 			}
 		},
 		"moneda": { "type": "enum", "values": ["PEN", "USD"], "default": "PEN" },
+		"tipoOperacion": { "type": "string", "default": "0101", "description": "SUNAT Catalog 51" },
 		"serie": { "type": "string", "pattern": "^F[0-9A-Z]{3}$", "description": "Factura serie, e.g. F001" },
 		"numero": { "type": "integer", "min": 1 },
 		"fechaEmision": { "type": "date", "format": "YYYY-MM-DD", "default": "today" }

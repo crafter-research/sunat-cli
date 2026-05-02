@@ -1,4 +1,5 @@
 import { existsSync } from "fs";
+import { buildCatalogCoverageReport, hasCatalogWarnings } from "../catalogos/index.ts";
 import { resolveCpeContext } from "../config.ts";
 import { findCachedResult, findStalePendings, idempotencyKey, logFailure, logPending, logSuccess } from "../idempotency.ts";
 import { signFacturaXml } from "../sign/xades.ts";
@@ -124,7 +125,14 @@ export class SunatDirectDriver implements CpeDriver {
 		const unsigned = buildFacturaUbl(input, { emisor: ctx.emisor });
 		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
 		const hash = `sha256:${await sha256Hex(signed.xml)}`;
-		return { xml: signed.xml, hash, wouldSend: true, validacion: { ok: true, errors: [] } };
+		const catalogCoverage = buildCatalogCoverageReport(input);
+		return {
+			xml: signed.xml,
+			hash,
+			wouldSend: true,
+			validacion: { ok: true, errors: [] },
+			...(hasCatalogWarnings(catalogCoverage) ? { catalogCoverage } : {}),
+		};
 	}
 
 	async emitFactura(input: FacturaInput): Promise<CpeResult> {
@@ -193,7 +201,14 @@ export class SunatDirectDriver implements CpeDriver {
 		const unsigned = buildBoletaUbl(input, { emisor: ctx.emisor });
 		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
 		const hash = `sha256:${await sha256Hex(signed.xml)}`;
-		return { xml: signed.xml, hash, wouldSend: true, validacion: { ok: true, errors: [] } };
+		const catalogCoverage = buildCatalogCoverageReport(input);
+		return {
+			xml: signed.xml,
+			hash,
+			wouldSend: true,
+			validacion: { ok: true, errors: [] },
+			...(hasCatalogWarnings(catalogCoverage) ? { catalogCoverage } : {}),
+		};
 	}
 
 	async emitBoleta(input: BoletaInput): Promise<CpeResult> {

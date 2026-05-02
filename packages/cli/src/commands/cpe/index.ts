@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { audit } from "../../data/audit.ts";
 import { clearQueueForEmisor, enqueueBoleta, listQueueDates, readQueue } from "../../cpe/boleta-queue.ts";
+import { buildCatalogCoverageReport, hasCatalogWarnings } from "../../cpe/catalogos/index.ts";
 import { resolveCpeContext } from "../../cpe/config.ts";
 import { getDriver } from "../../cpe/drivers/index.ts";
 import type { CpeDriverName } from "../../cpe/drivers/types.ts";
@@ -85,6 +86,8 @@ export function createCpeCommand(): Command {
 				const input = parseFacturaInput(opts.params);
 				const driver = getDriver(getDriverName(cmd));
 				const result = await driver.previewFactura(input);
+				const catalogCoverage = buildCatalogCoverageReport(input);
+				if (hasCatalogWarnings(catalogCoverage)) result.catalogCoverage = catalogCoverage;
 				audit({ command: "cpe factura preview", args: input as unknown as Record<string, unknown>, result: "dry-run", details: { hash: result.hash } });
 				output(format, { json: { dryRun: true, ...result } });
 			} catch (err) {
@@ -106,6 +109,8 @@ export function createCpeCommand(): Command {
 
 				if (opts.dryRun) {
 					const preview = await driver.previewFactura(input);
+					const catalogCoverage = buildCatalogCoverageReport(input);
+					if (hasCatalogWarnings(catalogCoverage)) preview.catalogCoverage = catalogCoverage;
 					audit({ command: "cpe factura emit", args: input as unknown as Record<string, unknown>, result: "dry-run" });
 					output(format, { json: { dryRun: true, ...preview } });
 					return;
