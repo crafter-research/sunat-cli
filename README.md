@@ -124,6 +124,16 @@ sunat-cli tipo-cambio --fecha hoy
 sunat-cli tipo-cambio --fecha 2026-04-29 --output json
 ```
 
+### Audit log · `source`
+
+```bash
+# Archive audit months older than the retention window
+sunat-cli audit compact
+
+# Delete archived months before a cutoff. Never runs on its own
+sunat-cli audit prune --before 2025-01
+```
+
 ### RHE / F616 (personas naturales) · `npm`
 
 ```bash
