@@ -57,6 +57,17 @@ export async function navigateToF616(): Promise<void> {
 }
 
 export async function declareF616(input: F616Input, screenshotPath?: string): Promise<F616Result> {
+	// The form opens behind a "Sr. Contribuyente" notice whose button is
+	// labelled "Close", not "Aceptar". Left open, its modal-backdrop covers the
+	// form: a real click on the periodo field is refused as covered, and every
+	// control reports disabled. Dismiss it before touching anything.
+	const opening = await browser.snapshot({ interactive: true });
+	const noticeRef = findRefSafe(opening, "Close", "button") || findRefSafe(opening, "Aceptar", "button");
+	if (noticeRef) {
+		await browser.click(noticeRef);
+		await browser.sleep(1500);
+	}
+
 	// Step 1: Set periodo via CDP (bypasses input mask)
 	const periodoFormatted = formatPeriodo(input.periodo);
 	await setInputValueInIframe("casilla007", periodoFormatted);
