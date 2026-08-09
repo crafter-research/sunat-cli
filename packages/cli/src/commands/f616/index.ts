@@ -1,9 +1,11 @@
 import { Command } from "commander";
-import { ensureNuevaPlataformaAndF616, declareF616, navigateToF616, type F616Input } from "../../workflows/f616.ts";
-import { validatePeriodo } from "../../validation/input.ts";
+import { audit, auditScreenshotPath } from "../../data/audit.ts";
+import { ensurePlataformaToken } from "../../plataforma/ensure-token.ts";
+import { obtenerListaOficios, obtenerPeriodo } from "../../plataforma/f616-api.ts";
 import { expandPeriodoRange } from "../../utils/dates.ts";
 import { output, outputError } from "../../utils/output.ts";
-import { audit, auditScreenshotPath } from "../../data/audit.ts";
+import { validatePeriodo } from "../../validation/input.ts";
+import { declareF616, ensureNuevaPlataformaAndF616, type F616Input, navigateToF616 } from "../../workflows/f616.ts";
 
 export function createF616Command(): Command {
 	const f616 = new Command("f616").description("Formulario Virtual 616 monthly declaration");
@@ -74,6 +76,52 @@ export function createF616Command(): Command {
 		.action((_, cmd) => {
 			const format = cmd.parent?.parent?.opts().output || "auto";
 			outputError("F616 status not implemented yet.", format);
+		});
+
+	f616
+		.command("periodo")
+		.description(
+			"Open an F616 period through the API (read-only, T0). Reuses a cached Nueva Plataforma token, opening the browser only to capture one when needed.",
+		)
+		.argument("<periodo>", "Tax period (YYYY-MM)")
+		.action(async (periodo, _opts, cmd) => {
+			const format = cmd.parent?.parent?.opts().output || "auto";
+			try {
+				validatePeriodo(periodo);
+				await ensurePlataformaToken();
+				const data = (await obtenerPeriodo(periodo)) as { resultado?: Record<string, unknown> };
+				const r = data.resultado ?? {};
+				output(format, {
+					json: { periodo, ...r },
+					table: {
+						headers: ["Campo", "Valor"],
+						rows: [
+							["fecha", String(r.fec_hoy ?? "")],
+							["tipos de comprobante", String((r.tip_compr_list as unknown[] | undefined)?.length ?? 0)],
+						],
+					},
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
+		});
+
+	f616
+		.command("oficios")
+		.description("List the SUNAT profession catalog (Catálogo de oficios) through the API. T0.")
+		.action(async (_opts, cmd) => {
+			const format = cmd.parent?.parent?.opts().output || "auto";
+			try {
+				await ensurePlataformaToken();
+				const data = (await obtenerListaOficios()) as { resultado?: Array<Record<string, string>> };
+				const rows = (data.resultado ?? []).map((o) => [o.tip_prof, o.des_tip_prof]);
+				output(format, {
+					json: { count: rows.length, oficios: data.resultado ?? [] },
+					table: { headers: ["Código", "Profesión"], rows },
+				});
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
 		});
 
 	return f616;

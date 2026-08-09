@@ -179,3 +179,6 @@ dist
 .DS_Store
 .vercel
 packages/cli/sunat-cli
+
+# recon artifacts: HARs carry live cookies and tokens
+recon/
