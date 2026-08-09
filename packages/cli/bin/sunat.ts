@@ -12,13 +12,14 @@ import { createSchemaCommand } from "../src/commands/schema.ts";
 import { createSireCommand } from "../src/commands/sire/index.ts";
 import { createTipoCambioCommand } from "../src/commands/tipo-cambio.ts";
 import { createWhoamiCommand } from "../src/commands/whoami.ts";
+import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
 
 program
 	.name("sunat")
 	.description("Agent-first CLI for SUNAT tax automation")
-	.version("0.1.0")
+	.version(pkg.version)
 	.option("-o, --output <format>", "output format", "auto")
 	.hook("preAction", (thisCommand) => {
 		const opts = thisCommand.opts();
