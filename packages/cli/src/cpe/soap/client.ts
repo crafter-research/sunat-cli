@@ -230,6 +230,13 @@ export async function getStatus(args: GetStatusArgs): Promise<GetStatusOutcome> 
 	}
 
 	const cdrZipBuffer = Buffer.from(content, "base64");
+	// SUNAT puts a plain-text reason in <content> for error codes instead of a
+	// base64 CDR zip (e.g. statusCode 0127 -> "El ticket no existe"). Decoding
+	// that as base64 yields garbage, so surface the reason instead of failing
+	// inside the unzip with "not a zip file".
+	if (cdrZipBuffer.subarray(0, 2).toString("ascii") !== "PK") {
+		throw new Error(`SUNAT getStatus ${statusCode}: ${content.trim()}`);
+	}
 	const { xml: cdrXml } = await unzipNested(cdrZipBuffer);
 	const cdr = parseCdr(cdrXml);
 	const accepted = statusCode === "0" && cdr.accepted;

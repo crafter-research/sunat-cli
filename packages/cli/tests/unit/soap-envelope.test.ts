@@ -104,6 +104,17 @@ describe("postSoap empty-body guard", () => {
 		).rejects.toThrow(/empty body/i);
 	});
 
+	test("a text reason in <content> surfaces as an error, not as a zip failure", async () => {
+		// Real beta response to getStatus with a ticket that does not exist.
+		const envelope =
+			'<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/"><S:Body><ns2:getStatusResponse xmlns:ns2="http://service.sunat.gob.pe"><status><content>El ticket no existe</content><statusCode>0127</statusCode></status></ns2:getStatusResponse></S:Body></S:Envelope>';
+		globalThis.fetch = (async () => new Response(envelope, { status: 200 })) as typeof fetch;
+
+		await expect(getStatus({ mode: "beta", wsUsername: "u", wsPassword: "p", ticket: "1" })).rejects.toThrow(
+			/0127.*El ticket no existe/,
+		);
+	});
+
 	test("a non-empty response is still parsed normally", async () => {
 		const envelope =
 			'<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/"><S:Body><ns2:getStatusResponse xmlns:ns2="http://service.sunat.gob.pe"><status><statusCode>98</statusCode></status></ns2:getStatusResponse></S:Body></S:Envelope>';
