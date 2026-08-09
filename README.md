@@ -1,8 +1,24 @@
-# sunat-cli
+<p align="center">
+  <a href="https://sunat-cli.crafter.ing" target="_blank">
+    <img src="https://raw.githubusercontent.com/Railly/crafter-station/main/public/logo.png" height="64" alt="Crafter Station">
+  </a>
+  <br />
+  <h1 align="center">sunat-cli</h1>
+</p>
 
-Agent-first CLI for SUNAT tax automation in Peru. Built for AI agents as primary consumers, humans as supervisors.
+<p align="center">
+  Agent-first CLI for SUNAT tax automation in Peru. Built for AI agents as primary consumers, humans as supervisors.
+</p>
 
-[sunat-cli.crafter.ing](https://sunat-cli.crafter.ing) · [`@crafter/sunat-cli` on npm](https://www.npmjs.com/package/@crafter/sunat-cli)
+<div align="center">
+
+[![npm](https://img.shields.io/npm/v/@crafter/sunat-cli?label=npm)](https://www.npmjs.com/package/@crafter/sunat-cli)
+[![Release](https://img.shields.io/github/v/release/crafter-research/sunat-cli?display_name=tag&sort=semver&label=release)](https://github.com/crafter-research/sunat-cli/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![Built with Crafter Station](https://img.shields.io/badge/built%20with-Crafter%20Station-orange)](https://crafterstation.com)
+[![sunat-cli.crafter.ing](https://img.shields.io/badge/site-sunat--cli.crafter.ing-black)](https://sunat-cli.crafter.ing)
+
+</div>
 
 ## What it does
 
@@ -172,6 +188,10 @@ sunat-cli f616 declare --json '{"periodo":"2026-03"}'
 
 # Varios periodos de una
 sunat-cli f616 declare --batch --months 2025-03..2026-02 --dry-run
+
+# Lecturas del F616 por API, headless (abre el navegador solo si el token vencio)
+sunat-cli f616 periodo 2026-03
+sunat-cli f616 oficios
 ```
 
 ## Design
@@ -187,6 +207,14 @@ Follows [Agent DX principles](https://justin.poehnelt.com/posts/rewrite-your-cli
 - Two-phase audit (`pending` → `success`/`error`) on every write
 - Idempotency cache by natural key `RUC-tipo-serie-numero`
 - Input hardening against agent hallucinations
+
+## Headless after one login
+
+SUNAT's monthly-declaration form looks server-rendered and behaves like one: driving the DOM never works, because the fields stay disabled until a background call returns. Underneath sits a JSON API, and reaching it needs a session token (`IdCache`) the portal mints only during its own browser login. A self-registered API client can never request that audience.
+
+So the CLI captures the token once from the browser, then reads the API headless for its hour of life. `f616 periodo` and `f616 oficios` open the browser only when the cached token is missing or expired; otherwise they are plain HTTP. Verified with zero browser processes running.
+
+The OAuth2 surfaces (SIRE, GRE, CPE, buzón) need no browser at all: their token comes from a `password` grant against `api-seguridad.sunat.gob.pe` with a client registered from the SOL menu.
 
 ## Verification status
 
