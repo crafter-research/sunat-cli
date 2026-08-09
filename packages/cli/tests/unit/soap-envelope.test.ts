@@ -1,8 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import {
 	buildGetStatusEnvelope,
 	buildSendBillEnvelope,
 	buildSendSummaryEnvelope,
+	getStatus,
 	SUNAT_ENDPOINTS_FAC,
 } from "../../src/cpe/soap/client.ts";
 
@@ -85,5 +86,31 @@ describe("buildGetStatusEnvelope", () => {
 	test("escapes ticket value", () => {
 		const env = buildGetStatusEnvelope({ username: "u", password: "p", ticket: "abc<&>" });
 		expect(env).toContain("abc&lt;&amp;&gt;");
+	});
+});
+
+describe("postSoap empty-body guard", () => {
+	const realFetch = globalThis.fetch;
+
+	afterEach(() => {
+		globalThis.fetch = realFetch;
+	});
+
+	test("getStatus throws instead of reporting processing when prod returns an empty 200", async () => {
+		globalThis.fetch = (async () => new Response("", { status: 200 })) as typeof fetch;
+
+		await expect(
+			getStatus({ mode: "prod", wsUsername: "10712392563HUNTER17", wsPassword: "x", ticket: "1" }),
+		).rejects.toThrow(/empty body/i);
+	});
+
+	test("a non-empty response is still parsed normally", async () => {
+		const envelope =
+			'<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/"><S:Body><ns2:getStatusResponse xmlns:ns2="http://service.sunat.gob.pe"><status><statusCode>98</statusCode></status></ns2:getStatusResponse></S:Body></S:Envelope>';
+		globalThis.fetch = (async () => new Response(envelope, { status: 200 })) as typeof fetch;
+
+		const outcome = await getStatus({ mode: "beta", wsUsername: "u", wsPassword: "p", ticket: "1" });
+		expect(outcome.state).toBe("processing");
+		expect(outcome.statusCode).toBe("98");
 	});
 });

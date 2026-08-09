@@ -142,6 +142,11 @@ async function postSoap(url: string, envelope: string): Promise<string> {
 	}
 	const fault = extractFault(body);
 	if (fault) throw new Error(`SUNAT SOAP Fault: ${fault.code} — ${fault.message}`);
+	if (!body.trim()) {
+		throw new Error(
+			`SUNAT returned HTTP ${resp.status} with an empty body from ${url}. Production rejects malformed or unauthenticated requests this way instead of returning a SOAP Fault; check the WSSE username (RUC + SOL user) and password.`,
+		);
+	}
 	return body;
 }
 
