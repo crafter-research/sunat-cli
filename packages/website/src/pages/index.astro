@@ -43,8 +43,18 @@ const features = [
 	},
 	{
 		title: "RHE + F616 (personas naturales)",
-		desc: "Browser automation sin CAPTCHA. RHE en batch, F616 mensual via CDP raw.",
-		code: "$ sunat-cli rhe emit --batch ./data.csv",
+		desc: "Browser login without CAPTCHA. RHE in batch, F616 mensual read headless from the declaration API.",
+		code: "$ sunat-cli f616 declare --json '{\"periodo\":\"2026-03\"}'",
+	},
+	{
+		title: "OS Keychain Secrets",
+		desc: "Store cert passwords and clave SOL in the macOS/Linux keychain. Hidden prompt keeps secrets out of shell history and env vars.",
+		code: "$ sunat-cli keychain set CPE_CERT_PASSWORD\n# prompts without echo",
+	},
+	{
+		title: "Multi-Emisor Profiles",
+		desc: "Manage several RUC from one machine. Set a profile per emisor, switch with one command.",
+		code: "$ sunat-cli cpe profile use acme",
 	},
 	{
 		title: "Schema Introspection",
@@ -293,6 +303,37 @@ const stats = [
 			}
 			.feature-code :global(code) { font-family: 'JetBrains Mono', monospace !important; }
 
+			/* Headless */
+			.headless { padding: 80px 24px; }
+			.headless-grid {
+				display: grid; grid-template-columns: 1fr 1fr;
+				gap: 40px; align-items: start;
+			}
+			.headless-desc {
+				font-size: 15px; color: var(--text-2); line-height: 1.7;
+				max-width: 480px;
+			}
+			.headless-desc p:not(:last-child) { margin-bottom: 16px; }
+			.headless-steps {
+				list-style: none; padding: 0; margin: 0;
+				display: flex; flex-direction: column; gap: 14px;
+			}
+			.headless-step {
+				display: grid; grid-template-columns: 28px 1fr; gap: 14px;
+				align-items: start; padding: 16px 20px;
+				background: var(--bg-alt); border: 1px solid var(--border);
+				border-radius: 10px;
+			}
+			.headless-num {
+				font-family: 'JetBrains Mono', monospace; font-size: 13px;
+				font-weight: 600; color: var(--red);
+				width: 28px; height: 28px; border-radius: 6px;
+				display: flex; align-items: center; justify-content: center;
+				background: white; border: 1px solid var(--border);
+			}
+			.headless-step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+			.headless-step-desc { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
 			/* Coverage */
 			.coverage { padding: 80px 24px; }
 			.coverage-headline {
@@ -414,6 +455,7 @@ const stats = [
 				.cov-row { grid-template-columns: 1fr 60px; gap: 8px; }
 				.cov-row .cov-bar { grid-column: 1 / -1; order: 3; }
 				.roadmap-grid { grid-template-columns: 1fr; }
+				.headless-grid { grid-template-columns: 1fr; gap: 28px; }
 			}
 		</style>
 	</head>
@@ -423,6 +465,7 @@ const stats = [
 				<a href="#" class="nav-brand">sunat<span>/</span>cli</a>
 				<div class="nav-links">
 					<a href="#features">Features</a>
+					<a href="#headless">Architecture</a>
 					<a href="#coverage">Coverage</a>
 					<a href="#roadmap">Roadmap</a>
 					<a href="#agent-dx">Agent DX</a>
@@ -437,7 +480,7 @@ const stats = [
 					<div>
 						<div class="hero-badge">
 							<span class="dot"></span>
-							<span class="mono">crafter station / gov-tech · v0.1.6</span>
+							<span class="mono">crafter station / gov-tech · v0.6.1</span>
 						</div>
 						<h1>Mapping SUNAT,<br/>making it <span class="accent">agent-ready</span></h1>
 						<p class="hero-desc">
@@ -480,6 +523,51 @@ const stats = [
 							<div class="feature-code" set:html={featureHtmls[i]} />
 						</div>
 					))}
+				</div>
+			</div>
+		</section>
+
+		<section class="headless" id="headless">
+			<div class="container">
+				<p class="section-label mono">Architecture</p>
+				<h2 class="section-title">Headless after one login</h2>
+				<div class="headless-grid">
+					<div class="headless-desc">
+						<p>
+							The F616 declaration form is a single-page app over a JSON API.
+							Instead of driving the DOM on every run, the CLI opens a browser
+							once to capture a session token (the IdCache), then closes it.
+						</p>
+						<p>
+							From there, <span class="mono">f616 periodo</span> and
+							<span class="mono">f616 oficios</span> read the API directly,
+							headless, for the lifetime of that token. No CAPTCHA to solve,
+							no form fields to fight.
+						</p>
+					</div>
+					<ol class="headless-steps">
+						<li class="headless-step">
+							<span class="headless-num">1</span>
+							<div>
+								<div class="headless-step-title">Capture</div>
+								<div class="headless-step-desc">Open the browser once, log in, grab the session token, close it.</div>
+							</div>
+						</li>
+						<li class="headless-step">
+							<span class="headless-num">2</span>
+							<div>
+								<div class="headless-step-title">Read headless</div>
+								<div class="headless-step-desc">Query the declaration API behind the form with the cached token, no browser running.</div>
+							</div>
+						</li>
+						<li class="headless-step">
+							<span class="headless-num">3</span>
+							<div>
+								<div class="headless-step-title">Refresh on expiry</div>
+								<div class="headless-step-desc">When the token ages out, capture again. Everything in between stays headless.</div>
+							</div>
+						</li>
+					</ol>
 				</div>
 			</div>
 		</section>
