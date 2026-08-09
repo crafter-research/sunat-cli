@@ -77,16 +77,22 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.local }}
         run: |
-          for i in 1 2 3 4 5 6; do
-            if npm view "@crafter/sunat-cli@$VERSION" version >/dev/null 2>&1; then
-              break
-            fi
-            echo "Waiting for the registry to serve $VERSION ($i/6)"
-            sleep 10
-          done
           WORKDIR=$(mktemp -d)
           cd "$WORKDIR"
-          bun add "@crafter/sunat-cli@$VERSION"
+          # Poll with the same client that installs. `npm view` sees the new
+          # version before Bun's metadata cache does, so waiting on npm and
+          # then installing with Bun races and fails on a fresh publish.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if bun add "@crafter/sunat-cli@$VERSION" 2>/dev/null; then
+              break
+            fi
+            if [ "$i" = "10" ]; then
+              echo "Registry never served $VERSION to bun after 10 attempts"
+              bun add "@crafter/sunat-cli@$VERSION"
+            fi
+            echo "Waiting for the registry to serve $VERSION to bun ($i/10)"
+            sleep 15
+          done
           INSTALLED=$(./node_modules/.bin/sunat-cli --version)
           echo "Installed version: $INSTALLED"
           test "$INSTALLED" = "$VERSION"
@@ -99,6 +105,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.local }}
         run: |
-          git tag "v$VERSION"
-          git push origin "v$VERSION"
-          gh release create "v$VERSION" --title "v$VERSION" --generate-notes
+          if ! git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            git tag "v$VERSION"
+            git push origin "v$VERSION"
+          fi
+          if ! gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release create "v$VERSION" --title "v$VERSION" --generate-notes
+          fi
