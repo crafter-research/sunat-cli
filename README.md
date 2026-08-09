@@ -38,19 +38,11 @@ it prints is available in the version you have.
 
 ## Usage
 
-Each section below says which surface it needs. `npm` means the published
-release; `source` means the command exists on `main` and ships in the next
-release. Check `sunat-cli --help` if you are unsure what your install has.
+Every section below is tagged `npm`, meaning it ships in the published release.
+A section tagged `source` would exist on `main` only. Right now nothing is
+source-only: the published release matches `main`.
 
-To run the source-only commands today:
-
-```bash
-git clone https://github.com/crafter-research/sunat-cli
-cd sunat-cli && bun install
-bun run packages/cli/bin/sunat.ts --help
-```
-
-### CPE — Comprobantes Electrónicos (empresas, RUC 20) · `source`
+### CPE — Comprobantes Electrónicos (empresas, RUC 20) · `npm`
 
 ```bash
 # Health check + driver info
@@ -86,7 +78,7 @@ sunat-cli cpe gre status --ticket 12345...
 sunat-cli cpe consulta --tipo 01 --serie F001 --numero 1234
 ```
 
-### SIRE — Sistema Integrado de Registros Electrónicos · `source`
+### SIRE — Sistema Integrado de Registros Electrónicos · `npm`
 
 ```bash
 # RVIE (Ventas)
@@ -107,7 +99,7 @@ sunat-cli sire compras importar --periodo 202504 --file ./compras.zip --yes
 sunat-cli api token
 ```
 
-### Padrón RUC + Tipo de Cambio · `source`
+### Padrón RUC + Tipo de Cambio · `npm`
 
 ```bash
 # Padrón RUC: download once (~370MB ZIP), then look up locally
@@ -124,9 +116,31 @@ sunat-cli tipo-cambio --fecha hoy
 sunat-cli tipo-cambio --fecha 2026-04-29 --output json
 ```
 
-### Audit log · `source`
+### Secrets · `npm`
+
+Secrets resolve from the environment first, then the OS keychain. Existing
+env-var setups keep working unchanged.
 
 ```bash
+sunat-cli keychain set CPE_CERT_PASSWORD --value '...'
+sunat-cli keychain list
+sunat-cli keychain clear CPE_CERT_PASSWORD
+```
+
+### Multi-emisor profiles · `npm`
+
+```bash
+sunat-cli cpe profile set --name acme --ruc 20123456789 --razon-social "ACME SAC" --mode beta
+sunat-cli cpe profile list
+sunat-cli cpe profile use acme
+```
+
+### Audit log · `npm`
+
+```bash
+# Inspect, optionally scoped to one emisor
+sunat-cli audit list --ruc 20123456789 --limit 20
+
 # Archive audit months older than the retention window
 sunat-cli audit compact
 
@@ -186,10 +200,10 @@ Tracked in GitHub issues — [milestones board](https://github.com/crafter-resea
 
 | Priority | Issues |
 |----------|--------|
-| P0 — Now | [#10 cpe void T3 + safety rail](https://github.com/crafter-research/sunat-cli/issues/10) |
-| P1 — Next | [#11 GRE modal 01 + Transportista](https://github.com/crafter-research/sunat-cli/issues/11) · [#12 Drivers nubefact + apisperu](https://github.com/crafter-research/sunat-cli/issues/12) · [#18 Live verification](https://github.com/crafter-research/sunat-cli/issues/18) |
+| P0 — Now | [#18 Live verification against production](https://github.com/crafter-research/sunat-cli/issues/18) |
+| P1 — Next | [#10 cpe void T3 + safety rail](https://github.com/crafter-research/sunat-cli/issues/10) · [#12 Drivers nubefact + apisperu](https://github.com/crafter-research/sunat-cli/issues/12) · [#11 GRE modal 01 + Transportista](https://github.com/crafter-research/sunat-cli/issues/11) |
 | P2 — Later | [#13 Driver facturador](https://github.com/crafter-research/sunat-cli/issues/13) · [#14 SIRE reportes complementarios](https://github.com/crafter-research/sunat-cli/issues/14) · [#15 sqlite padrón index](https://github.com/crafter-research/sunat-cli/issues/15) · [#16 CI smoke jobs](https://github.com/crafter-research/sunat-cli/issues/16) · [#17 TUS auto-resume](https://github.com/crafter-research/sunat-cli/issues/17) |
-| P3 — Backlog | [#19 Catálogos cacheados](https://github.com/crafter-research/sunat-cli/issues/19) · [#21 Keychain integration](https://github.com/crafter-research/sunat-cli/issues/21) · [#22 Multi-RUC profiles](https://github.com/crafter-research/sunat-cli/issues/22) |
+| P3 — Backlog | [#30 F.1683 arrendamiento](https://github.com/crafter-research/sunat-cli/issues/30) |
 
 ## Research
 
