@@ -79,19 +79,20 @@ jobs:
         run: |
           WORKDIR=$(mktemp -d)
           cd "$WORKDIR"
-          # Poll with the same client that installs. `npm view` sees the new
-          # version before Bun's metadata cache does, so waiting on npm and
-          # then installing with Bun races and fails on a fresh publish.
-          for i in 1 2 3 4 5 6 7 8 9 10; do
+          # Poll with the same client that installs. `npm view` serves a fresh
+          # publish well before Bun's registry view catches up: 0.4.1 and 0.4.2
+          # both published fine and then failed here, the second one after
+          # 2.5 minutes of retries, so the window is minutes and not seconds.
+          for i in $(seq 1 30); do
             if bun add "@crafter/sunat-cli@$VERSION" 2>/dev/null; then
               break
             fi
-            if [ "$i" = "10" ]; then
-              echo "Registry never served $VERSION to bun after 10 attempts"
+            if [ "$i" = "30" ]; then
+              echo "Registry never served $VERSION to bun after 30 attempts"
               bun add "@crafter/sunat-cli@$VERSION"
             fi
-            echo "Waiting for the registry to serve $VERSION to bun ($i/10)"
-            sleep 15
+            echo "Waiting for the registry to serve $VERSION to bun ($i/30)"
+            sleep 20
           done
           INSTALLED=$(./node_modules/.bin/sunat-cli --version)
           echo "Installed version: $INSTALLED"
