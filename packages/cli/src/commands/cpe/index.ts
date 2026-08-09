@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { audit } from "../../data/audit.ts";
 import { clearQueueForEmisor, enqueueBoleta, listQueueDates, readQueue } from "../../cpe/boleta-queue.ts";
 import { buildCatalogCoverageReport, hasCatalogWarnings } from "../../cpe/catalogos/index.ts";
 import { loadCpeConfig, resolveCpeAuditContext, resolveCpeContext, saveCpeConfig } from "../../cpe/config.ts";
@@ -7,6 +6,8 @@ import { getDriver } from "../../cpe/drivers/index.ts";
 import type { CpeDriverName } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
 import { boletaRequiresIndividualSubmission } from "../../cpe/ubl/boleta.ts";
+import { audit } from "../../data/audit.ts";
+import { loadConfig } from "../../data/config.ts";
 import { resolveSecret } from "../../data/keychain.ts";
 import { output, outputError } from "../../utils/output.ts";
 
@@ -55,7 +56,10 @@ export function createCpeCommand(): Command {
 		"Comprobantes de Pago Electronicos (CPE) for empresas con RUC 20. Factura, Boleta, NC, ND, Guia. NOT for personas naturales — use 'sunat rhe'.",
 	);
 
-	cpe.option("--driver <name>", "Backend driver: mock|facturador|sunat-direct|nubefact|apisperu (default: mock or $CPE_DRIVER)");
+	cpe.option(
+		"--driver <name>",
+		"Backend driver: mock|facturador|sunat-direct|nubefact|apisperu (default: mock or $CPE_DRIVER)",
+	);
 
 	cpe
 		.command("doctor")
@@ -98,7 +102,12 @@ export function createCpeCommand(): Command {
 				const result = await driver.previewFactura(input);
 				const catalogCoverage = buildCatalogCoverageReport(input);
 				if (hasCatalogWarnings(catalogCoverage)) result.catalogCoverage = catalogCoverage;
-				audit({ command: "cpe factura preview", args: input as unknown as Record<string, unknown>, result: "dry-run", details: { hash: result.hash } });
+				audit({
+					command: "cpe factura preview",
+					args: input as unknown as Record<string, unknown>,
+					result: "dry-run",
+					details: { hash: result.hash },
+				});
 				output(format, { json: { dryRun: true, ...result } });
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
@@ -199,7 +208,9 @@ export function createCpeCommand(): Command {
 
 	boleta
 		.command("emit")
-		.description("Emit a Boleta individually (only when total >= S/700). For total<S/700 use 'cpe boleta queue' + 'cpe resumen send'. T2.")
+		.description(
+			"Emit a Boleta individually (only when total >= S/700). For total<S/700 use 'cpe boleta queue' + 'cpe resumen send'. T2.",
+		)
 		.requiredOption("--params <json>")
 		.option("--dry-run")
 		.option("--yes")
@@ -294,8 +305,7 @@ export function createCpeCommand(): Command {
 
 	const nc = cpe.command("nc").description("Nota de Credito (CPE tipo 07) operations.");
 
-	nc
-		.command("emit")
+	nc.command("emit")
 		.description("Emit a Nota de Credito. T2.")
 		.requiredOption("--params <json>")
 		.option("--dry-run")
@@ -334,8 +344,7 @@ export function createCpeCommand(): Command {
 
 	const nd = cpe.command("nd").description("Nota de Debito (CPE tipo 08) operations.");
 
-	nd
-		.command("emit")
+	nd.command("emit")
 		.description("Emit a Nota de Debito. T2.")
 		.requiredOption("--params <json>")
 		.option("--dry-run")
@@ -372,7 +381,9 @@ export function createCpeCommand(): Command {
 			}
 		});
 
-	const gre = cpe.command("gre").description("Guía de Remisión Electrónica (CPE tipo 09) — REST OAuth, NOT SOAP. T0/T2.");
+	const gre = cpe
+		.command("gre")
+		.description("Guía de Remisión Electrónica (CPE tipo 09) — REST OAuth, NOT SOAP. T0/T2.");
 	cpe
 		.command("guia")
 		.description("Alias for 'cpe gre' — kept for backwards naming.")
@@ -385,9 +396,7 @@ export function createCpeCommand(): Command {
 
 	gre
 		.command("emit")
-		.description(
-			"Sign + zip + base64 + POST a Guía de Remisión via SUNAT GRE REST API. Async — returns ticket. T2.",
-		)
+		.description("Sign + zip + base64 + POST a Guía de Remisión via SUNAT GRE REST API. Async — returns ticket. T2.")
 		.requiredOption("--params <json>", "JSON payload (run: sunat schema cpe-gre)")
 		.option("--dry-run", "Build + sign locally, do NOT submit")
 		.option("--yes", "Skip T2 confirmation")
@@ -433,7 +442,7 @@ export function createCpeCommand(): Command {
 				}
 
 				// Need OAuth credentials (client_id/secret + RUC + SOL pwd)
-				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
+				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID || loadConfig().apiClientId;
 				const clientSecret = resolveSecret(["SUNAT_GRE_CLIENT_SECRET", "SUNAT_API_CLIENT_SECRET"]);
 				if (!clientId || !clientSecret) {
 					outputError(
@@ -443,7 +452,10 @@ export function createCpeCommand(): Command {
 					return;
 				}
 				if (!ctx.solUsuario || !ctx.solPassword) {
-					outputError("GRE needs SOL usuario + password (CPE_SOL_USUARIO env var plus CPE_SOL_PASSWORD/SUNAT_PASSWORD env var or keychain secret).", format);
+					outputError(
+						"GRE needs SOL usuario + password (CPE_SOL_USUARIO env var plus CPE_SOL_PASSWORD/SUNAT_PASSWORD env var or keychain secret).",
+						format,
+					);
 					return;
 				}
 				const greCreds = greCredentials({
@@ -469,7 +481,12 @@ export function createCpeCommand(): Command {
 							hint: `Poll status with: sunat cpe gre status --ticket ${sendResp.numTicket}`,
 						},
 					});
-					audit({ command: "cpe gre emit", args: input as Record<string, unknown>, result: "success", details: auditDetails });
+					audit({
+						command: "cpe gre emit",
+						args: input as Record<string, unknown>,
+						result: "success",
+						details: auditDetails,
+					});
 					return;
 				}
 
@@ -509,10 +526,13 @@ export function createCpeCommand(): Command {
 				const { resolveCpeContext } = await import("../../cpe/config.ts");
 				const { greCredentials, consultarGreTicket, pollGreTicket } = await import("../../sunat-rest/gre.ts");
 				const ctx = resolveCpeContext();
-				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID;
+				const clientId = process.env.SUNAT_GRE_CLIENT_ID || process.env.SUNAT_API_CLIENT_ID || loadConfig().apiClientId;
 				const clientSecret = resolveSecret(["SUNAT_GRE_CLIENT_SECRET", "SUNAT_API_CLIENT_SECRET"]);
 				if (!clientId || !clientSecret) {
-					outputError("Missing SUNAT_GRE_CLIENT_ID env var and SUNAT_GRE_CLIENT_SECRET/SUNAT_API_CLIENT_SECRET env var or keychain secret.", format);
+					outputError(
+						"Missing SUNAT_GRE_CLIENT_ID env var and SUNAT_GRE_CLIENT_SECRET/SUNAT_API_CLIENT_SECRET env var or keychain secret.",
+						format,
+					);
 					return;
 				}
 				const greCreds = greCredentials({
@@ -580,9 +600,10 @@ export function createCpeCommand(): Command {
 						tipoDoc: "03" as const,
 						serie: q.input.serie,
 						numero: q.input.numero,
-						receptor: q.input.receptor && q.input.receptor.numDoc
-							? { tipoDoc: q.input.receptor.tipoDoc, numDoc: q.input.receptor.numDoc }
-							: undefined,
+						receptor:
+							q.input.receptor && q.input.receptor.numDoc
+								? { tipoDoc: q.input.receptor.tipoDoc, numDoc: q.input.receptor.numDoc }
+								: undefined,
 						totales: q.input.totales,
 						moneda: q.input.moneda,
 					})),
@@ -699,7 +720,10 @@ export function createCpeCommand(): Command {
 	baja
 		.command("send")
 		.description("Send Comunicacion de Baja for one or more documents. Async — returns ticket. T2.")
-		.requiredOption("--params <json>", "JSON: { fechaEmisionDocs, fechaComunicacion?, correlativo?, entries: [{tipoDoc,serie,numero,motivo}, ...] }")
+		.requiredOption(
+			"--params <json>",
+			"JSON: { fechaEmisionDocs, fechaComunicacion?, correlativo?, entries: [{tipoDoc,serie,numero,motivo}, ...] }",
+		)
 		.option("--yes", "Skip T2 confirmation prompt")
 		.option("--wait", "Poll getStatus until completed/rejected")
 		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
@@ -811,10 +835,7 @@ export function createCpeCommand(): Command {
 						const ctx = resolveCpeContext();
 						rucConsultante = ctx.emisor.ruc;
 					} catch {
-						outputError(
-							"--ruc-consultante required (could not resolve from CPE_EMISOR_RUC or active profile)",
-							format,
-						);
+						outputError("--ruc-consultante required (could not resolve from CPE_EMISOR_RUC or active profile)", format);
 						return;
 					}
 				}

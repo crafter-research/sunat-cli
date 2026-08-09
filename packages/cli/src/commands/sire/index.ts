@@ -1,20 +1,19 @@
 import { Command } from "commander";
-import { writeFileSync } from "fs";
-import { audit } from "../../data/audit.ts";
-import { readFileSync as readFile, statSync as fileStat } from "fs";
+import { statSync as fileStat, readFileSync as readFile, writeFileSync } from "fs";
 import { basename } from "path";
-import { missingSecretMessage, resolveSecret } from "../../data/keychain.ts";
+import { audit } from "../../data/audit.ts";
+import { getApiCredentials, getCredentials } from "../../data/config.ts";
 import {
+	aceptarPropuestaRvie,
 	COD_LIBRO,
 	type CodLibro,
-	type SireUploadKind,
-	aceptarPropuestaRvie,
 	consultarTicket,
 	descargarArchivo,
 	descargarPropuesta,
 	descargarRvie,
 	listarPeriodos,
 	pollTicket,
+	type SireUploadKind,
 	sireCredentials,
 	sireUpload,
 } from "../../sunat-rest/sire.ts";
@@ -33,16 +32,11 @@ function getFormat(cmd: Command): Format {
 }
 
 function resolveSireCreds(): ReturnType<typeof sireCredentials> {
-	const clientId = process.env.SUNAT_API_CLIENT_ID;
-	const clientSecret = resolveSecret(["SUNAT_API_CLIENT_SECRET"]);
-	const ruc = process.env.SUNAT_RUC || process.env.CPE_EMISOR_RUC;
-	const solUsuario = process.env.SUNAT_USER || process.env.CPE_SOL_USUARIO;
-	const solPassword = resolveSecret(["SUNAT_PASSWORD", "CPE_SOL_PASSWORD"]);
-	if (!clientId) throw new Error("SUNAT_API_CLIENT_ID env var missing (from SOL → Credenciales API SUNAT, MIGE RCE y RVIE - SIRE)");
-	if (!clientSecret) throw new Error(missingSecretMessage(["SUNAT_API_CLIENT_SECRET"], "SUNAT_API_CLIENT_SECRET"));
-	if (!ruc) throw new Error("SUNAT_RUC env var missing");
-	if (!solUsuario) throw new Error("SUNAT_USER env var missing (SOL usuario, NOT the password)");
-	if (!solPassword) throw new Error(missingSecretMessage(["SUNAT_PASSWORD", "CPE_SOL_PASSWORD"], "Clave SOL"));
+	// clientId + secret resolve from env, then ~/.sunat/config.json, then keychain
+	// (getApiCredentials). RUC + SOL user + password come from the same place login
+	// stored them, so a logged-in user does not have to re-set env vars for SIRE.
+	const { clientId, clientSecret } = getApiCredentials();
+	const { ruc, usuario: solUsuario, password: solPassword } = getCredentials();
 	return sireCredentials({ clientId, clientSecret, ruc, solUsuario, solPassword });
 }
 
@@ -78,7 +72,12 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 				const numTicket = await descargarPropuesta({ codLibro, perTributario: opts.periodo }, creds);
 
 				if (!opts.wait) {
-					audit({ command: `sire ${libroAlias} propuesta`, args: { periodo: opts.periodo }, result: "success", details: { numTicket } });
+					audit({
+						command: `sire ${libroAlias} propuesta`,
+						args: { periodo: opts.periodo },
+						result: "success",
+						details: { numTicket },
+					});
 					output(format, {
 						json: {
 							numTicket,
@@ -95,7 +94,9 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 				});
 
 				if (result.state !== "completed") {
-					output(format, { json: { numTicket, state: result.state, statusCode: result.statusCode, statusDesc: result.statusDesc } });
+					output(format, {
+						json: { numTicket, state: result.state, statusCode: result.statusCode, statusDesc: result.statusDesc },
+					});
 					return;
 				}
 
@@ -130,7 +131,9 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 						state: result.state,
 						statusDesc: result.statusDesc,
 						archivoReporte: archivos,
-						hint: archivos[0] ? `Download with: sunat sire ${libroAlias} archivo --nombre ${archivos[0].nomArchivoReporte} --periodo ${opts.periodo} --out path` : undefined,
+						hint: archivos[0]
+							? `Download with: sunat sire ${libroAlias} archivo --nombre ${archivos[0].nomArchivoReporte} --periodo ${opts.periodo} --out path`
+							: undefined,
 					},
 				});
 			} catch (err) {
@@ -189,9 +192,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 
 	const uploadCommand = sub
 		.command("reemplazar")
-		.description(
-			"Reemplazar la propuesta SUNAT con un archivo .zip propio (TUS.IO upload, async). T2.",
-		)
+		.description("Reemplazar la propuesta SUNAT con un archivo .zip propio (TUS.IO upload, async). T2.")
 		.requiredOption("--periodo <YYYYMM>", "Periodo tributario, e.g. 202404")
 		.requiredOption("--file <path>", "Path to the .zip file to upload (must contain a .txt per SUNAT spec)")
 		.option("--filename <name>", "Override filename announced to SUNAT (defaults to basename of --file)")
@@ -209,10 +210,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 		)
 		.requiredOption("--periodo <YYYYMM>")
 		.requiredOption("--file <path>", "Path to the .zip file to upload")
-		.requiredOption(
-			"--tipo <kind>",
-			"propuesta | preliminar | ajustes | ajustes-anteriores",
-		)
+		.requiredOption("--tipo <kind>", "propuesta | preliminar | ajustes | ajustes-anteriores")
 		.option("--filename <name>")
 		.option("--yes")
 		.option("--wait")
@@ -235,7 +233,15 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 
 	async function uploadAction(
 		cmd: Command,
-		opts: { periodo: string; file: string; filename?: string; yes?: boolean; wait?: boolean; timeout: string; chunkSize: string },
+		opts: {
+			periodo: string;
+			file: string;
+			filename?: string;
+			yes?: boolean;
+			wait?: boolean;
+			timeout: string;
+			chunkSize: string;
+		},
 		kind: SireUploadKind,
 	): Promise<void> {
 		const format = getFormat(cmd);
@@ -346,8 +352,15 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 					}
 					const creds = resolveSireCreds();
 					const result = await aceptarPropuestaRvie(opts.periodo, creds);
-					audit({ command: "sire ventas aceptar", args: { periodo: opts.periodo }, result: "success", details: result as unknown as Record<string, unknown> });
-					output(format, { json: { ...result, hint: `Poll status with: sunat sire ventas ticket --num ${result.numTicket}` } });
+					audit({
+						command: "sire ventas aceptar",
+						args: { periodo: opts.periodo },
+						result: "success",
+						details: result as unknown as Record<string, unknown>,
+					});
+					output(format, {
+						json: { ...result, hint: `Poll status with: sunat sire ventas ticket --num ${result.numTicket}` },
+					});
 				} catch (err) {
 					outputError(err instanceof Error ? err.message : String(err), format);
 				}
@@ -395,7 +408,9 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 }
 
 export function createSireCommand(): Command {
-	const sire = new Command("sire").description("SUNAT SIRE — Registro de Ventas (RVIE) y Compras (RCE) electrónicos. T0/T1/T2.");
+	const sire = new Command("sire").description(
+		"SUNAT SIRE — Registro de Ventas (RVIE) y Compras (RCE) electrónicos. T0/T1/T2.",
+	);
 	sire.addCommand(bookCommand("ventas", COD_LIBRO.rvie));
 	sire.addCommand(bookCommand("compras", COD_LIBRO.rce));
 	return sire;
