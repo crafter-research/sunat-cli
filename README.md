@@ -165,9 +165,10 @@ sunat-cli rhe emit --dry-run --json '{"empresa":"Acme Corp.","monto":5000,"moned
 # Batch emit
 sunat-cli rhe emit --batch ./data/example.csv
 
-# F616 mensual (periodo en YYYY-MM)
-sunat-cli f616 declare --dry-run --json '{"periodo":"2026-03","ingresoPEN":5000}'
-sunat-cli f616 declare --json '{"periodo":"2026-03","ingresoPEN":5000}'
+# F616 mensual (periodo en YYYY-MM). El ingreso lo precarga SUNAT desde tus
+# RHE registrados: el CLI no lo escribe, asi que verificalo en el portal
+sunat-cli f616 declare --dry-run --json '{"periodo":"2026-03"}'
+sunat-cli f616 declare --json '{"periodo":"2026-03"}'
 
 # Varios periodos de una
 sunat-cli f616 declare --batch --months 2025-03..2026-02 --dry-run

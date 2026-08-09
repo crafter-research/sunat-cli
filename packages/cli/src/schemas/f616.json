@@ -10,14 +10,24 @@
 		},
 		"ingresoPEN": {
 			"type": "number",
-			"required": true,
+			"required": false,
 			"min": 0,
-			"description": "Total monthly income in PEN. System calculates 8% tax."
+			"description": "Ignored. SUNAT prefills the income from your registered RHE and the CLI does not overwrite it. Verify the prefilled amount in the portal before submitting."
 		},
 		"retenciones": {
 			"type": "number",
 			"default": 0,
-			"description": "4ta categoria withholdings received (usually 0 for foreign employers)"
+			"description": "Ignored, same reason as ingresoPEN. SUNAT applies its own withholding records."
+		},
+		"telefono": {
+			"type": "string",
+			"required": false,
+			"description": "Contact phone written into the form."
+		},
+		"profesion": {
+			"type": "string",
+			"required": false,
+			"description": "Profession selected in the form."
 		}
 	},
 	"flags": {
@@ -26,7 +36,7 @@
 		"--batch --months <range>": "Declare multiple months (e.g. '2025-03..2026-02')"
 	},
 	"computed": {
-		"pagoACuenta": "ingresoPEN * 0.08 - retenciones"
+		"pagoACuenta": "Computed by SUNAT from its own prefilled figures, not by this CLI."
 	},
 	"auth": "Requires Nueva Plataforma session. Run 'sunat login --nueva-plataforma' first.",
 	"portal": "Nueva Plataforma (e-menu.sunat.gob.pe/cl-ti-itmenu2/) — requires reCAPTCHA v2 (one-time)"
