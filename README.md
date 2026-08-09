@@ -122,7 +122,9 @@ Secrets resolve from the environment first, then the OS keychain. Existing
 env-var setups keep working unchanged.
 
 ```bash
-sunat-cli keychain set CPE_CERT_PASSWORD --value '...'
+# Omit --value on a terminal and it prompts without echo, so the secret
+# never lands in shell history
+sunat-cli keychain set CPE_CERT_PASSWORD
 sunat-cli keychain list
 sunat-cli keychain clear CPE_CERT_PASSWORD
 ```
