@@ -112,6 +112,62 @@ All endpoints follow Manual de Servicios Web Api SIRE Ventas v22 (March 2024) at
 
 ---
 
+## Renta Anual F709 — e-renta (PR: read path)
+
+Read-only namespace over `e-renta.sunat.gob.pe`. Recon: `recon/sunat-f709-erenta-api.md`.
+
+### Verified end-to-end 2026-08-21
+
+- 🔬 `renta login` — OAuth via SUNAT's e-renta client, token cached to `~/.sunat/renta-token.json` (0600)
+- 🔬 `renta whoami`, `renta status` — session state and server date
+- 🔬 `renta form -e 2025` — form metadata, filing window, official help links
+- 🔬 `renta casillas -e 2025` — 88 casillas with required/editable flags
+- 🔬 `renta declaracion -e 2025` — the prefilled declaration (62KB document)
+- 🔬 `renta presentaciones -e 2024` — filing history, returned 2 real filings
+- 🔬 `renta constancia <id>` — proof of filing for a real past declaration
+
+All of the above were exercised through the globally linked binary against
+production SUNAT, with the browser closed after login. Control: the same
+requests without the bearer token return HTTP 401, so the token is what
+authorizes rather than a residual browser session.
+
+### Deliberately not implemented
+
+- 🚧 **Filing, amending and paying.** `orquestacionpresentacion/procesarPresentarPagar`
+  is identified in the SPA bundle but is NOT wired and must not be until its
+  request body is captured from a real filing. Filing an annual return is
+  irreversible. `predeclaracion/save` (draft write) is in the same position.
+- 🚧 PDF export (`generador/ppnn/*`) and the payment gateway (`orquestacionproxypago/*`)
+  are mapped in `recon/f709-uri-table.txt` but not implemented.
+
+### Active limitations
+
+- ⚠️ **Seasonal.** The filing window for ejercicio 2025 opened 31 March 2026 and
+  closed in June 2026 by RUC last digit. Reads work year-round; a filing flow
+  could not be tested end-to-end outside the window even if it were built.
+- ⚠️ **Only ejercicio 2025 and 2024 were exercised.** The selector offers 2019
+  onward and the schema endpoint is per-ejercicio, so older years likely work,
+  but they are untested.
+- ⚠️ **`version-web` is a client-version gate.** Captured at login from the live
+  SPA (`SUNAT.Version`), with `v4.3.12` as a fallback constant. When SUNAT bumps
+  it, a stale cached token returns HTTP 422 code 42209; re-running `renta login`
+  picks up the new value. The CLI surfaces that error verbatim rather than retrying.
+- ⚠️ **SUNAT throttles by source IP.** ~15-20 requests within seconds makes every
+  subsequent request return a static nginx 500 for 1-2 minutes, with no
+  `Retry-After` header. The client serializes requests with a 1.2s floor;
+  do not parallelise `renta` commands.
+- ⚠️ **`consultadeclaracion/.../resumen` wants `formulario=709` without the
+  leading zero** while every other endpoint wants `0709`. Measured by contrast.
+  Do not "fix" it to match its neighbours.
+- ⚠️ **An unknown identifier returns HTTP 202 with an empty body**, not a 404.
+  Surfaced as error code `empty`.
+- ⚠️ **Token acquisition still needs the browser.** SUNAT's e-renta client is
+  registered for `authorization_code` only. Whether a self-registered API client
+  can be granted the `e-renta` scope is the open question that would remove the
+  browser entirely. Untested.
+
+---
+
 ## RHE / F616 — Personas Naturales (legacy, pre-existing)
 
 These predate the agent-first refactor and use the older agent-browser scraping path. Not part of recent PRs but documenting for completeness:

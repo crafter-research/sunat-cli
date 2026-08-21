@@ -9,6 +9,7 @@ const SCHEMAS_DIR = join(dirname(import.meta.dir), "schemas");
 const AVAILABLE_SCHEMAS = [
 	"rhe",
 	"f616",
+	"renta",
 	"login",
 	"cpe-factura",
 	"cpe-boleta",

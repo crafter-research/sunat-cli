@@ -1,0 +1,135 @@
+{
+	"resource": "renta",
+	"version": "1.0.0",
+	"formulario": "0709",
+	"description": "Renta Anual Persona Natural (F709) on e-renta.sunat.gob.pe. Read-only.",
+	"readOnly": true,
+	"writesNothing": "This command surface performs GET requests only. Filing, amending and paying are not implemented: SUNAT's submission endpoint (orquestacionpresentacion/procesarPresentarPagar) exists but is deliberately not wired, because filing an annual return is irreversible.",
+	"auth": {
+		"portal": "e-renta.sunat.gob.pe",
+		"mechanism": "OAuth2 authorization_code via Clave SOL, in a browser",
+		"clientId": "03590141-c69c-438c-a36a-8ee2a3ad9747",
+		"header": "Authorization: Bearer <jwt>",
+		"tokenLifetimeSeconds": 3600,
+		"cache": "~/.sunat/renta-token.json (mode 0600)",
+		"captcha": "none",
+		"notes": "A Nueva Plataforma (F616) token does NOT work here: different audience. Run 'sunat-cli renta login' to mint one.",
+		"envVars": {
+			"SUNAT_RUC": "RUC number (11 digits)",
+			"SUNAT_USER": "SOL username",
+			"SUNAT_PASSWORD": "SOL password"
+		}
+	},
+	"conventions": {
+		"periodo": "The annual period is {ejercicio}13, e.g. ejercicio 2025 is periodo 202513. Month sentinel 13, not a real month.",
+		"ejercicioDefault": "Commands default to the previous calendar year, because the annual return covers the prior year.",
+		"versionWeb": "The API requires a 'version-web' client-version header. It is captured at login and refreshed automatically; a stale value returns HTTP 422 code 42209."
+	},
+	"commands": {
+		"login": {
+			"description": "Authenticate and cache the e-renta token",
+			"flags": {
+				"--force": "Re-authenticate even if the cached token is fresh"
+			},
+			"output": {
+				"ruc": "string",
+				"usuario": "string",
+				"expiresAt": "number (epoch seconds)",
+				"expiresInMinutes": "number",
+				"versionWeb": "string",
+				"reused": "boolean"
+			}
+		},
+		"whoami": {
+			"description": "Cached session status",
+			"output": {
+				"authenticated": "boolean",
+				"ruc": "string|null",
+				"expiresInMinutes": "number",
+				"versionWeb": "string|null"
+			}
+		},
+		"status": {
+			"description": "Whether e-renta is answering, plus its server date",
+			"output": {
+				"up": "boolean",
+				"fecha": "YYYY-MM-DD",
+				"hora": "ISO 8601"
+			}
+		},
+		"form": {
+			"description": "Form metadata for an ejercicio",
+			"flags": {
+				"-e, --ejercicio <year>": "Tax year (default: previous year)"
+			},
+			"output": {
+				"codFormulario": "string",
+				"descripcion": "string",
+				"ejercicio": "string",
+				"esPresentacion": "boolean",
+				"ayudas": "array of {codAyuda, descripcion, uri}"
+			}
+		},
+		"casillas": {
+			"description": "Field schema: every casilla with its required/editable flags",
+			"flags": {
+				"-e, --ejercicio <year>": "Tax year",
+				"--editable": "Only casillas the taxpayer can fill",
+				"--search <text>": "Filter by description"
+			},
+			"output": "array of { numCas: string, descripcion: string, indObligatorio: boolean, indEditable: boolean }"
+		},
+		"declaracion": {
+			"description": "The declaration SUNAT prefilled for the taxpayer",
+			"flags": {
+				"-e, --ejercicio <year>": "Tax year",
+				"--full": "Emit the whole document rather than a section summary"
+			},
+			"output": {
+				"perTri": "number",
+				"numRuc": "string",
+				"valHash": "string",
+				"declaracion": "{ generales, seccInformativa, seccDeterminativa, determinacionDeuda }"
+			}
+		},
+		"presentaciones": {
+			"description": "Declarations already filed for an ejercicio",
+			"flags": {
+				"-e, --ejercicio <year>": "Tax year"
+			},
+			"output": "array of { numOrden: number, desTipoDeclaracion: string, fecDeclaracion: string, mtoPag: number, idPresentacion: string, web: boolean }"
+		},
+		"constancia": {
+			"description": "Proof of filing for one declaration",
+			"args": {
+				"idPresentacion": "Filing id, from 'renta presentaciones'"
+			},
+			"flags": {
+				"--detalle": "Return the full filed declaration instead of the receipt"
+			},
+			"output": {
+				"resultado": {
+					"numeroOperacionSunat": "string",
+					"descripcionOperacionSunat": "string",
+					"fechaProcesoPresentacion": "string",
+					"numeroRUC": "string",
+					"razonSocial": "string"
+				}
+			}
+		}
+	},
+	"errors": {
+		"no-token": "No cached session. Run 'sunat-cli renta login'.",
+		"expired": "Token expired (1 hour lifetime). Run 'sunat-cli renta login'.",
+		"throttled": "SUNAT throttles by source IP for 1-2 minutes after a burst. Wait and retry; this is not a dead endpoint.",
+		"42209": "Client-version gate. Re-run login to pick up SUNAT's current version.",
+		"42210": "Wrong formulario code for that endpoint.",
+		"empty": "SUNAT returned no data (HTTP 202, empty body). Usually an identifier that does not exist."
+	},
+	"limitations": [
+		"Filing and payment are not implemented, by design.",
+		"The filing window is seasonal: for ejercicio 2025 it opened 31 March 2026 and closed in June 2026.",
+		"Only ejercicio 2025 was verified end to end; the selector offers 2019 onward.",
+		"Requests are paced ~1.2s apart because SUNAT's WAF blocks bursts by IP."
+	]
+}

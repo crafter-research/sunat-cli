@@ -1,6 +1,6 @@
 ---
 name: sunat-cli
-description: SUNAT tax automation CLI for Peru. Two namespaces. (A) Personas naturales (RUC 10): emit Recibos por Honorarios (RHE), file F616 monthly declarations. (B) Empresas (RUC 20): emit Comprobantes de Pago Electronicos (CPE) — Factura, Boleta, NC, ND, Guia — under `sunat cpe ...`. Use when: (1) user mentions SUNAT, RHE, recibo por honorarios, F616, impuestos Peru, (2) user wants to emit an invoice (factura/boleta) or recibo, (3) user asks about CPE, UBL 2.1, XAdES, OSE, PSE, Facturador SUNAT, (4) user says "emitir recibo", "emitir factura", "declarar F616", "anular comprobante". Package: @crafter/sunat-cli (npm).
+description: SUNAT tax automation CLI for Peru. Three namespaces. (A) Personas naturales (RUC 10): emit Recibos por Honorarios (RHE), file F616 monthly declarations. (B) Empresas (RUC 20): emit Comprobantes de Pago Electronicos (CPE) — Factura, Boleta, NC, ND, Guia — under `sunat cpe ...`. Use when: (1) user mentions SUNAT, RHE, recibo por honorarios, F616, impuestos Peru, (2) user wants to emit an invoice (factura/boleta) or recibo, (3) user asks about CPE, UBL 2.1, XAdES, OSE, PSE, Facturador SUNAT, (4) user says "emitir recibo", "emitir factura", "declarar F616", "anular comprobante". (C) Renta Anual (F709) read-only: consult the annual income-tax return, its casillas, filings and constancias under `sunat renta ...` — use when the user mentions renta anual, declaracion jurada anual, F709, or DJ anual. Package: @crafter/sunat-cli (npm).
 ---
 
 # sunat-cli
@@ -406,6 +406,71 @@ sunat schema cpe-nota-credito
 ```
 
 Use `sunat schema <resource>` to get machine-readable field definitions before constructing payloads.
+
+## Renta Anual — F709 (Persona Natural)
+
+Read-only consultation of the annual income-tax return on `e-renta.sunat.gob.pe`.
+**This namespace cannot file, amend or pay.** SUNAT's submission endpoint exists
+but is deliberately not wired, because filing an annual return is irreversible.
+
+### Session
+
+e-renta uses a different OAuth client and a different token audience from the
+F616 / Nueva Plataforma commands, so its session is separate:
+
+```bash
+sunat-cli renta login          # opens a browser once, caches a 1-hour token
+sunat-cli renta whoami         # session status, no network call
+sunat-cli renta status         # is e-renta answering, plus its server date
+```
+
+Every other `renta` command refreshes the session on its own when the cache is
+cold, so `login` is rarely needed explicitly. The browser is required only to
+mint the token; all reads afterwards run headless.
+
+### Consulting the form
+
+```bash
+sunat-cli renta form -e 2025                     # description, filing window, help links
+sunat-cli renta casillas -e 2025                 # all 88 fields with required/editable flags
+sunat-cli renta casillas -e 2025 --editable      # only the ones you may fill
+sunat-cli renta casillas -e 2025 --search alquiler
+```
+
+### Your declaration and filing history
+
+```bash
+sunat-cli renta declaracion -e 2025              # section summary of the prefilled return
+sunat-cli renta declaracion -e 2025 --full --output json   # the whole document
+sunat-cli renta presentaciones -e 2024           # what has already been filed
+sunat-cli renta constancia <idPresentacion>      # proof of filing
+sunat-cli renta constancia <idPresentacion> --detalle      # the full filed return
+```
+
+`idPresentacion` comes from `renta presentaciones`.
+
+### Conventions that will bite you
+
+- **`ejercicio` defaults to last year**, because the annual return covers the
+  prior year. Pass `-e` to override.
+- **The annual period is `{ejercicio}13`** — month sentinel 13, not a real month.
+  Ejercicio 2025 is periodo `202513`.
+- **The filing window is seasonal.** For ejercicio 2025 it opened 31 March 2026
+  and closed in June 2026 depending on the RUC's last digit. `renta form` reports
+  whether filing is currently open.
+- **Requests are paced ~1.2s apart** on purpose: SUNAT's WAF blocks bursts by
+  source IP for 1-2 minutes. Do not parallelise these commands.
+
+### Errors worth handling
+
+| code | meaning |
+|---|---|
+| `no-token` / `expired` | Run `sunat-cli renta login` |
+| `throttled` | SUNAT rate-limited this IP. Wait a minute, retry. Not a dead endpoint. |
+| `42209` | SUNAT bumped its client version. Re-run `login` to pick up the new one. |
+| `empty` | No data for that identifier, usually a wrong `idPresentacion`. |
+
+Full machine-readable contract: `sunat-cli schema renta`.
 
 ## Limitations
 
