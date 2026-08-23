@@ -219,6 +219,20 @@ Follows [Agent DX principles](https://justin.poehnelt.com/posts/rewrite-your-cli
 
 SUNAT's monthly-declaration form looks server-rendered and behaves like one: driving the DOM never works, because the fields stay disabled until a background call returns. Underneath sits a JSON API, and reaching it needs a session token (`IdCache`) the portal mints only during its own browser login. A self-registered API client can never request that audience.
 
+### Docs that cannot go stale
+
+```bash
+sunat-cli skills get core        # auth, RHE, F616, workflows
+sunat-cli skills get schemas     # field specs
+sunat-cli skills get endpoints   # the SUNAT endpoints behind each command
+sunat-cli skills list
+```
+
+The agent skill installed on a machine is a thin stub that points here. Serving
+the content from the binary means an agent always reads the docs for the version
+it is actually running, instead of whatever was copied into `~/.claude/skills/`
+months ago. Same idea as `agent-browser skills get core`.
+
 ### Declaring without emitting RHE
 
 `f616 declarar` fills the web form directly, and that unlocks something the API path
