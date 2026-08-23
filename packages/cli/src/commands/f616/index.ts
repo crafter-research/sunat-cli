@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { createDeclararCommand } from "./declarar.ts";
 import { audit, auditScreenshotPath } from "../../data/audit.ts";
 import { ensurePlataformaToken } from "../../plataforma/ensure-token.ts";
 import { obtenerListaOficios, obtenerPeriodo } from "../../plataforma/f616-api.ts";
@@ -123,6 +124,8 @@ export function createF616Command(): Command {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}
 		});
+
+	f616.addCommand(createDeclararCommand());
 
 	return f616;
 }

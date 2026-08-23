@@ -192,6 +192,13 @@ sunat-cli f616 declare --batch --months 2025-03..2026-02 --dry-run
 # Lecturas del F616 por API, headless (abre el navegador solo si el token vencio)
 sunat-cli f616 periodo 2026-03
 sunat-cli f616 oficios
+
+# Fill the web form itself (T2). Needs the F616 open in the browser.
+sunat-cli f616 declarar estado
+sunat-cli f616 declarar periodo 2025-11
+sunat-cli f616 declarar ingreso --fecha 17/11/2025 --monto 21054 --cliente "CLERK INC"
+sunat-cli f616 declarar bandeja
+sunat-cli f616 declarar constancias --dir ~/Downloads/constancias
 ```
 
 ## Design
@@ -211,6 +218,30 @@ Follows [Agent DX principles](https://justin.poehnelt.com/posts/rewrite-your-cli
 ## Headless after one login
 
 SUNAT's monthly-declaration form looks server-rendered and behaves like one: driving the DOM never works, because the fields stay disabled until a background call returns. Underneath sits a JSON API, and reaching it needs a session token (`IdCache`) the portal mints only during its own browser login. A self-registered API client can never request that audience.
+
+### Declaring without emitting RHE
+
+`f616 declarar` fills the web form directly, and that unlocks something the API path
+cannot do: **the F616 does not require the RHE to exist**. Income rows are entered in
+the form itself (Detalle de Ingresos, "Nuevo"), and that modal validates neither the
+serie nor the número against the SEE, nor does it cap how far back the dates can go.
+The electronic RHE issuer does cap it at two days, but declaring never goes through it.
+
+Three things the form does not tell you, learned by hitting them:
+
+- **Serie is four digits, no letter.** `E001` is rejected; `0001` works. The `E` belongs
+  to the RHE filename, not to this field.
+- **Serie, número and fecha de pago are required** even though they carry no asterisk.
+- **Reload the form between periods.** Changing `casilla007` updates the value but does
+  not rebuild the modal's validation rules, which stay bound to the previous period and
+  reject the dates of the new one.
+
+The interest in casilla 553 is **read, never computed**: SUNAT's rule does not reproduce
+with TIM 0.9%/month from the due date (for 11/2025 it charges S/53 where the formula
+gives S/124).
+
+Nothing in `declarar` presents or pays. It leaves the form in the tray for a human to
+submit.
 
 So the CLI captures the token once from the browser, then reads the API headless for its hour of life. `f616 periodo` and `f616 oficios` open the browser only when the cached token is missing or expired; otherwise they are plain HTTP. Verified with zero browser processes running.
 
