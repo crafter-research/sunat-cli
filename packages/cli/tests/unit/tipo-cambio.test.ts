@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { loadCachedTc, parseTcSnapshot, saveTc } from "../../src/sunat-rest/tipo-cambio.ts";
+import { loadCachedTc, saveTc, selectRateForDate } from "../../src/sunat-rest/tipo-cambio.ts";
 import { paths } from "../../src/data/config.ts";
 
 const CACHE_FILE = join(paths.sunatDir, "cache", "tipo-cambio.jsonl");
@@ -30,51 +30,53 @@ afterAll(() => {
 	writeFileSync(CACHE_FILE, filtered ? `${filtered}\n` : "");
 });
 
-describe("parseTcSnapshot — pure parser", () => {
-	test("aria-label style 'Compra X Venta Y'", () => {
-		const snap = "Tipo de Cambio Bancario\nCompra 3.760 Venta 3.768\n";
-		const r = parseTcSnapshot(snap, "2026-04-29");
-		expect(r).toEqual({ compra: 3.76, venta: 3.768 });
+const row = (fecPublica: string, valTipo: string, codTipo: "C" | "V") => ({ fecPublica, valTipo, codTipo });
+
+describe("selectRateForDate — pure selector", () => {
+	test("picks the compra/venta pair published on the exact date", () => {
+		const rows = [
+			row("01/11/2025", "3.372", "C"),
+			row("01/11/2025", "3.379", "V"),
+			row("17/11/2025", "3.365", "C"),
+			row("17/11/2025", "3.374", "V"),
+		];
+		expect(selectRateForDate(rows, "2025-11-17")).toEqual({ compra: 3.365, venta: 3.374, publicada: "2025-11-17" });
 	});
 
-	test("aria-label with colons 'Compra: X Venta: Y'", () => {
-		const snap = "Compra: 3.755   Venta: 3.770";
-		const r = parseTcSnapshot(snap, "2026-04-29");
-		expect(r).toEqual({ compra: 3.755, venta: 3.77 });
+	test("falls back to the last rate published before the date", () => {
+		const rows = [
+			row("14/11/2025", "3.360", "C"),
+			row("14/11/2025", "3.370", "V"),
+			row("20/11/2025", "3.400", "C"),
+			row("20/11/2025", "3.410", "V"),
+		];
+		// Nothing published on the 17th: the valid TC is the 14th's.
+		expect(selectRateForDate(rows, "2025-11-17")).toEqual({ compra: 3.36, venta: 3.37, publicada: "2025-11-14" });
 	});
 
-	test("table row '3.760 | 3.768'", () => {
-		const snap = "29 Abril 2026 | 3.760 | 3.768";
-		const r = parseTcSnapshot(snap, "2026-04-29");
-		expect(r).not.toBeNull();
-		expect(r?.compra).toBe(3.76);
-		expect(r?.venta).toBe(3.768);
+	test("never picks a rate published after the requested date", () => {
+		const rows = [row("20/11/2025", "3.400", "C"), row("20/11/2025", "3.410", "V")];
+		expect(selectRateForDate(rows, "2025-11-17")).toBeNull();
 	});
 
-	test("normalizes order so compra <= venta", () => {
-		const snap = "3.770 | 3.755"; // accidentally swapped
-		const r = parseTcSnapshot(snap, "2026-04-29");
-		expect(r?.compra).toBe(3.755);
-		expect(r?.venta).toBe(3.77);
+	test("returns null when a date has compra but no venta", () => {
+		const rows = [row("17/11/2025", "3.365", "C")];
+		expect(selectRateForDate(rows, "2025-11-17")).toBeNull();
 	});
 
-	test("rejects unrelated decimals (e.g. weights, totals)", () => {
-		const snap = "Peso bruto: 100.00 | Peso neto: 99.50";
-		const r = parseTcSnapshot(snap, "2026-04-29");
-		// Sanity check filter: weights are >10 so should be rejected
-		expect(r).toBeNull();
+	test("returns null on empty input", () => {
+		expect(selectRateForDate([], "2025-11-17")).toBeNull();
 	});
 
-	test("returns null on empty/garbage", () => {
-		expect(parseTcSnapshot("", "2026-04-29")).toBeNull();
-		expect(parseTcSnapshot("just text", "2026-04-29")).toBeNull();
-	});
-
-	test("handles 4-decimal values (some TC sources)", () => {
-		const snap = "Compra 3.7625 Venta 3.7700";
-		const r = parseTcSnapshot(snap, "2026-04-29");
-		expect(r?.compra).toBe(3.7625);
-		expect(r?.venta).toBe(3.77);
+	test("orders dates chronologically, not lexically by DD/MM/YYYY", () => {
+		// Lexical sort on "DD/MM/YYYY" would rank 30/11 below 02/12.
+		const rows = [
+			row("30/11/2025", "3.300", "C"),
+			row("30/11/2025", "3.310", "V"),
+			row("02/12/2025", "3.500", "C"),
+			row("02/12/2025", "3.510", "V"),
+		];
+		expect(selectRateForDate(rows, "2025-12-05")?.publicada).toBe("2025-12-02");
 	});
 });
 
