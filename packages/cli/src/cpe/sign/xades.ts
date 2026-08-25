@@ -15,7 +15,7 @@
  * 7. Fill in SignatureValue.
  */
 
-import { createSign, createHash } from "crypto";
+import { createHash, createSign } from "node:crypto";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { C14nCanonicalization } from "xml-crypto/lib/c14n-canonicalization.js";
 import { type LoadedCert, loadPfx, pemToBase64Cert } from "./cert-loader.ts";
@@ -113,7 +113,7 @@ function createSignatureSkeleton(doc: Document, signatureId: string, certB64: st
 	return sig;
 }
 
-function computeEnvelopedDigest(doc: Document, signatureEl: Element): string {
+function computeEnvelopedDigest(doc: Document, _signatureEl: Element): string {
 	// Clone the doc, remove the signature, then canonicalize.
 	const clone = new DOMParser().parseFromString(new XMLSerializer().serializeToString(doc), "text/xml");
 	const sigInClone = clone.getElementsByTagNameNS(DS_NS, "Signature")[0];
@@ -130,7 +130,10 @@ function findExtensionContent(doc: Document): Element {
 
 const c14n = new C14nCanonicalization();
 
-function canonicalize(node: Node | Element, ancestorNamespaces: Array<{ prefix: string; namespaceURI: string }> = []): string {
+function canonicalize(
+	node: Node | Element,
+	ancestorNamespaces: Array<{ prefix: string; namespaceURI: string }> = [],
+): string {
 	// biome-ignore lint/suspicious/noExplicitAny: xml-crypto types don't match xmldom types but runtime is compatible
 	return c14n.process(node as any, { ancestorNamespaces }) as string;
 }

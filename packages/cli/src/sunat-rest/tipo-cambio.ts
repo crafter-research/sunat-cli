@@ -22,8 +22,8 @@
  * the legally valid TC for that date.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { paths } from "../data/config.ts";
 
 export interface TipoCambioRate {
@@ -140,7 +140,9 @@ async function fetchMonth(anio: number, mesIndex: number): Promise<TcRow[]> {
 		body: JSON.stringify({ anio, mes: mesIndex, token: "x" }),
 	});
 	if (!res.ok) {
-		throw new Error(`SUNAT TC endpoint returned HTTP ${res.status} for ${anio}-${String(mesIndex + 1).padStart(2, "0")}`);
+		throw new Error(
+			`SUNAT TC endpoint returned HTTP ${res.status} for ${anio}-${String(mesIndex + 1).padStart(2, "0")}`,
+		);
 	}
 	const text = await res.text();
 	if (text.includes("Request Rejected")) {

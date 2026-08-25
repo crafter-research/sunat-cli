@@ -11,7 +11,7 @@
  * Note: requires OAuth client_credentials with scope 'contribuyente'.
  */
 
-import { type OAuthCredentials, callRestApi } from "./oauth.ts";
+import { callRestApi, type OAuthCredentials } from "./oauth.ts";
 
 export type CpeTipoCode = "01" | "03" | "07" | "08" | "20" | "40" | "R1" | "R7" | "09";
 

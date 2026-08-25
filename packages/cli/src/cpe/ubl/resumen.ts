@@ -71,7 +71,7 @@ function renderSummaryLine(entry: SummaryBoletaEntry, idx: number): string {
 	// SUNAT element order (per Greenter twig + SUNAT XSD):
 	// LineID, DocumentTypeCode, ID, AccountingCustomerParty, [BillingReference],
 	// cac:Status, sac:TotalAmount, sac:BillingPayment*, cac:TaxTotal+
-	const receptorBlock = entry.receptor && entry.receptor.numDoc
+	const receptorBlock = entry.receptor?.numDoc
 		? `            <cac:AccountingCustomerParty>
                 <cbc:CustomerAssignedAccountID>${escapeXml(entry.receptor.numDoc)}</cbc:CustomerAssignedAccountID>
                 <cbc:AdditionalAccountID>${escapeXml(entry.receptor.tipoDoc)}</cbc:AdditionalAccountID>

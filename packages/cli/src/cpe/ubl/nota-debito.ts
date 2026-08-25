@@ -17,11 +17,11 @@ import type { NotaDebitoInput } from "../drivers/types.ts";
 import {
 	type EmisorCtx,
 	escapeXml,
+	fmt,
 	renderCacSignature,
 	renderEmisorParty,
-	renderReceptorParty,
 	renderInvoiceLine,
-	fmt,
+	renderReceptorParty,
 } from "./common.ts";
 
 export interface NotaDebitoContext {

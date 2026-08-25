@@ -5,7 +5,14 @@
  * before hitting the SUNAT SOAP endpoint. Full SUNAT catalog is ~600 rules.
  */
 
-import type { BoletaInput, CpeItem, CpeTotales, FacturaInput, NotaCreditoInput, NotaDebitoInput } from "../drivers/types.ts";
+import type {
+	BoletaInput,
+	CpeItem,
+	CpeTotales,
+	FacturaInput,
+	NotaCreditoInput,
+	NotaDebitoInput,
+} from "../drivers/types.ts";
 import { BOLETA_RECEPTOR_REQUIRED_THRESHOLD } from "../ubl/boleta.ts";
 
 export interface ValidationError {
@@ -249,7 +256,11 @@ export function validateBoleta(input: BoletaInput, today = new Date()): Validati
 			}
 		}
 		if (!r.rznSocial || r.rznSocial.length === 0) {
-			errors.push({ code: "RZN_SOCIAL", field: "receptor.rznSocial", message: "rznSocial required when receptor present" });
+			errors.push({
+				code: "RZN_SOCIAL",
+				field: "receptor.rznSocial",
+				message: "rznSocial required when receptor present",
+			});
 		}
 	}
 

@@ -209,7 +209,7 @@ export function createPadronCommand(): Command {
 			"Lookup a single RUC in the local padrón. Streaming scan — slow first call (~5-15s on 600MB), instant after. T0.",
 		)
 		.argument("<ruc>", "11-digit RUC to lookup")
-		.action(async (ruc, opts, cmd) => {
+		.action(async (ruc, _opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
 				if (!/^\d{11}$/.test(ruc)) {
@@ -267,7 +267,7 @@ export function createPadronCommand(): Command {
 			try {
 				let input = "";
 				if (opts.file) {
-					const { readFileSync } = await import("fs");
+					const { readFileSync } = await import("node:fs");
 					input = readFileSync(opts.file, "utf-8");
 				} else if (!process.stdin.isTTY) {
 					input = await new Response(process.stdin as unknown as ReadableStream).text();

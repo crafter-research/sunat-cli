@@ -28,6 +28,9 @@
 		"--driver <name>": "Override active driver"
 	},
 	"trust": "T2",
-	"safety": ["Plazo igual que el documento referenciado.", "Para anulaciones totales prefer 'cpe factura void' (T3 con intent token)."],
+	"safety": [
+		"Plazo igual que el documento referenciado.",
+		"Para anulaciones totales prefer 'cpe factura void' (T3 con intent token)."
+	],
 	"status": "STUB — driver=mock works."
 }

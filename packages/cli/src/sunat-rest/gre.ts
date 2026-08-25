@@ -10,9 +10,9 @@
  * Async pattern same as SIRE: send → ticket → poll status → CDR ZIP
  */
 
-import { createHash } from "crypto";
-import { type OAuthCredentials, callRestApi, getAccessToken } from "./oauth.ts";
+import { createHash } from "node:crypto";
 import { zipSingleFile } from "../cpe/soap/zip.ts";
+import { callRestApi, type OAuthCredentials } from "./oauth.ts";
 
 /**
  * Build SIRE-style credentials for GRE (same shape, different scope).
@@ -122,16 +122,30 @@ export async function pollGreTicket(opts: GrePollOpts): Promise<GrePollResult> {
 		const status = await consultarGreTicket(opts.numTicket, opts.creds);
 		opts.onTick?.(attempt, status.codRespuesta);
 		if (status.codRespuesta === "0001") {
-			return { state: "completed", codRespuesta: status.codRespuesta, desRespuesta: status.desRespuesta, arcCdr: status.arcCdr };
+			return {
+				state: "completed",
+				codRespuesta: status.codRespuesta,
+				desRespuesta: status.desRespuesta,
+				arcCdr: status.arcCdr,
+			};
 		}
 		if (status.codRespuesta === "0002" || status.codRespuesta === "0003") {
-			return { state: "rejected", codRespuesta: status.codRespuesta, desRespuesta: status.desRespuesta, arcCdr: status.arcCdr };
+			return {
+				state: "rejected",
+				codRespuesta: status.codRespuesta,
+				desRespuesta: status.desRespuesta,
+				arcCdr: status.arcCdr,
+			};
 		}
 		// 0098 / unknown → still processing
 		await sleep(delay);
 		delay = Math.min(delay * 2, maxDelay);
 	}
-	return { state: "still-processing", codRespuesta: "0098", desRespuesta: `Timeout after ${Math.round((Date.now() - start) / 1000)}s` };
+	return {
+		state: "still-processing",
+		codRespuesta: "0098",
+		desRespuesta: `Timeout after ${Math.round((Date.now() - start) / 1000)}s`,
+	};
 }
 
 function sleep(ms: number): Promise<void> {

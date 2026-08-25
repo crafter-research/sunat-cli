@@ -6,8 +6,8 @@
  *   Mi RUC y Otros Registros → Apps Móviles → Credenciales API
  */
 
-import type { OAuthCredentials } from "../sunat-rest/oauth.ts";
 import { missingSecretMessage, resolveSecret } from "../data/keychain.ts";
+import type { OAuthCredentials } from "../sunat-rest/oauth.ts";
 
 export function resolveOAuthCredentials(): OAuthCredentials {
 	const clientId = process.env.SUNAT_API_CLIENT_ID;

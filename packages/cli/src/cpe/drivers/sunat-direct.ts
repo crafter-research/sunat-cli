@@ -1,10 +1,17 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { buildCatalogCoverageReport, hasCatalogWarnings } from "../catalogos/index.ts";
 import { resolveCpeContext } from "../config.ts";
-import { findCachedResult, findStalePendings, idempotencyKey, logFailure, logPending, logSuccess } from "../idempotency.ts";
-import { signFacturaXml } from "../sign/xades.ts";
+import {
+	findCachedResult,
+	findStalePendings,
+	idempotencyKey,
+	logFailure,
+	logPending,
+	logSuccess,
+} from "../idempotency.ts";
 import { loadPfx } from "../sign/cert-loader.ts";
-import { getStatus, pollStatus, sendBill, sendSummary, SUNAT_ENDPOINTS_FAC } from "../soap/client.ts";
+import { signFacturaXml } from "../sign/xades.ts";
+import { getStatus, pollStatus, SUNAT_ENDPOINTS_FAC, sendBill, sendSummary } from "../soap/client.ts";
 import { bajaFilenameRA, buildBajaUbl } from "../ubl/baja.ts";
 import { boletaFilename, boletaRequiresIndividualSubmission, buildBoletaUbl } from "../ubl/boleta.ts";
 import { buildFacturaUbl, facturaFilename } from "../ubl/factura.ts";
@@ -279,9 +286,8 @@ export class SunatDirectDriver implements CpeDriver {
 
 	private async emitNota(input: NotaCreditoInput | NotaDebitoInput, tipo: "07" | "08"): Promise<CpeResult> {
 		const ctx = resolveCpeContext();
-		const errors = tipo === "07"
-			? validateNotaCredito(input as NotaCreditoInput)
-			: validateNotaDebito(input as NotaDebitoInput);
+		const errors =
+			tipo === "07" ? validateNotaCredito(input as NotaCreditoInput) : validateNotaDebito(input as NotaDebitoInput);
 		if (errors.length > 0) {
 			throw new Error(`Validation failed: ${errors.map((e) => `[${e.code}] ${e.message}`).join("; ")}`);
 		}
@@ -290,13 +296,15 @@ export class SunatDirectDriver implements CpeDriver {
 		const cached = findCachedResult(idemKey);
 		if (cached) return cached;
 
-		const unsigned = tipo === "07"
-			? buildNotaCreditoUbl(input as NotaCreditoInput, { emisor: ctx.emisor })
-			: buildNotaDebitoUbl(input as NotaDebitoInput, { emisor: ctx.emisor });
+		const unsigned =
+			tipo === "07"
+				? buildNotaCreditoUbl(input as NotaCreditoInput, { emisor: ctx.emisor })
+				: buildNotaDebitoUbl(input as NotaDebitoInput, { emisor: ctx.emisor });
 		const signed = signFacturaXml(unsigned, { pfxPath: ctx.certPath, pfxPassword: ctx.certPassword });
-		const filename = tipo === "07"
-			? notaCreditoFilename(ctx.emisor.ruc, input.serie, input.numero)
-			: notaDebitoFilename(ctx.emisor.ruc, input.serie, input.numero);
+		const filename =
+			tipo === "07"
+				? notaCreditoFilename(ctx.emisor.ruc, input.serie, input.numero)
+				: notaDebitoFilename(ctx.emisor.ruc, input.serie, input.numero);
 		const hash = `sha256:${await sha256Hex(signed.xml)}`;
 
 		const auditCmd = tipo === "07" ? "cpe nc emit" : "cpe nd emit";
@@ -396,22 +404,17 @@ export class SunatDirectDriver implements CpeDriver {
 				ts: new Date().toISOString(),
 			};
 
-			logSuccess(
-				idemKey,
-				"cpe resumen send",
-				auditArgs,
-				{
-					id: idemId,
-					serie: idemKey.serie,
-					numero: input.correlativo,
-					hash: signed.cert.serialNumber,
-					status: "pending",
-					cdrCode: undefined,
-					cdrDesc: `ticket=${summaryResp.ticket}`,
-					xml: signed.xml,
-					ts: result.ts,
-				} as unknown as never,
-			);
+			logSuccess(idemKey, "cpe resumen send", auditArgs, {
+				id: idemId,
+				serie: idemKey.serie,
+				numero: input.correlativo,
+				hash: signed.cert.serialNumber,
+				status: "pending",
+				cdrCode: undefined,
+				cdrDesc: `ticket=${summaryResp.ticket}`,
+				xml: signed.xml,
+				ts: result.ts,
+			} as unknown as never);
 
 			return result;
 		} catch (err) {
@@ -444,7 +447,10 @@ export class SunatDirectDriver implements CpeDriver {
 		};
 	}
 
-	async pollResumen(ticket: string, opts?: { timeoutMs?: number; onTick?: (n: number, s: string) => void }): Promise<ResumenStatusResult> {
+	async pollResumen(
+		ticket: string,
+		opts?: { timeoutMs?: number; onTick?: (n: number, s: string) => void },
+	): Promise<ResumenStatusResult> {
 		const ctx = resolveCpeContext();
 		const outcome = await pollStatus({
 			mode: ctx.mode,

@@ -66,7 +66,10 @@ export function parseRucSnapshot(snapshot: string, ruc: string): RucPortalEntry 
 		// where the last segment before " - X - Y" is the address tail with the
 		// distrito appended. We pull the last 3 hyphen-segments and then
 		// tokenize the leftmost of those to extract the distrito.
-		const parts = direccion.split(/\s*-\s*/).map((p) => p.trim()).filter(Boolean);
+		const parts = direccion
+			.split(/\s*-\s*/)
+			.map((p) => p.trim())
+			.filter(Boolean);
 		if (parts.length >= 3) {
 			departamento = parts[parts.length - 1];
 			provincia = parts[parts.length - 2];

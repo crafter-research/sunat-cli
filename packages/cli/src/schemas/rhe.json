@@ -35,7 +35,16 @@
 		},
 		"medioPago": {
 			"type": "enum",
-			"values": ["DEPOSITO", "GIRO", "TRANSFERENCIA", "ORDEN DE PAGO", "TARJETA DEBITO", "TARJETA CREDITO", "CHEQUE", "EFECTIVO"],
+			"values": [
+				"DEPOSITO",
+				"GIRO",
+				"TRANSFERENCIA",
+				"ORDEN DE PAGO",
+				"TARJETA DEBITO",
+				"TARJETA CREDITO",
+				"CHEQUE",
+				"EFECTIVO"
+			],
 			"default": "TRANSFERENCIA",
 			"description": "Payment method used."
 		},

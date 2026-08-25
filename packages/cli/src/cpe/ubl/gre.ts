@@ -21,13 +21,7 @@
  * Reference: https://github.com/thegreenter/greenter/blob/master/packages/xml/src/Xml/Templates/despatch2022.xml.twig
  */
 
-import {
-	type EmisorCtx,
-	NS,
-	escapeXml,
-	fmt,
-	renderCacSignature,
-} from "./common.ts";
+import { type EmisorCtx, escapeXml, fmt, NS, renderCacSignature } from "./common.ts";
 
 export const GRE_NS = {
 	xmlns: "urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2",

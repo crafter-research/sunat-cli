@@ -20,8 +20,7 @@ export function createTipoCambioCommand(): Command {
 		"Tipo de Cambio oficial SUNAT (USD/PEN) — scrapes the SUNAT portal via agent-browser. T0.",
 	);
 
-	tc
-		.option("--fecha <YYYY-MM-DD>", "Date for which to fetch the rate (defaults to today)")
+	tc.option("--fecha <YYYY-MM-DD>", "Date for which to fetch the rate (defaults to today)")
 		.option("--force", "Bypass local cache (default: cached if present, since SUNAT TC is immutable per date)")
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
@@ -44,8 +43,7 @@ export function createTipoCambioCommand(): Command {
 			}
 		});
 
-	tc
-		.command("cached")
+	tc.command("cached")
 		.description("List rates already cached locally without scraping. T0.")
 		.option("--fecha <YYYY-MM-DD>", "Filter to one specific date")
 		.action((opts, cmd) => {
@@ -56,10 +54,7 @@ export function createTipoCambioCommand(): Command {
 					output(format, { json: r ? { found: true, ...r } : { found: false, fecha: opts.fecha } });
 					return;
 				}
-				outputError(
-					"--fecha required for 'cached' (full cache list shaped, not implemented)",
-					format,
-				);
+				outputError("--fecha required for 'cached' (full cache list shaped, not implemented)", format);
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}

@@ -10,7 +10,7 @@
  * Medido contra el portal el 2026-08-22/23. Ver `recon/sunat-f616-api.md`.
  */
 
-import { connect, NATIVE_SETTER, type CdpSession } from "../browser/cdp.ts";
+import { type CdpSession, connect, NATIVE_SETTER } from "../browser/cdp.ts";
 
 /** El visor puede tener varios contextos vivos; este los distingue. */
 const PROBE = `!!document.getElementById('casilla007')||!!document.getElementById('mytable')`;
@@ -42,18 +42,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Cierra bootbox/modales abiertos: si queda uno, se come el próximo clic. */
 async function limpiarDialogos(s: CdpSession): Promise<void> {
 	for (let i = 0; i < 4; i++) {
-		const n = await s.evalIn(`[...document.querySelectorAll('.bootbox,.modal')].filter(function(m){return m.offsetParent!==null}).length`);
+		const n = await s.evalIn(
+			`[...document.querySelectorAll('.bootbox,.modal')].filter(function(m){return m.offsetParent!==null}).length`,
+		);
 		if (!Number(n.val)) return;
 		// Sin tocar "Otro formulario": ese botón resetea el formulario entero.
-		await s.evalIn(`(function(){var b=[...document.querySelectorAll('.bootbox button,.modal button')].find(function(x){return x.offsetParent!==null&&/^(Aceptar|OK|Cancelar)$/i.test(x.innerText.trim())});if(b)b.click();})()`);
+		await s.evalIn(
+			`(function(){var b=[...document.querySelectorAll('.bootbox button,.modal button')].find(function(x){return x.offsetParent!==null&&/^(Aceptar|OK|Cancelar)$/i.test(x.innerText.trim())});if(b)b.click();})()`,
+		);
 		await sleep(1200);
 	}
 }
 
 /** Acepta el bootbox visible y devuelve su texto. */
 async function aceptarDialogo(s: CdpSession): Promise<string> {
-	const txt = await s.evalIn(`[...document.querySelectorAll('.bootbox')].map(function(b){return b.innerText.replace(/\\s+/g,' ').trim()}).join(' | ')`);
-	await s.evalIn(`(function(){var b=[...document.querySelectorAll('.bootbox button')].find(function(x){return /^(Aceptar|S[ií])$/i.test(x.innerText.trim())});if(b)b.click();})()`);
+	const txt = await s.evalIn(
+		`[...document.querySelectorAll('.bootbox')].map(function(b){return b.innerText.replace(/\\s+/g,' ').trim()}).join(' | ')`,
+	);
+	await s.evalIn(
+		`(function(){var b=[...document.querySelectorAll('.bootbox button')].find(function(x){return /^(Aceptar|S[ií])$/i.test(x.innerText.trim())});if(b)b.click();})()`,
+	);
 	return String(txt.val || "").slice(0, 160);
 }
 
@@ -72,7 +80,12 @@ export async function conectarF616(): Promise<CdpSession> {
  * `casilla007` actualiza el valor pero NO reconstruye las reglas de
  * validación del modal de ingresos, que quedan atadas al periodo anterior.
  */
-export async function abrirPeriodo(s: CdpSession, mmyyyy: string, telefono: string, profesion = "INGENIERO"): Promise<boolean> {
+export async function abrirPeriodo(
+	s: CdpSession,
+	mmyyyy: string,
+	telefono: string,
+	profesion = "INGENIERO",
+): Promise<boolean> {
 	await limpiarDialogos(s);
 	await s.evalIn(`(function(){var set=${NATIVE_SETTER};return set('casilla007',${JSON.stringify(mmyyyy)});})()`);
 	await sleep(3500);
@@ -87,7 +100,9 @@ if(o){Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value'
 return 'ok';})()`);
 	await sleep(1200);
 
-	const disabled = await s.evalIn(`document.getElementById('btnSigiente')?document.getElementById('btnSigiente').disabled:true`);
+	const disabled = await s.evalIn(
+		`document.getElementById('btnSigiente')?document.getElementById('btnSigiente').disabled:true`,
+	);
 	return !disabled.val;
 }
 
@@ -103,7 +118,10 @@ export async function periodoAbierto(s: CdpSession): Promise<string> {
  * El orden importa: el radio de tipo de documento limpia los campos de
  * identidad, así que va antes de llenarlos.
  */
-export async function agregarIngreso(s: CdpSession, ing: IngresoF616): Promise<{ ok: boolean; error?: string; filas?: number }> {
+export async function agregarIngreso(
+	s: CdpSession,
+	ing: IngresoF616,
+): Promise<{ ok: boolean; error?: string; filas?: number }> {
 	await limpiarDialogos(s);
 	await s.evalIn(`document.getElementById('nuevo').click()`);
 	await sleep(2500);
@@ -112,9 +130,13 @@ export async function agregarIngreso(s: CdpSession, ing: IngresoF616): Promise<{
 	await sleep(1200);
 
 	const campos: Array<[string, string]> = [
-		["nomPaterno", ing.apePat], ["nomMaterno", ing.apeMat], ["textNombres", ing.nombres],
-		["textSerie", ing.serie], ["textNumero", ing.numero],
-		["textFecEmision", ing.fecha], ["textFecPago", ing.fecha],
+		["nomPaterno", ing.apePat],
+		["nomMaterno", ing.apeMat],
+		["textNombres", ing.nombres],
+		["textSerie", ing.serie],
+		["textNumero", ing.numero],
+		["textFecEmision", ing.fecha],
+		["textFecPago", ing.fecha],
 		["textMonto", String(ing.monto)],
 	];
 	const r = await s.evalIn(`(function(){var set=${NATIVE_SETTER};var o=[];
@@ -126,7 +148,9 @@ return o.join(' | ');})()`);
 	await s.evalIn(`document.getElementById('btnGrabar').click()`);
 	await sleep(2000);
 
-	const errs = await s.evalIn(`[...document.querySelectorAll('.modal [id$=Error]')].map(function(e){return e.innerText.trim()}).filter(Boolean).join(' ;; ')`);
+	const errs = await s.evalIn(
+		`[...document.querySelectorAll('.modal [id$=Error]')].map(function(e){return e.innerText.trim()}).filter(Boolean).join(' ;; ')`,
+	);
 	if (errs.val) return { ok: false, error: String(errs.val) };
 
 	await aceptarDialogo(s);
@@ -151,12 +175,15 @@ return o.join(' | ');})()`);
 export async function leerDeuda(s: CdpSession): Promise<DeudaF616> {
 	const yaEsta = await s.evalIn(`document.getElementById('casilla355')?document.getElementById('casilla355').value:''`);
 	if (!yaEsta.val) {
-		await s.evalIn(`(function(){var a=[...document.querySelectorAll('a.nav-link')].find(function(x){return /Detalle de Ingr/i.test(x.innerText||'')});if(a)a.click();})()`);
+		await s.evalIn(
+			`(function(){var a=[...document.querySelectorAll('a.nav-link')].find(function(x){return /Detalle de Ingr/i.test(x.innerText||'')});if(a)a.click();})()`,
+		);
 		await sleep(1800);
 		await s.evalIn(`(function(){var b=document.getElementById('btnSigiente');if(b&&!b.disabled)b.click();})()`);
 		await sleep(2500);
 	}
-	const get = async (id: string) => String((await s.evalIn(`document.getElementById('${id}')?document.getElementById('${id}').value:''`)).val || "");
+	const get = async (id: string) =>
+		String((await s.evalIn(`document.getElementById('${id}')?document.getElementById('${id}').value:''`)).val || "");
 	return {
 		baseImponible: await get("casilla307"),
 		impuesto: await get("casilla343"),
@@ -197,6 +224,8 @@ export async function limpiarIngresos(s: CdpSession): Promise<number> {
 
 /** Las filas cargadas, como texto. */
 export async function listarIngresos(s: CdpSession): Promise<string[]> {
-	const r = await s.evalIn(`[...document.querySelectorAll('#mytable tbody tr')].map(function(tr){return [...tr.querySelectorAll('td')].map(function(td){return td.innerText.trim()}).slice(0,10).join(' | ')})`);
+	const r = await s.evalIn(
+		`[...document.querySelectorAll('#mytable tbody tr')].map(function(tr){return [...tr.querySelectorAll('td')].map(function(td){return td.innerText.trim()}).slice(0,10).join(' | ')})`,
+	);
 	return (r.val as string[]) || [];
 }

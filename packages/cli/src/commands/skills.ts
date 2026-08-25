@@ -1,6 +1,6 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Command } from "commander";
-import { existsSync, readdirSync, readFileSync } from "fs";
-import { join } from "path";
 import { emitNextSteps } from "../utils/next-steps.ts";
 import { output, outputError } from "../utils/output.ts";
 import { packageDataDir } from "../utils/package-data.ts";

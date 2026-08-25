@@ -17,11 +17,19 @@
  * index is shaped for a follow-up PR.
  */
 
-import { createHash } from "crypto";
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs";
-import { join } from "path";
-import { paths } from "../data/config.ts";
+import { createHash } from "node:crypto";
+import {
+	createReadStream,
+	createWriteStream,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
 import yauzl from "yauzl";
+import { paths } from "../data/config.ts";
 
 const PADRON_URL = "http://www2.sunat.gob.pe/padron_reducido_ruc.zip";
 const CACHE_DIR = join(paths.sunatDir, "cache");

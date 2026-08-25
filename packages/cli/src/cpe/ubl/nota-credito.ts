@@ -21,9 +21,9 @@ import {
 	escapeXml,
 	renderCacSignature,
 	renderEmisorParty,
+	renderInvoiceLine,
 	renderReceptorParty,
 	renderTaxAndTotals,
-	renderInvoiceLine,
 } from "./common.ts";
 
 export interface NotaContext {

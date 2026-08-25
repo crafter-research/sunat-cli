@@ -1,6 +1,6 @@
-import type { CpeDriver, CpeDriverName } from "./types.ts";
 import { MockDriver } from "./mock.ts";
 import { SunatDirectDriver } from "./sunat-direct.ts";
+import type { CpeDriver, CpeDriverName } from "./types.ts";
 
 export function getDriver(name: CpeDriverName | undefined): CpeDriver {
 	const resolved = name || (process.env.CPE_DRIVER as CpeDriverName | undefined) || "mock";
@@ -21,5 +21,5 @@ export function getDriver(name: CpeDriverName | undefined): CpeDriver {
 	}
 }
 
-export { MockDriver, SunatDirectDriver };
 export * from "./types.ts";
+export { MockDriver, SunatDirectDriver };

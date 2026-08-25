@@ -70,7 +70,14 @@ export function sanitizePath(path: string): string {
 	return cleaned;
 }
 
-const VALID_TIPO_DOC = ["SIN DOCUMENTO", "RUC", "DNI", "CARNET DE EXTRANJERIA", "PASAPORTE", "CED. DIPLOMATICA DE IDENTIDAD"] as const;
+const VALID_TIPO_DOC = [
+	"SIN DOCUMENTO",
+	"RUC",
+	"DNI",
+	"CARNET DE EXTRANJERIA",
+	"PASAPORTE",
+	"CED. DIPLOMATICA DE IDENTIDAD",
+] as const;
 export type TipoDocumento = (typeof VALID_TIPO_DOC)[number];
 
 export function validateTipoDoc(tipo: string): TipoDocumento {
@@ -82,7 +89,7 @@ export function validateTipoDoc(tipo: string): TipoDocumento {
 	return found;
 }
 
-const VALID_MONEDA = ["PEN", "USD", "SOL", "DOLAR DE NORTE AMERICA"] as const;
+const _VALID_MONEDA = ["PEN", "USD", "SOL", "DOLAR DE NORTE AMERICA"] as const;
 export function validateMoneda(moneda: string): "PEN" | "USD" {
 	const upper = moneda.trim().toUpperCase();
 	if (upper === "PEN" || upper === "SOL") return "PEN";

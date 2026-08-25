@@ -61,8 +61,7 @@ export function buildBoletaUbl(input: BoletaInput, ctx: BoletaContext): string {
 	const id = `${input.serie}-${input.numero}`;
 	const lines = input.items.map((item, idx) => renderInvoiceLine(item, idx, input.moneda)).join("\n");
 
-	const receptorIn =
-		input.receptor && input.receptor.numDoc ? input.receptor : (defaultReceptor() as BoletaInput["receptor"]);
+	const receptorIn = input.receptor?.numDoc ? input.receptor : (defaultReceptor() as BoletaInput["receptor"]);
 
 	return `<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="${NS.xmlns}" xmlns:cac="${NS.cac}" xmlns:cbc="${NS.cbc}" xmlns:ds="${NS.ds}" xmlns:ext="${NS.ext}">

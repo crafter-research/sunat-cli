@@ -1,6 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Command } from "commander";
-import { readFileSync } from "fs";
-import { join } from "path";
 import { getCpeCatalogosSchema } from "../cpe/catalogos/index.ts";
 import { outputJSON } from "../utils/output.ts";
 import { packageDataDir } from "../utils/package-data.ts";

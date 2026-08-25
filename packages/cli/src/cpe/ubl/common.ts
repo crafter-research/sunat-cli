@@ -159,7 +159,10 @@ export function renderCacSignature(emisor: EmisorCtx): string {
     </cac:Signature>`;
 }
 
-export function renderTaxAndTotals(totales: { valorVenta: number; igv: number; total: number }, moneda: string): string {
+export function renderTaxAndTotals(
+	totales: { valorVenta: number; igv: number; total: number },
+	moneda: string,
+): string {
 	const totalIgv = round2(totales.igv);
 	const totalValor = round2(totales.valorVenta);
 	const totalPagar = round2(totales.total);
