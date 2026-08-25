@@ -14,6 +14,7 @@ import {
 } from "../../renta/f709-api.ts";
 import { ensureRentaToken, loginRenta } from "../../renta/login.ts";
 import { hasFreshToken, readToken } from "../../renta/session.ts";
+import { emitNextSteps, type NextStep } from "../../utils/next-steps.ts";
 import { output, outputError, outputSuccess } from "../../utils/output.ts";
 import { bold, dim, info, muted, ok, warn } from "../../utils/style.ts";
 
@@ -97,17 +98,28 @@ export function createRentaCommand(): Command {
 				versionWeb: cached?.versionWeb ?? null,
 			};
 
+			const steps: NextStep[] = fresh
+				? [
+						{
+							command: `sunat-cli renta presentaciones -e ${defaultEjercicio()}`,
+							description: "declarations already filed",
+						},
+					]
+				: [{ command: "sunat-cli renta login", description: "sign in to e-renta" }];
+
 			if (format === "json") {
 				output(format, { json });
+				emitNextSteps(steps, format);
 				return;
 			}
 			if (!fresh) {
 				console.log(`${warn("○")} No active e-renta session`);
-				console.log(dim("  Run: sunat-cli renta login"));
+				emitNextSteps(steps, format);
 				return;
 			}
 			console.log(`${ok("●")} Session active${ruc ? ` for ${bold(ruc)}` : ""}`);
 			console.log(dim(`  expires in ${mins} min · client ${cached?.versionWeb}`));
+			emitNextSteps(steps, format);
 		});
 
 	renta
@@ -234,13 +246,29 @@ export function createRentaCommand(): Command {
 				const ruc = getCredentials().ruc;
 				const items = await listarPresentaciones(ruc, opts.ejercicio);
 
+				const steps: NextStep[] = items.length
+					? [
+							{
+								command: `sunat-cli renta constancia ${items[0].idPresentacion}`,
+								description: "proof of filing for the most recent one",
+							},
+						]
+					: [
+							{
+								command: `sunat-cli renta form -e ${opts.ejercicio}`,
+								description: "check the form is available for this ejercicio",
+							},
+						];
+
 				if (format === "json") {
 					output(format, { json: items });
+					emitNextSteps(steps, format);
 					return;
 				}
 
 				if (items.length === 0) {
 					console.log(`${warn("○")} No filings for ejercicio ${bold(opts.ejercicio)}`);
+					emitNextSteps(steps, format);
 					return;
 				}
 
@@ -261,8 +289,7 @@ export function createRentaCommand(): Command {
 						]),
 					},
 				});
-				console.log();
-				console.log(dim(`Constancia:  sunat-cli renta constancia ${items[0].idPresentacion}`));
+				emitNextSteps(steps, format);
 			} catch (err) {
 				fail(err, format);
 			}
@@ -311,11 +338,19 @@ export function createRentaCommand(): Command {
 			try {
 				await ensureRentaToken();
 				const t = await obtenerFechaHora();
+				const steps: NextStep[] = [
+					{
+						command: `sunat-cli renta presentaciones -e ${defaultEjercicio()}`,
+						description: "declarations already filed",
+					},
+				];
 				if (format === "json") {
 					output(format, { json: { up: true, ...t } });
+					emitNextSteps(steps, format);
 					return;
 				}
 				console.log(`${ok("●")} e-renta responding  ${muted(`server date ${t.fecha}`)}`);
+				emitNextSteps(steps, format);
 			} catch (err) {
 				fail(err, format);
 			}

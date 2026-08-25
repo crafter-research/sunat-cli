@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { emitNextSteps } from "../utils/next-steps.ts";
 import { output, outputError } from "../utils/output.ts";
 
 /**
@@ -61,8 +62,20 @@ export function createSkillsCommand(): Command {
 		.description("What documentation this version ships")
 		.action(() => {
 			const items = listar();
-			if (quiereJson()) { output("json", { json: { skills: items } }); return; }
-			for (const s of items) console.log(`  ${s.name.padEnd(12)} ${s.summary}`);
+			const json = quiereJson();
+			if (json) {
+				output("json", { json: { skills: items } });
+			} else {
+				for (const s of items) console.log(`  ${s.name.padEnd(12)} ${s.summary}`);
+			}
+			emitNextSteps(
+				items.map((s) =>
+					s.name === "core"
+						? { command: "sunat-cli skills get core", description: "the usage guide" }
+						: { command: `sunat-cli skills get ${s.name}`, description: `read ${s.name}`, optional: true },
+				),
+				json ? "json" : "table",
+			);
 		});
 
 	skills
