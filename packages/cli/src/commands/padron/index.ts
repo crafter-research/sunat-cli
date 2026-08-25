@@ -1,7 +1,10 @@
 import { Command } from "commander";
+import type { PadronEntry } from "../../sunat-rest/padron-local.ts";
 import { isStale, loadMeta, lookupRuc, lookupRucBatch, syncPadron } from "../../sunat-rest/padron-local.ts";
 import { audit } from "../../data/audit.ts";
+import { emitNextSteps } from "../../utils/next-steps.ts";
 import { output, outputError } from "../../utils/output.ts";
+import { bold, dim, muted, ok, warn } from "../../utils/style.ts";
 
 type Format = "json" | "table" | "auto";
 
@@ -15,11 +18,92 @@ function getFormat(cmd: Command): Format {
 	return "auto";
 }
 
+/**
+ * True when the human branch should render. The root normalizes `auto` to
+ * `table` or `json` before an action runs, so `auto` only survives here when a
+ * subcommand is invoked outside that hook.
+ */
+function isHuman(format: Format): boolean {
+	return format === "table" || (format === "auto" && Boolean(process.stdout.isTTY));
+}
+
 function fmtBytes(n: number): string {
 	if (n < 1024) return `${n} B`;
 	if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
 	if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
 	return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+/**
+ * Age a reader does not have to compute. An ISO timestamp states a fact; the
+ * question behind `padron status` is how out of date the cache is right now.
+ */
+export function fmtAge(iso: string, now: number = Date.now()): string {
+	const then = new Date(iso).getTime();
+	if (Number.isNaN(then)) return "unknown";
+	const mins = Math.floor((now - then) / 60000);
+	if (mins < 1) return "just now";
+	if (mins < 60) return `${mins} min ago`;
+	const hours = Math.floor(mins / 60);
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(hours / 24);
+	if (days < 60) return `${days} days ago`;
+	return `${days} days ago (${Math.floor(days / 30)} months)`;
+}
+
+/**
+ * SUNAT writes the padrón's own placeholder as a literal "-", so a dash means
+ * absent rather than short. Measured on the local padrón: 1,999,990 of
+ * 2,000,000 address cells across 200k rows are this sentinel.
+ */
+function present(v: string | undefined): string | undefined {
+	if (v === undefined) return undefined;
+	const t = v.trim();
+	return t === "" || t === "-" ? undefined : t;
+}
+
+/**
+ * `danger` stays reserved for errors. A taxpayer given de baja is a state, not
+ * a failure of the command, so closed states read `muted` and only the
+ * attention-worthy one takes `warn`.
+ */
+export function styleEstado(estado: string): string {
+	const v = estado.toUpperCase();
+	if (v === "ACTIVO") return ok(estado);
+	if (v.startsWith("SUSPENSION")) return warn(estado);
+	return muted(estado);
+}
+
+/** HABIDO is the clean state; every NO HABIDO / NO HALLADO variant wants attention. */
+export function styleCondicion(condicion: string): string {
+	const v = condicion.toUpperCase();
+	if (v === "HABIDO") return ok(condicion);
+	if (v.startsWith("NO HABIDO") || v.startsWith("NO HALLADO")) return warn(condicion);
+	return muted(condicion);
+}
+
+/**
+ * Join the address components the padrón reducido actually carries. Returns
+ * undefined when every component is the "-" sentinel, which is the common case:
+ * ten rows each reading "-" is vertical repetition, so the block is dropped
+ * rather than printed empty.
+ */
+export function fmtDireccion(e: PadronEntry): string | undefined {
+	const via = [present(e.tipoVia), present(e.nombreVia)].filter(Boolean).join(" ");
+	const zona =
+		present(e.tipoZona) && present(e.codigoZona)
+			? `${present(e.tipoZona)} ${present(e.codigoZona)}`
+			: present(e.tipoZona) || present(e.codigoZona);
+	const parts = [
+		via || undefined,
+		present(e.numero) && `Nro. ${present(e.numero)}`,
+		present(e.interior) && `Int. ${present(e.interior)}`,
+		present(e.manzana) && `Mz. ${present(e.manzana)}`,
+		present(e.lote) && `Lt. ${present(e.lote)}`,
+		present(e.kilometro) && `Km. ${present(e.kilometro)}`,
+		zona,
+	].filter(Boolean);
+	return parts.length > 0 ? parts.join(", ") : undefined;
 }
 
 export function createPadronCommand(): Command {
@@ -32,13 +116,38 @@ export function createPadronCommand(): Command {
 			const format = getFormat(cmd);
 			const meta = loadMeta();
 			if (!meta) {
+				if (isHuman(format)) {
+					console.log(`${warn("○")} Padrón not synced`);
+					console.log(dim("  Run: sunat-cli padron sync"));
+					return;
+				}
 				output(format, { json: { synced: false, hint: "Run: sunat padron sync" } });
+				emitNextSteps(
+					[{ command: "sunat-cli padron sync", description: "download the padrón for the first time" }],
+					format,
+				);
 				return;
 			}
+
+			const stale = isStale(meta);
+			if (isHuman(format)) {
+				// The reader's question is "can I trust a lookup right now", not the meta object.
+				console.log(
+					stale
+						? `${warn("●")} Padrón usable but ${bold("stale")}  ${muted(`updated ${fmtAge(meta.lastFetchedAt)}`)}`
+						: `${ok("●")} Padrón up to date  ${muted(`updated ${fmtAge(meta.lastFetchedAt)}`)}`,
+				);
+				// `entries` is estimated from byte size / avg row upstream, so it reads as approximate.
+				const count = meta.entries === undefined ? "?" : `~${meta.entries.toLocaleString("en-US")}`;
+				console.log(dim(`  ${count} RUCs · ${fmtBytes(meta.zipSize)} · SUNAT republishes daily`));
+				if (stale) console.log(dim("  Refresh: sunat-cli padron sync"));
+				return;
+			}
+
 			output(format, {
 				json: {
 					synced: true,
-					stale: isStale(meta),
+					stale,
 					lastFetchedAt: meta.lastFetchedAt,
 					zipSize: meta.zipSize,
 					zipSizeHuman: fmtBytes(meta.zipSize),
@@ -46,6 +155,10 @@ export function createPadronCommand(): Command {
 					sha256: `${meta.zipSha256.slice(0, 16)}...`,
 				},
 			});
+			emitNextSteps(
+				stale ? [{ command: "sunat-cli padron sync", description: "the local copy is out of date" }] : [],
+				format,
+			);
 		});
 
 	padron
@@ -103,9 +216,40 @@ export function createPadronCommand(): Command {
 				}
 				const entry = await lookupRuc(ruc);
 				if (!entry) {
+					if (isHuman(format)) {
+						console.log(`${warn("○")} RUC ${bold(ruc)} not found in the local padrón`);
+						const meta = loadMeta();
+						console.log(
+							dim(
+								isStale(meta)
+									? `  Cache updated ${fmtAge(meta?.lastFetchedAt ?? "")}. Refresh: sunat-cli padron sync`
+									: `  Check the digits, or query SUNAT directly: sunat-cli padron ruc-online ${ruc}`,
+							),
+						);
+						return;
+					}
 					output(format, { json: { ruc, found: false } });
 					return;
 				}
+
+				if (isHuman(format)) {
+					console.log(bold(entry.razonSocial));
+					console.log(`${muted("RUC")} ${entry.ruc}`);
+					console.log();
+					console.log(`  ${dim("Estado".padEnd(9))}  ${styleEstado(entry.estado)}`);
+					console.log(`  ${dim("Condición".padEnd(9))}  ${styleCondicion(entry.condicion)}`);
+					// Ten rows each reading "-" is repetition, not data: print only what exists.
+					const direccion = fmtDireccion(entry);
+					const ubigeo = present(entry.ubigeo);
+					if (direccion) console.log(`  ${dim("Dirección".padEnd(9))}  ${direccion}`);
+					if (ubigeo) console.log(`  ${dim("Ubigeo".padEnd(9))}  ${ubigeo}`);
+					if (!direccion && !ubigeo) {
+						console.log();
+						console.log(muted("  The padrón reducido carries no address for this RUC."));
+					}
+					return;
+				}
+
 				output(format, { json: { ruc, found: true, ...entry } });
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);

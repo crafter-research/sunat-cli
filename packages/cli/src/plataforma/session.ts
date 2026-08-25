@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { privateChildEnv } from "../data/child-process.ts";
+import { paths } from "../data/config.ts";
 import { secureExistingFile, writePrivateFile } from "../data/private-storage.ts";
 
 /**
@@ -21,8 +21,7 @@ import { secureExistingFile, writePrivateFile } from "../data/private-storage.ts
  */
 
 const SESSION = "sunat";
-const CACHE_DIR = join(homedir(), ".sunat");
-const CACHE_FILE = join(CACHE_DIR, "plataforma-token.json");
+const CACHE_FILE = join(paths.sunatDir, "plataforma-token.json");
 
 export const PLATAFORMA_BASE = "https://e-plataformaunica.sunat.gob.pe";
 

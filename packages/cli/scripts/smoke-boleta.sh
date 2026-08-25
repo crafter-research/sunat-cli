@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# State root. Export SUNAT_HOME to point this run at a scratch dir instead of
+# the operator's real ~/.sunat sessions, tokens and audit log.
+export SUNAT_HOME="${SUNAT_HOME:-$HOME/.sunat}"
+
 CERT_DIR="${TMPDIR:-/tmp}"
 CERT_PEM="$CERT_DIR/sunat-test.pem"
 CERT_PFX="$CERT_DIR/sunat-test.pfx"

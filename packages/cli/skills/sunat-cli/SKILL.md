@@ -489,6 +489,31 @@ All commands support `--output <format>`:
 - `auto` (default): human-readable
 - `json`: machine-readable, pipe to `jq`
 
+**stdout is data, stderr is everything else.** Errors and next-step hints go to
+stderr, so `cmd --output json > out.json` writes only the result.
+
+### Next steps
+
+Some commands name what to run next. In `--output json` these arrive on stderr
+as NDJSON, one object per line, tagged `"type": "next-step"`:
+
+```json
+{"type":"next-step","command":"sunat-cli renta constancia 68378d1065fb17631760eca0","description":"proof of filing for the most recent one"}
+```
+
+Fields: `command` (runnable as printed, values already substituted),
+`description`, and `optional` when the step is a suggestion rather than the
+expected continuation. Read stdout for data and stderr for hints:
+
+```bash
+sunat-cli renta presentaciones -e 2024 --output json 2>steps.ndjson >filings.ndjson
+```
+
+Commands that emit them today: `whoami`, `padron status` (when stale),
+`skills list`, `renta whoami`, `renta status`, `renta presentaciones`.
+The list is additive; treat an absent hint as "no unambiguous next step",
+not as an error.
+
 ## Common Workflows
 
 **Monthly routine (4ta categoria)**:

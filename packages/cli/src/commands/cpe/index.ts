@@ -23,24 +23,28 @@ function mockAuditDetails(
 	return { ...result, id, ...context };
 }
 
-function getFormat(cmd: Command): Format {
-	let parent: Command | null = cmd;
-	while (parent) {
-		const opts = parent.opts();
-		if (opts.output) return opts.output as Format;
-		parent = parent.parent;
-	}
-	return "auto";
+function isCommand(value: unknown): value is Command {
+	return typeof (value as Command | undefined)?.opts === "function";
 }
 
-function getDriverName(cmd: Command): CpeDriverName | undefined {
-	let parent: Command | null = cmd;
-	while (parent) {
-		const opts = parent.opts();
-		if (opts.driver) return opts.driver as CpeDriverName;
-		parent = parent.parent;
+function findOption<T>(cmd: unknown, key: string): T | undefined {
+	let node: unknown = cmd;
+	while (node) {
+		if (isCommand(node)) {
+			const value = node.opts()[key];
+			if (value !== undefined) return value as T;
+		}
+		node = (node as { parent?: unknown }).parent;
 	}
 	return undefined;
+}
+
+function getFormat(cmd: unknown): Format {
+	return findOption<Format>(cmd, "output") ?? "auto";
+}
+
+function getDriverName(cmd: unknown): CpeDriverName | undefined {
+	return findOption<CpeDriverName>(cmd, "driver");
 }
 
 function notImplemented(verb: string, format: Format): never {
@@ -386,16 +390,8 @@ export function createCpeCommand(): Command {
 
 	const gre = cpe
 		.command("gre")
+		.alias("guia")
 		.description("Guía de Remisión Electrónica (CPE tipo 09) — REST OAuth, NOT SOAP. T0/T2.");
-	cpe
-		.command("guia")
-		.description("Alias for 'cpe gre' — kept for backwards naming.")
-		.allowUnknownOption(true)
-		.helpOption(false)
-		.action(() => {
-			console.error("Use 'sunat cpe gre <verb>' instead. 'cpe guia' is an alias placeholder.");
-			process.exit(1);
-		});
 
 	gre
 		.command("emit")
@@ -876,7 +872,7 @@ export function createCpeCommand(): Command {
 		.description("Manage active driver. T1.")
 		.argument("[verb]", "set | list")
 		.argument("[name]", "Driver name")
-		.action((_, _opts, cmd) => notImplemented("driver set/list", getFormat(cmd)));
+		.action((_verb, _name, _opts, cmd) => notImplemented("driver set/list", getFormat(cmd)));
 
 	const profile = cpe.command("profile").description("Manage CPE emisor profiles for sunat-direct. T1.");
 

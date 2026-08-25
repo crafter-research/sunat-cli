@@ -32,10 +32,11 @@ async function runCli(args: string[]): Promise<CliResult> {
 }
 
 async function runCliWithEnv(args: string[], env: Record<string, string | undefined>): Promise<CliResult> {
+	const scoped = env.HOME ? { SUNAT_HOME: join(env.HOME, ".sunat"), ...env } : env;
 	const proc = Bun.spawn(["bun", "run", CLI, ...args], {
 		stdout: "pipe",
 		stderr: "pipe",
-		env: { ...process.env, ...env },
+		env: { ...process.env, ...scoped },
 	});
 	const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
 	const exitCode = await proc.exited;
@@ -188,6 +189,7 @@ describe("sunat cpe — E2E", () => {
 		const home = createTempHome();
 		const script = `
 process.env.HOME = ${JSON.stringify(home)};
+process.env.SUNAT_HOME = ${JSON.stringify(join(home, ".sunat"))};
 process.env.CPE_DRIVER = "mock";
 delete process.env.CPE_PROFILE;
 delete process.env.CPE_EMISOR_RUC;
@@ -208,7 +210,7 @@ await run(["factura", "emit", "--params", JSON.stringify({ ...base, serie: "F101
 		const proc = Bun.spawn(["bun", "--eval", script], {
 			stdout: "pipe",
 			stderr: "pipe",
-			env: { ...process.env, HOME: home, CPE_DRIVER: "mock" },
+			env: { ...process.env, HOME: home, SUNAT_HOME: join(home, ".sunat"), CPE_DRIVER: "mock" },
 		});
 		const [, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
 		expect(await proc.exited).toBe(0);
