@@ -164,13 +164,30 @@ jobs:
             --source-ref refs/heads/main
           workdir=$(mktemp -d)
           cd "$workdir"
-          npm install "@crafter/sunat-cli@$VERSION" --ignore-scripts --registry https://registry.npmjs.org
+          # Retry like the two checks above it. The tarball and the metadata
+          # each get a retry loop, but this install did not, and it is the
+          # slowest thing to propagate: 0.10.0 failed here with ETARGET six
+          # seconds after a successful publish, blocking the tag and release
+          # for a package that was already on npm and correct.
+          for attempt in $(seq 1 15); do
+            if npm install "@crafter/sunat-cli@$VERSION" --ignore-scripts --registry https://registry.npmjs.org; then
+              break
+            fi
+            test "$attempt" != "15"
+            sleep 20
+          done
           test "$(./node_modules/.bin/sunat-cli --version)" = "$VERSION"
           ./node_modules/.bin/sunat-cli --help | grep -q "cpe"
           npm install --ignore-scripts --package-lock-only "@crafter/sunat-cli@$VERSION" --registry https://registry.npmjs.org
           npm audit signatures
 
+      # Runs even when a check above failed. Publish happens before any of
+      # them, so a verification failure leaves the package on npm with no tag
+      # and no release, which is the worst of the three states: 0.9.0 and
+      # 0.10.0 both landed there and both needed finishing by hand. The job
+      # still reports failure, so nothing is hidden.
       - name: Tag and create GitHub release
+        if: always() && steps.version.outputs.publish == 'true'
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
