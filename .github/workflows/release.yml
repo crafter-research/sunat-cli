@@ -88,8 +88,29 @@ jobs:
       - name: Verify the built bin runs without bun
         run: |
           head -1 dist/sunat.js | grep -qx '#!/usr/bin/env node'
-          env PATH=/usr/bin:/bin node dist/sunat.js --help | grep -q "cpe"
-          test "$(env PATH=/usr/bin:/bin node dist/sunat.js --version)" = "${{ steps.version.outputs.local }}"
+          # Strip bun out of the real PATH rather than pinning one. Hardcoding
+          # /usr/bin:/bin assumed node lives there, and on the runner it does
+          # not: setup-node installs it elsewhere, so the check died with
+          # "env: node: No such file or directory" before proving anything.
+          node_path=$(dirname "$(command -v node)")
+          # Drop every PATH entry that actually contains a bun executable,
+          # rather than matching the string "bun" against the directory name:
+          # bun installs to ~/.bun/bin, which a /bun pattern does not catch.
+          clean_path=""
+          while IFS= read -r dir; do
+            [ -n "$dir" ] || continue
+            [ -x "$dir/bun" ] && continue
+            clean_path="${clean_path:+$clean_path:}$dir"
+          done <<EOF
+          $(printf '%s' "$PATH" | tr ':' '\n')
+          EOF
+          clean_path="$node_path:$clean_path"
+          if env PATH="$clean_path" command -v bun >/dev/null 2>&1; then
+            echo "::error::bun is still on PATH, so this check would not prove anything" >&2
+            exit 1
+          fi
+          env PATH="$clean_path" node dist/sunat.js --help | grep -q "cpe"
+          test "$(env PATH="$clean_path" node dist/sunat.js --version)" = "${{ steps.version.outputs.local }}"
 
       - name: Build release tarball
         env:
