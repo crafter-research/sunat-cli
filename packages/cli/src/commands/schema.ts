@@ -1,10 +1,11 @@
 import { Command } from "commander";
 import { readFileSync } from "fs";
-import { dirname, join } from "path";
+import { join } from "path";
 import { getCpeCatalogosSchema } from "../cpe/catalogos/index.ts";
 import { outputJSON } from "../utils/output.ts";
+import { packageDataDir } from "../utils/package-data.ts";
 
-const SCHEMAS_DIR = join(dirname(import.meta.dir), "schemas");
+const SCHEMAS_DIR = packageDataDir("schemas");
 
 const AVAILABLE_SCHEMAS = [
 	"rhe",

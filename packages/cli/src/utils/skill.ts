@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import * as p from "@clack/prompts";
@@ -23,20 +24,24 @@ export async function installSkill(canPrompt: boolean): Promise<boolean> {
 	}
 
 	try {
-		const proc = Bun.spawn(["npx", "skills", "add", "Railly/sunat-cli", "-g"], {
-			env: privateChildEnv(process.env, [
-				"HTTPS_PROXY",
-				"HTTP_PROXY",
-				"NO_PROXY",
-				"NPM_CONFIG_CAFILE",
-				"NPM_CONFIG_REGISTRY",
-				"NPM_CONFIG_STRICT_SSL",
-			]),
-			stdin: "inherit",
-			stdout: "inherit",
-			stderr: "inherit",
+		// A missing `npx` surfaces as an async 'error' event here rather than a
+		// throw, so the failure path is a rejected promise instead of the catch
+		// arm reached under a synchronous spawn.
+		const exitCode = await new Promise<number>((resolve, reject) => {
+			const proc = spawn("npx", ["skills", "add", "Railly/sunat-cli", "-g"], {
+				env: privateChildEnv(process.env, [
+					"HTTPS_PROXY",
+					"HTTP_PROXY",
+					"NO_PROXY",
+					"NPM_CONFIG_CAFILE",
+					"NPM_CONFIG_REGISTRY",
+					"NPM_CONFIG_STRICT_SSL",
+				]),
+				stdio: "inherit",
+			});
+			proc.on("error", reject);
+			proc.on("close", (code) => resolve(code ?? 1));
 		});
-		const exitCode = await proc.exited;
 		return exitCode === 0;
 	} catch {
 		p.log.warn("npx skills not available. Install manually: npx skills add Railly/sunat-cli -g");

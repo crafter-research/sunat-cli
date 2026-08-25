@@ -1,9 +1,9 @@
 import { Command } from "commander";
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
 import { emitNextSteps } from "../utils/next-steps.ts";
 import { output, outputError } from "../utils/output.ts";
+import { packageDataDir } from "../utils/package-data.ts";
 import { truncateVisible } from "../utils/style.ts";
 
 /**
@@ -17,7 +17,7 @@ import { truncateVisible } from "../utils/style.ts";
  * Mismo patrón que `agent-browser skills get core`.
  */
 
-const SKILLS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "skills");
+const SKILLS_DIR = packageDataDir("skills");
 
 /**
  * Si el usuario pidió JSON explícitamente.
