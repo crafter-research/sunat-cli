@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { ensureSOLSession } from "../../browser/auth.ts";
 import { audit } from "../../data/audit.ts";
 import { getCredentials } from "../../data/config.ts";
+import { resolveParams } from "../../utils/deprecation.ts";
 import { output, outputError } from "../../utils/output.ts";
 import {
 	sanitizePath,
@@ -20,12 +21,14 @@ export function createRheCommand(): Command {
 	rhe
 		.command("emit")
 		.description("Emit an RHE via SUNAT SOL")
-		.option("--json <payload>", "JSON payload with RHE data")
+		.option("--params <json>", "JSON payload (see: sunat-cli schema rhe)")
+		.option("--json <payload>", "Deprecated alias for --params, will be removed in a later 0.x release")
 		.option("--batch <file>", "CSV file with multiple RHEs")
 		.option("--dry-run", "Preview without submitting")
 		.action(async (opts, cmd) => {
 			const format = cmd.parent?.parent?.opts().output || "auto";
 			const dryRun = opts.dryRun || false;
+			const params = resolveParams(opts, "--params", "--json", format);
 
 			try {
 				if (opts.batch) {
@@ -51,8 +54,8 @@ export function createRheCommand(): Command {
 							output(format, { json: { success: true, ...result } });
 						}
 					}
-				} else if (opts.json) {
-					const raw = JSON.parse(opts.json);
+				} else if (params) {
+					const raw = JSON.parse(params);
 					const input = validateRHEInput(raw);
 
 					if (dryRun) {
@@ -71,7 +74,7 @@ export function createRheCommand(): Command {
 						output(format, { json: { success: true, ...result } });
 					}
 				} else {
-					outputError("Provide --json or --batch. Use 'sunat-cli schema rhe' to see fields.", format);
+					outputError("Provide --params or --batch. Use 'sunat-cli schema rhe' to see fields.", format);
 				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);

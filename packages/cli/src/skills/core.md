@@ -27,7 +27,7 @@ RUC and usuario are saved to `~/.sunat/config.json` after first login. Password 
 
 ```bash
 # Emit single RHE
-sunat-cli rhe emit --json '{
+sunat-cli rhe emit --params '{
   "empresa": "Cliente Ejemplo",
   "tipoDoc": "SIN DOCUMENTO",
   "descripcion": "Servicios de desarrollo de software",
@@ -37,7 +37,7 @@ sunat-cli rhe emit --json '{
 }'
 
 # Preview without submitting
-sunat-cli rhe emit --json '...' --dry-run
+sunat-cli rhe emit --params '...' --dry-run
 
 # Batch from CSV
 sunat-cli rhe emit --batch recibos.csv
@@ -145,7 +145,7 @@ form between periods**. Eight periods spanning nine months were filed this way o
 
 **Emit an RHE**:
 1. `sunat-cli login`
-2. `sunat-cli rhe emit --json '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA","tipoCambio":3.75}' --dry-run`
+2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA","tipoCambio":3.75}' --dry-run`
 3. `sunat-cli rhe verify --month 2026-03`
 
 ## Error Handling

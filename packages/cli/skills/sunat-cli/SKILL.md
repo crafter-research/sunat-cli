@@ -44,7 +44,7 @@ Linux stores secrets through `secret-tool` / libsecret.
 
 ```bash
 # Emit single RHE
-sunat-cli rhe emit --json '{
+sunat-cli rhe emit --params '{
   "empresa": "Cliente Ejemplo",
   "tipoDoc": "SIN DOCUMENTO",
   "descripcion": "Servicios de desarrollo de software",
@@ -54,7 +54,7 @@ sunat-cli rhe emit --json '{
 }'
 
 # Preview without submitting
-sunat-cli rhe emit --json '...' --dry-run
+sunat-cli rhe emit --params '...' --dry-run
 
 # Batch from CSV
 sunat-cli rhe emit --batch recibos.csv
@@ -78,12 +78,12 @@ Key rules:
 
 ```bash
 # Single month
-sunat-cli f616 declare --json '{
+sunat-cli f616 declare --params '{
   "periodo": "2026-03"
 }'
 
 # Preview
-sunat-cli f616 declare --json '...' --dry-run
+sunat-cli f616 declare --params '...' --dry-run
 
 # Batch multiple months
 sunat-cli f616 declare --batch --months "2025-03..2026-02"
@@ -518,13 +518,13 @@ not as an error.
 
 **Monthly routine (4ta categoria)**:
 1. `sunat-cli login --nueva-plataforma`
-2. `sunat-cli f616 declare --json '{"periodo":"2026-03"}' --dry-run`
+2. `sunat-cli f616 declare --params '{"periodo":"2026-03"}' --dry-run`
 3. Review dry-run output
 4. Remove `--dry-run` to submit
 
 **Emit an RHE**:
 1. `sunat-cli login`
-2. `sunat-cli rhe emit --json '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA"}'`
+2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA"}'`
 3. `sunat-cli rhe verify --month 2026-03`
 
 ## Error Handling
