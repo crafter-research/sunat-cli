@@ -79,6 +79,18 @@ jobs:
         run: npm run build
         working-directory: packages/website
 
+      # npm pack and npm publish both run with --ignore-scripts below, so a
+      # prepublishOnly hook would never fire. The build has to be its own step
+      # or the tarball ships a bin that does not exist.
+      - name: Build CLI
+        run: bun run build
+
+      - name: Verify the built bin runs without bun
+        run: |
+          head -1 dist/sunat.js | grep -qx '#!/usr/bin/env node'
+          env PATH=/usr/bin:/bin node dist/sunat.js --help | grep -q "cpe"
+          test "$(env PATH=/usr/bin:/bin node dist/sunat.js --version)" = "${{ steps.version.outputs.local }}"
+
       - name: Build release tarball
         env:
           VERSION: ${{ steps.version.outputs.local }}
