@@ -3,13 +3,15 @@ import { clearQueueForEmisor, enqueueBoleta, listQueueDates, readQueue } from ".
 import { buildCatalogCoverageReport, hasCatalogWarnings } from "../../cpe/catalogos/index.ts";
 import { loadCpeConfig, resolveCpeAuditContext, resolveCpeContext, saveCpeConfig } from "../../cpe/config.ts";
 import { getDriver } from "../../cpe/drivers/index.ts";
-import type { CpeDriverName } from "../../cpe/drivers/types.ts";
+import type { CpeDriverName, CpeMode, DoctorCheck, DoctorReport, DriverInfo } from "../../cpe/drivers/types.ts";
 import { parseFacturaInput, parseNotaInput } from "../../cpe/parsers.ts";
 import { boletaRequiresIndividualSubmission } from "../../cpe/ubl/boleta.ts";
 import { audit } from "../../data/audit.ts";
 import { loadConfig } from "../../data/config.ts";
 import { resolveSecret } from "../../data/keychain.ts";
-import { output, outputError } from "../../utils/output.ts";
+import { emitNextSteps, type NextStep } from "../../utils/next-steps.ts";
+import { isHumanFormat, output, outputError } from "../../utils/output.ts";
+import { bold, danger, dim, info, muted, ok as okColor, padVisible, visibleWidth } from "../../utils/style.ts";
 
 type Format = "json" | "table" | "auto";
 
@@ -43,6 +45,65 @@ function getFormat(cmd: unknown): Format {
 	return findOption<Format>(cmd, "output") ?? "auto";
 }
 
+/**
+ * True when the human branch should render. The root normalizes `auto` to
+ * `table` or `json` before an action runs, so `auto` only survives here when a
+ * subcommand is invoked outside that hook.
+ */
+function isHuman(format: Format): boolean {
+	return isHumanFormat(format);
+}
+
+/**
+ * A driver name a reader can act on. `mock` never reaches SUNAT, so a person
+ * reading "healthy" needs to know the answer came from memory rather than the
+ * wire; that distinction is the whole value of the line.
+ */
+export function describeDriver(d: DriverInfo): string {
+	return d.name === "mock" ? "nothing is sent to SUNAT" : `${d.mode === "prod" ? "live" : "sandbox"} endpoint`;
+}
+
+/**
+ * `prod` is the state a reader must not miss, so it takes `info`: it departs
+ * from the safe default. `danger` stays reserved for errors, and a sandbox is
+ * not an error.
+ */
+export function styleMode(mode: CpeMode): string {
+	return mode === "prod" ? info(mode) : muted(mode);
+}
+
+/**
+ * Only read-only commands are emitted. An emitted command is an executable
+ * promise, and nothing here may point a reader at a write path against SUNAT.
+ */
+export function doctorNextSteps(report: DoctorReport): NextStep[] {
+	if (report.ok) {
+		return report.driver.name === "mock"
+			? [{ command: "sunat-cli cpe doctor --driver sunat-direct", description: "check the driver that reaches SUNAT" }]
+			: [];
+	}
+	const failed = new Set(report.checks.filter((c) => !c.ok).map((c) => c.name));
+	const steps: NextStep[] = [];
+	if (failed.has("config_resolved") || failed.has("cert_file_exists") || failed.has("cert_loaded")) {
+		steps.push({ command: "sunat-cli cpe profile list", description: "the emisor or certificate is not resolving" });
+	}
+	if (failed.has("stale_pendings")) {
+		steps.push({ command: "sunat-cli audit list", description: "review the submissions left pending" });
+	}
+	return steps;
+}
+
+/**
+ * One check line: glyph and colour agree, so the eye never has to resolve a
+ * green cross. A failed check in a health report IS the error state, which is
+ * the one thing `danger` is for.
+ */
+export function formatCheck(check: DoctorCheck, labelWidth: number): string {
+	const glyph = check.ok ? okColor("✓") : danger("✗");
+	const name = padVisible(check.ok ? check.name : bold(check.name), labelWidth);
+	return `  ${glyph} ${name}${check.detail ? `  ${muted(check.detail)}` : ""}`;
+}
+
 function getDriverName(cmd: unknown): CpeDriverName | undefined {
 	return findOption<CpeDriverName>(cmd, "driver");
 }
@@ -73,7 +134,34 @@ export function createCpeCommand(): Command {
 			try {
 				const driver = getDriver(getDriverName(cmd));
 				const report = await driver.doctor();
-				output(format, { json: report });
+
+				if (!isHuman(format)) {
+					output(format, { json: report });
+					return;
+				}
+
+				// The question is "is my driver working", not "what does the report
+				// object contain", so the verdict leads and the checks support it.
+				const failed = report.checks.filter((c) => !c.ok);
+				console.log(
+					report.ok
+						? `${okColor("●")} ${bold(report.driver.name)} driver healthy  ${muted(`${report.checks.length} checks passed`)}`
+						: `${danger("●")} ${bold(report.driver.name)} driver ${danger("unhealthy")}  ${muted(
+								`${failed.length} of ${report.checks.length} checks failed`,
+							)}`,
+				);
+				console.log(
+					dim(`  ${styleMode(report.driver.mode)} · v${report.driver.version} · ${describeDriver(report.driver)}`),
+				);
+				console.log();
+
+				// Failures first: a reader scanning a health check is looking for what
+				// broke, and burying it under passing rows costs them the scan.
+				const ordered = [...failed, ...report.checks.filter((c) => c.ok)];
+				const labelWidth = Math.max(...ordered.map((c) => visibleWidth(c.name)));
+				for (const check of ordered) console.log(formatCheck(check, labelWidth));
+
+				emitNextSteps(doctorNextSteps(report), format);
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}
@@ -86,7 +174,27 @@ export function createCpeCommand(): Command {
 			const format = getFormat(cmd);
 			try {
 				const driver = getDriver(getDriverName(cmd));
-				output(format, { json: driver.info() });
+				const d = driver.info();
+
+				if (!isHuman(format)) {
+					output(format, { json: d });
+					return;
+				}
+
+				console.log(`${bold(d.name)} ${muted(`v${d.version}`)}  ${styleMode(d.mode)}`);
+				console.log(dim(`  ${describeDriver(d)}`));
+				console.log();
+				// A flag only says something when it is true: a row reading "no" for
+				// every driver is vertical repetition, and the machine mode still
+				// carries both fields for a caller that wants them.
+				const rows: Array<[string, string]> = [];
+				if (d.endpoint) rows.push(["Endpoint", d.endpoint]);
+				if (d.requiresJava) rows.push(["Requires", "Java on PATH"]);
+				if (d.acreditadoOse) rows.push(["OSE", "acreditado"]);
+				const width = rows.length > 0 ? Math.max(...rows.map(([k]) => k.length)) : 0;
+				for (const [k, v] of rows) console.log(`  ${dim(padVisible(k, width))}  ${v}`);
+
+				emitNextSteps([{ command: "sunat-cli cpe doctor", description: "verify this driver is working" }], format);
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}

@@ -18,7 +18,9 @@ import {
 	sireCredentials,
 	sireUpload,
 } from "../../sunat-rest/sire.ts";
-import { output, outputError } from "../../utils/output.ts";
+import { emitNextSteps } from "../../utils/next-steps.ts";
+import { isHumanFormat, output, outputError } from "../../utils/output.ts";
+import { bold, dim, muted, padVisible, visibleWidth, warn } from "../../utils/style.ts";
 
 type Format = "json" | "table" | "auto";
 
@@ -30,6 +32,35 @@ function getFormat(cmd: Command): Format {
 		parent = parent.parent;
 	}
 	return "auto";
+}
+
+/**
+ * True when the human branch should render. The root normalizes `auto` to
+ * `table` or `json` before an action runs, so `auto` only survives here when a
+ * subcommand is invoked outside that hook.
+ */
+function isHuman(format: Format): boolean {
+	return isHumanFormat(format);
+}
+
+/**
+ * `202504` is a key, not a date. A reader scanning a column of six-digit blobs
+ * has to segment each one; the separator does it once, here.
+ */
+export function fmtPeriodo(perTributario: string): string {
+	return /^\d{6}$/.test(perTributario) ? `${perTributario.slice(0, 4)}-${perTributario.slice(4, 6)}` : perTributario;
+}
+
+/**
+ * SUNAT sends `desEstado` as its own human description, and the `codEstado`
+ * catalogue is not documented in this repo: the type comment says "01
+ * presentado" while the captured fixture pairs "01" with "Pendiente". Printing
+ * the server's word avoids inventing a mapping that would read backwards, and
+ * the machine contract still carries `codEstado` for a caller that has the
+ * catalogue.
+ */
+export function fmtEstado(desEstado: string | undefined): string {
+	return desEstado?.trim() ? desEstado.trim() : muted("sin estado");
 }
 
 function resolveSireCreds(): ReturnType<typeof sireCredentials> {
@@ -52,7 +83,57 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 			try {
 				const creds = resolveSireCreds();
 				const ejercicios = await listarPeriodos(codLibro, creds);
-				output(format, { json: { codLibro, ejercicios } });
+
+				if (!isHuman(format)) {
+					output(format, { json: { codLibro, ejercicios } });
+					return;
+				}
+
+				const total = ejercicios.reduce((n, e) => n + (e.lisPeriodos?.length ?? 0), 0);
+
+				// An empty list is an answer, and the raw `[]` was not one: SIRE is
+				// only assigned to taxpayers obligated to keep the book, so nothing
+				// here usually means "not enrolled" rather than "nothing happened".
+				if (total === 0) {
+					console.log(`${warn("○")} No ${bold(longName)} periods available`);
+					console.log(
+						dim("  SUNAT lists no periodos for this RUC, which normally means the book is not assigned to it."),
+					);
+					return;
+				}
+
+				console.log(
+					`${bold(String(total))} periodo${total === 1 ? "" : "s"} ${muted(
+						`· ${longName} · ${ejercicios.length} ejercicio${ejercicios.length === 1 ? "" : "s"}`,
+					)}`,
+				);
+
+				// The ejercicio is a heading, not a column: repeating "2025" down
+				// twelve rows is twelve chances to read it and no information after
+				// the first.
+				for (const ej of ejercicios) {
+					const periodos = ej.lisPeriodos ?? [];
+					console.log();
+					console.log(`${bold(ej.numEjercicio)}  ${muted(fmtEstado(ej.desEstado))}`);
+					const width = Math.max(0, ...periodos.map((p) => visibleWidth(fmtPeriodo(p.perTributario))));
+					for (const p of periodos) {
+						console.log(`  ${padVisible(fmtPeriodo(p.perTributario), width)}  ${fmtEstado(p.desEstado)}`);
+					}
+				}
+
+				const latest = ejercicios.flatMap((e) => e.lisPeriodos ?? []).map((p) => p.perTributario);
+				const target = latest.sort().at(-1);
+				emitNextSteps(
+					target
+						? [
+								{
+									command: `sunat-cli sire ${libroAlias} propuesta --periodo ${target}`,
+									description: "download SUNAT's proposal for the most recent periodo",
+								},
+							]
+						: [],
+					format,
+				);
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
 			}

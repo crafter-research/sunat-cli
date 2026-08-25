@@ -15,8 +15,21 @@ import { createSireCommand } from "../src/commands/sire/index.ts";
 import { createSkillsCommand } from "../src/commands/skills.ts";
 import { createTipoCambioCommand } from "../src/commands/tipo-cambio.ts";
 import { createWhoamiCommand } from "../src/commands/whoami.ts";
+import { printBanner } from "../src/utils/banner.ts";
 
 const program = new Command();
+
+/**
+ * The banner belongs to the two screens a person reads before running anything:
+ * bare invoke and `--help`. Putting it on every command would tax each
+ * invocation of a CLI whose main caller is an agent.
+ */
+function wantsBanner(argv: string[]): boolean {
+	const args = argv.slice(2);
+	if (args.length === 0) return true;
+	if (args.some((a) => a === "-o" || a === "--output" || a.startsWith("--output="))) return false;
+	return args.every((a) => a === "help" || a === "-h" || a === "--help");
+}
 
 program
 	.name("sunat-cli")
@@ -44,5 +57,9 @@ program.addCommand(createRentaCommand());
 program.addCommand(createSireCommand());
 program.addCommand(createTipoCambioCommand());
 program.addCommand(createAuditCommand());
+
+if (wantsBanner(process.argv)) {
+	printBanner({ version: pkg.version, tagline: "Agent-first CLI for SUNAT tax automation" });
+}
 
 program.parse();

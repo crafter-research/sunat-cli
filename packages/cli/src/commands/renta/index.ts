@@ -216,7 +216,7 @@ export function createRentaCommand(): Command {
 				}
 
 				console.log(`${bold("Declaración")} ${dim("F709")} ${opts.ejercicio}   ${muted(`RUC ${decl.numRuc}`)}`);
-				console.log(dim(`periodo ${decl.perTri} · hash ${decl.valHash.slice(0, 12)}…`));
+				console.log(dim(`periodo ${decl.perTri} · hash ${truncateVisible(decl.valHash, 13)}`));
 				console.log();
 				const sections: Array<[string, unknown]> = [
 					["Generales", decl.declaracion.generales],

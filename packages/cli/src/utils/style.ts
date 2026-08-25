@@ -72,6 +72,19 @@ export function padStartVisible(s: string, width: number): string {
 	return pad > 0 ? " ".repeat(pad) + s : s;
 }
 
+/**
+ * A preview of a secret that identifies it without disclosing it.
+ *
+ * Keeps the head and tail so a reader can tell two credentials apart, and
+ * spends a fixed-width ellipsis on the middle so the output never leaks the
+ * length of what it hides. Anything too short to mask safely renders fully
+ * masked rather than partially revealed.
+ */
+export function maskSecret(secret: string, visible = 4): string {
+	if (secret.length <= visible * 2) return "•".repeat(8);
+	return `${secret.slice(0, visible)}…${secret.slice(-visible)}`;
+}
+
 export function truncateVisible(s: string, width: number): string {
 	if (visibleWidth(s) <= width) return s;
 	if (width <= 1) return stripAnsi(s).slice(0, width);

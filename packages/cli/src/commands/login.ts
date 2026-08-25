@@ -15,7 +15,7 @@ interface LoginOpts {
 
 async function getOrPromptCredentials(
 	opts: LoginOpts,
-	isTTY: boolean,
+	canPrompt: boolean,
 ): Promise<{ ruc: string; usuario: string; password: string }> {
 	const config = loadConfig();
 	let ruc = opts.ruc || process.env.SUNAT_RUC || config.ruc;
@@ -26,7 +26,7 @@ async function getOrPromptCredentials(
 		return { ruc, usuario, password };
 	}
 
-	if (!isTTY) {
+	if (!canPrompt) {
 		throw new Error(
 			"Missing credentials. Pass --ruc and --user, set SUNAT_RUC, SUNAT_USER and SUNAT_PASSWORD, or store SUNAT_PASSWORD with sunat-cli keychain set",
 		);
@@ -94,9 +94,10 @@ export function createLoginCommand(): Command {
 		.action(async (opts: LoginOpts, cmd) => {
 			const format = cmd.parent?.opts().output || "table";
 			const portal = opts.nuevaPlataforma ? "nueva-plataforma" : "sol";
-			const isTTY = process.stdout.isTTY && format !== "json";
+			// Whether we may ask the operator a question, not how we print the answer.
+			const canPrompt = process.stdout.isTTY && format !== "json";
 			try {
-				const creds = await getOrPromptCredentials(opts, isTTY);
+				const creds = await getOrPromptCredentials(opts, canPrompt);
 				if (opts.nuevaPlataforma) {
 					await loginNuevaPlataforma(creds);
 				} else {
@@ -106,7 +107,7 @@ export function createLoginCommand(): Command {
 				outputSuccess(`Logged in to ${portal === "sol" ? "SOL (RHE)" : "Nueva Plataforma (F616)"}`, format);
 
 				if (!isSkillInstalled()) {
-					await installSkill(isTTY);
+					await installSkill(canPrompt);
 				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);

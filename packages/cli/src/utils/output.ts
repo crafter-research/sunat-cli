@@ -37,11 +37,31 @@ export function outputTable(headers: string[], rows: string[][]): void {
 	}
 }
 
+/**
+ * The one place that decides machine versus human output.
+ *
+ * `auto` resolves from the TTY, so a piped or captured run is machine-readable
+ * without the caller passing a flag. Every site that needs the answer imports
+ * this rather than reading `isTTY` again: three copies of the rule had drifted
+ * apart, and the command that forgets is the one an agent hits.
+ *
+ * A TTY check guarding a prompt is a different question and does not belong
+ * here.
+ */
+export function resolveFormat(format: OutputFormat): "json" | "table" {
+	if (format === "auto") return process.stdout.isTTY ? "table" : "json";
+	return format;
+}
+
+export function isHumanFormat(format: OutputFormat): boolean {
+	return resolveFormat(format) === "table";
+}
+
 export function output(
 	format: OutputFormat,
 	data: { json: unknown; table?: { headers: string[]; rows: string[][] } },
 ): void {
-	const resolvedFormat = format === "auto" ? (process.stdout.isTTY ? "table" : "json") : format;
+	const resolvedFormat = resolveFormat(format);
 
 	if (resolvedFormat === "json") {
 		if (Array.isArray(data.json)) {

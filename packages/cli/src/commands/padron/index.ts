@@ -1,9 +1,9 @@
 import { Command } from "commander";
+import { audit } from "../../data/audit.ts";
 import type { PadronEntry } from "../../sunat-rest/padron-local.ts";
 import { isStale, loadMeta, lookupRuc, lookupRucBatch, syncPadron } from "../../sunat-rest/padron-local.ts";
-import { audit } from "../../data/audit.ts";
 import { emitNextSteps } from "../../utils/next-steps.ts";
-import { output, outputError } from "../../utils/output.ts";
+import { isHumanFormat, output, outputError } from "../../utils/output.ts";
 import { bold, dim, muted, ok, warn } from "../../utils/style.ts";
 
 type Format = "json" | "table" | "auto";
@@ -24,7 +24,7 @@ function getFormat(cmd: Command): Format {
  * subcommand is invoked outside that hook.
  */
 function isHuman(format: Format): boolean {
-	return format === "table" || (format === "auto" && Boolean(process.stdout.isTTY));
+	return isHumanFormat(format);
 }
 
 function fmtBytes(n: number): string {
@@ -205,7 +205,9 @@ export function createPadronCommand(): Command {
 
 	padron
 		.command("ruc")
-		.description("Lookup a single RUC in the local padrón. Streaming scan — slow first call (~5-15s on 600MB), instant after. T0.")
+		.description(
+			"Lookup a single RUC in the local padrón. Streaming scan — slow first call (~5-15s on 600MB), instant after. T0.",
+		)
 		.argument("<ruc>", "11-digit RUC to lookup")
 		.action(async (ruc, opts, cmd) => {
 			const format = getFormat(cmd);
@@ -276,7 +278,12 @@ export function createPadronCommand(): Command {
 
 				const rucs = input
 					.split("\n")
-					.map((l) => l.trim().split(/[,;\t]/)[0].trim())
+					.map((l) =>
+						l
+							.trim()
+							.split(/[,;\t]/)[0]
+							.trim(),
+					)
 					.filter((l) => /^\d{11}$/.test(l));
 
 				if (rucs.length === 0) {

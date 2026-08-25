@@ -1,4 +1,4 @@
-import type { OutputFormat } from "./output.ts";
+import { type OutputFormat, resolveFormat } from "./output.ts";
 import { bold, dim, info, muted } from "./style.ts";
 
 /**
@@ -36,7 +36,7 @@ export type NextStep = {
 export function emitNextSteps(steps: NextStep[], format: OutputFormat): void {
 	if (steps.length === 0) return;
 
-	const resolved = format === "auto" ? (process.stdout.isTTY ? "table" : "json") : format;
+	const resolved = resolveFormat(format);
 
 	if (resolved === "json") {
 		for (const step of steps) {

@@ -10,8 +10,8 @@ export function isSkillInstalled(): boolean {
 	return existsSync(SKILL_MD);
 }
 
-export async function installSkill(isTTY: boolean): Promise<boolean> {
-	if (!isTTY) return false;
+export async function installSkill(canPrompt: boolean): Promise<boolean> {
+	if (!canPrompt) return false;
 
 	const install = await p.confirm({
 		message: "Install Claude Code skill? (lets AI agents use sunat-cli)",
