@@ -2,7 +2,9 @@
 
 SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat-cli` if globally installed).
 
-Install: `npm install -g @crafter/sunat-cli`
+Install: `npm install -g @crafter/sunat-cli`. Runs on Node, no Bun needed.
+
+RHE and F616 additionally need [agent-browser](https://github.com/vercel-labs/agent-browser) and Chrome; CPE, SIRE and GRE need a SUNAT certificate and a clave SOL. Everything else works with neither.
 
 Current beta posture: supervised RHE/F616 beta, not autonomous filing. Real SUNAT operations require `--yes --live-sunat`, should use `--preview-only` first, and must stop if preview values cannot be parsed or reconciled.
 
@@ -125,8 +127,25 @@ Use `sunat-cli schema <resource>` to get machine-readable field definitions befo
 ## Output Formats
 
 All commands support `--output <format>`:
-- `auto` (default): human-readable
-- `json`: machine-readable, pipe to `jq`
+- `auto` (default): JSON when stdout is not a terminal, a human view when it is
+- `json`: JSON always
+- `table`: the human view always, even under a pipe
+
+**You do not need to pass anything.** Capturing stdout makes it non-interactive,
+so `auto` already gives you JSON. `-o json` only matters when you want JSON while
+attached to a terminal.
+
+Data goes to stdout, diagnostics to stderr. A failing command leaves stdout empty
+and reports on stderr, so `cmd > out.json` never mixes an error into the file you
+are about to parse.
+
+Some commands emit next-step hints on **stderr**, one NDJSON object per line,
+shaped `{"type":"next-step","command":"...","description":"..."}`. They tell you
+what to run next without re-planning. Ignore stderr and stdout is unchanged.
+
+Two exceptions, both deliberate: `skills get <name>` serves raw markdown rather
+than JSON, because a document escaped inside a JSON string is unreadable, and
+`--params` takes JSON *in* rather than controlling output.
 
 ## Common Workflows
 

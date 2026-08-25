@@ -141,27 +141,27 @@ const roadmap = [
 
 const featureHtmls = await Promise.all(features.map((f) => codeToHtml(f.code, { lang: "bash", theme: sunatTheme })));
 
-const heroCode = `# Install globally
+const heroCode = `# Install globally. Runs on Node, no Bun needed
 $ npm install -g @crafter/sunat-cli
 
-# Introspect schema (agents self-serve)
-$ sunat-cli schema cpe-factura --output json
-{ "command": "cpe factura emit", "fields": {...} }
+# Introspect the schema, versioned so agents can pin it
+$ sunat-cli schema cpe-factura
+{ "version": "1.0.0", "command": "cpe factura emit", "fields": {...} }
 
-# Always dry-run first
-$ sunat-cli cpe factura preview --params @factura.json
+# Always preview first
+$ sunat-cli cpe factura preview --params "$(cat factura.json)"
 { "dryRun": true, "hash": "sha256:...", "validacion": {"ok": true} }
 
-# Ship it — UBL 2.1 + XAdES + SOAP, end-to-end
-$ sunat-cli cpe factura emit --params @factura.json --yes
+# Ship it. UBL 2.1 + XAdES + SOAP, end to end
+$ sunat-cli cpe factura emit --params "$(cat factura.json)" --yes
 ✓ Aceptado · CDR 0000 · F001-1234`;
 
 const heroCodeHtml = await codeToHtml(heroCode, { lang: "bash", theme: sunatTheme });
 
 const principles = [
-	"--json payloads over flags",
+	"--params payloads over flags",
 	"--dry-run for all mutations",
-	"--output json by default",
+	"JSON when stdout is not a terminal",
 	"Schema introspection at runtime",
 	"Input hardening against hallucinations",
 	"SKILL.md per agentskills.io spec",
