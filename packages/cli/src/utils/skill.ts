@@ -19,7 +19,7 @@ export async function installSkill(canPrompt: boolean): Promise<boolean> {
 	});
 
 	if (p.isCancel(install) || !install) {
-		p.log.info("Skipped. Install later: npx skills add Railly/sunat-cli -g");
+		p.log.info("Skipped. Install later: npx skills add crafter-research/sunat-cli -g");
 		return false;
 	}
 
@@ -28,7 +28,7 @@ export async function installSkill(canPrompt: boolean): Promise<boolean> {
 		// throw, so the failure path is a rejected promise instead of the catch
 		// arm reached under a synchronous spawn.
 		const exitCode = await new Promise<number>((resolve, reject) => {
-			const proc = spawn("npx", ["skills", "add", "Railly/sunat-cli", "-g"], {
+			const proc = spawn("npx", ["skills", "add", "crafter-research/sunat-cli", "-g"], {
 				env: privateChildEnv(process.env, [
 					"HTTPS_PROXY",
 					"HTTP_PROXY",
@@ -44,7 +44,7 @@ export async function installSkill(canPrompt: boolean): Promise<boolean> {
 		});
 		return exitCode === 0;
 	} catch {
-		p.log.warn("npx skills not available. Install manually: npx skills add Railly/sunat-cli -g");
+		p.log.warn("npx skills not available. Install manually: npx skills add crafter-research/sunat-cli -g");
 		return false;
 	}
 }

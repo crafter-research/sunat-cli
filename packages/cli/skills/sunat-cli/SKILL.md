@@ -7,7 +7,7 @@ description: SUNAT tax automation CLI for Peru. Three namespaces. (A) Personas n
 
 SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat-cli` if globally installed).
 
-Install: `npx skills add Railly/sunat-cli -g`
+Install: `npx skills add crafter-research/sunat-cli -g`
 
 ## Auth
 
