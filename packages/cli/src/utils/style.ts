@@ -32,8 +32,24 @@ export function shouldColor(): boolean {
 
 const wrap = (open: string, close: string) => (s: string) => (shouldColor() ? `${open}${s}${close}` : s);
 
-export const bold = wrap("\x1b[1m", "\x1b[22m");
-export const dim = wrap("\x1b[2m", "\x1b[22m");
+/**
+ * Bold and dim share a reset. SGR 22 turns off both, so a bold span nested
+ * inside a dim one ends the dim early and the rest of the line silently loses
+ * its styling. Reopening the outer attribute after each inner reset costs a few
+ * bytes and makes nesting behave the way a caller expects.
+ *
+ * `visibleWidth` strips these the same either way, so column arithmetic is
+ * unaffected.
+ */
+const wrapShared =
+	(open: string, close: string) =>
+	(s: string): string => {
+		if (!shouldColor()) return s;
+		return `${open}${s.replaceAll(close, `${close}${open}`)}${close}`;
+	};
+
+export const bold = wrapShared("\x1b[1m", "\x1b[22m");
+export const dim = wrapShared("\x1b[2m", "\x1b[22m");
 export const italic = wrap("\x1b[3m", "\x1b[23m");
 export const underline = wrap("\x1b[4m", "\x1b[24m");
 
