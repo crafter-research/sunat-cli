@@ -24,9 +24,11 @@ jobs:
       run:
         working-directory: packages/cli
     steps:
+      # Credentials are kept so the tag can be pushed with git, the way it works
+      # in the sibling trx pipeline. The gh api call this replaces failed three
+      # times across releases with no diagnostic, always after a successful
+      # publish, leaving the package on npm with no tag and no release.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -141,14 +143,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.local }}
         run: |
-          tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" --jq .object.sha 2>/dev/null || true)
-          if [ -z "$tag_sha" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/git/refs" \
-              --method POST \
-              -f ref="refs/tags/v$VERSION" \
-              -f sha="$GITHUB_SHA" >/dev/null
+          # git push, not gh api. The API call this replaces died three times
+          # across releases in under a second with no gh diagnostic, always
+          # after publish had already succeeded. The sibling trx pipeline
+          # pushes the tag with git and has not failed here, so this follows
+          # the mechanism that works rather than a guess at why the other did
+          # not. Idempotent: a tag already pointing at this commit is fine, one
+          # pointing elsewhere is a real conflict and must stop the run.
+          existing=$(git ls-remote --tags origin "refs/tags/v$VERSION" | awk '{print $1}')
+          if [ -n "$existing" ]; then
+            test "$existing" = "$GITHUB_SHA"
           else
-            test "$tag_sha" = "$GITHUB_SHA"
+            git tag "v$VERSION"
+            git push origin "v$VERSION"
           fi
           if ! gh release view "v$VERSION" >/dev/null 2>&1; then
             gh release create "v$VERSION" "$GITHUB_WORKSPACE/.release/crafter-sunat-cli-$VERSION.tgz" --title "v$VERSION" --generate-notes --verify-tag
