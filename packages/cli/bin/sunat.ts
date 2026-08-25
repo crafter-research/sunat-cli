@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
+import pkg from "../package.json" with { type: "json" };
 import { createApiCommand } from "../src/commands/api/index.ts";
 import { createAuditCommand } from "../src/commands/audit.ts";
 import { createCpeCommand } from "../src/commands/cpe/index.ts";
 import { createF616Command } from "../src/commands/f616/index.ts";
-import { createSkillsCommand } from "../src/commands/skills.ts";
 import { createKeychainCommand } from "../src/commands/keychain.ts";
 import { createLoginCommand } from "../src/commands/login.ts";
 import { createPadronCommand } from "../src/commands/padron/index.ts";
@@ -12,14 +12,14 @@ import { createRentaCommand } from "../src/commands/renta/index.ts";
 import { createRheCommand } from "../src/commands/rhe/index.ts";
 import { createSchemaCommand } from "../src/commands/schema.ts";
 import { createSireCommand } from "../src/commands/sire/index.ts";
+import { createSkillsCommand } from "../src/commands/skills.ts";
 import { createTipoCambioCommand } from "../src/commands/tipo-cambio.ts";
 import { createWhoamiCommand } from "../src/commands/whoami.ts";
-import pkg from "../package.json" with { type: "json" };
 
 const program = new Command();
 
 program
-	.name("sunat")
+	.name("sunat-cli")
 	.description("Agent-first CLI for SUNAT tax automation")
 	.version(pkg.version)
 	.option("-o, --output <format>", "output format", "auto")
