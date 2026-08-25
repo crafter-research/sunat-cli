@@ -15,7 +15,7 @@ type Check = {
 
 function checks(): Check[] {
 	const ab = probeAgentBrowser();
-	const configured = existsSync(paths.configFile);
+	const configured = existsSync(paths.config);
 
 	return [
 		{
@@ -35,7 +35,7 @@ function checks(): Check[] {
 			name: "config",
 			ok: configured,
 			required: false,
-			detail: configured ? paths.configFile : "not created yet",
+			detail: configured ? paths.config : "not created yet",
 			hint: configured ? undefined : "Run: sunat-cli login",
 		},
 	];
