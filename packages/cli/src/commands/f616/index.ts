@@ -3,6 +3,7 @@ import { audit } from "../../data/audit.ts";
 import { ensurePlataformaToken } from "../../plataforma/ensure-token.ts";
 import { obtenerListaOficios, obtenerPeriodo } from "../../plataforma/f616-api.ts";
 import { expandPeriodoRange } from "../../utils/dates.ts";
+import { resolveParams } from "../../utils/deprecation.ts";
 import { output, outputError } from "../../utils/output.ts";
 import { validatePeriodo } from "../../validation/input.ts";
 import { declareF616, ensureNuevaPlataformaAndF616, type F616Input, navigateToF616 } from "../../workflows/f616.ts";
@@ -14,7 +15,8 @@ export function createF616Command(): Command {
 	f616
 		.command("declare")
 		.description("File F616 monthly tax declaration")
-		.option("--json <payload>", "JSON payload with F616 data")
+		.option("--params <json>", "JSON payload (see: sunat-cli schema f616)")
+		.option("--json <payload>", "Deprecated alias for --params, will be removed in a later 0.x release")
 		.option("--batch", "Process multiple months")
 		.option("--months <range>", "Month range (e.g. 2025-03..2026-02)")
 		.option("--dry-run", "Preview without submitting")
@@ -23,6 +25,7 @@ export function createF616Command(): Command {
 		.action(async (opts, cmd) => {
 			const format = cmd.parent?.parent?.opts().output || "auto";
 			const dryRun = opts.dryRun || false;
+			const params = resolveParams(opts, "--params", "--json", format);
 
 			try {
 				if (opts.batch && opts.months) {
@@ -46,8 +49,8 @@ export function createF616Command(): Command {
 						await navigateToF616();
 						await new Promise((r) => setTimeout(r, 2000));
 					}
-				} else if (opts.json) {
-					const raw = JSON.parse(opts.json);
+				} else if (params) {
+					const raw = JSON.parse(params);
 					const periodo = validatePeriodo(String(raw.periodo));
 					const input: F616Input = {
 						periodo,
@@ -68,7 +71,7 @@ export function createF616Command(): Command {
 					audit({ command: "f616 declare", args: { ...input }, result: "success", details: { ...result } });
 					output(format, { json: { success: true, ...result } });
 				} else {
-					outputError("Provide --json or --batch --months. Use 'sunat-cli schema f616' to see fields.", format);
+					outputError("Provide --params or --batch --months. Use 'sunat-cli schema f616' to see fields.", format);
 				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
