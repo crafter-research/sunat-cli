@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { Command } from "commander";
 import { loadConfig, paths } from "../data/config.ts";
+import { emitNextSteps, type NextStep } from "../utils/next-steps.ts";
 import { output } from "../utils/output.ts";
 
 export function createWhoamiCommand(): Command {
@@ -33,6 +34,13 @@ export function createWhoamiCommand(): Command {
 			},
 		};
 
+		const steps: NextStep[] = [];
+		if (!data.ruc || !data.usuario) {
+			steps.push({ command: "sunat-cli login", description: "set RUC and usuario, then sign in" });
+		} else if (data.sessions.sol.stale) {
+			steps.push({ command: "sunat-cli login", description: "the SOL session is stale" });
+		}
+
 		output(format, {
 			json: data,
 			table: {
@@ -49,5 +57,7 @@ export function createWhoamiCommand(): Command {
 				],
 			},
 		});
+
+		emitNextSteps(steps, format);
 	});
 }

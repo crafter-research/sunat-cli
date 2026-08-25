@@ -61,7 +61,7 @@ export function createDeclararCommand(): Command {
 
 	cmd
 		.command("periodo <YYYY-MM>")
-		.description("Abre un periodo. Recargá el formulario antes de cambiar de periodo.")
+		.description("Abre un periodo. Recarga el formulario antes de cambiar de periodo.")
 		.requiredOption("--telefono <n>", "Teléfono para Información General")
 		.requiredOption("--profesion <p>", "Profesión del catálogo")
 		.action(async (periodo, opts, c) => {
@@ -74,7 +74,7 @@ export function createDeclararCommand(): Command {
 					json: {
 						periodo: await periodoAbierto(s),
 						habilitado: ok,
-						...(ok ? {} : { aviso: "El formulario no se habilitó. Revisá si SUNAT mostró algún aviso." }),
+						...(ok ? {} : { aviso: "El formulario no se habilitó. Revisa si SUNAT mostró algún aviso." }),
 					},
 				});
 			} catch (e) {
@@ -151,7 +151,7 @@ export function createDeclararCommand(): Command {
 					return;
 				}
 				output(format, {
-					json: { success: true, importe: r.importe, nota: "Presentá y pagá vos desde Presente/Pague." },
+					json: { success: true, importe: r.importe, nota: "Presenta y paga tú desde Presente/Pague." },
 				});
 			} catch (e) {
 				outputError(e instanceof Error ? e.message : String(e), format);

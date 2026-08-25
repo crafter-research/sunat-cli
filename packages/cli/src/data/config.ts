@@ -3,7 +3,18 @@ import { join } from "node:path";
 import { missingSecretMessage, resolveSecret } from "./keychain.ts";
 import { ensurePrivateDir, secureExistingFile, writePrivateFile } from "./private-storage.ts";
 
-const SUNAT_DIR = join(process.env.HOME || "", ".sunat");
+/**
+ * Root of all on-disk state. `SUNAT_HOME` overrides it so tests and smoke runs
+ * can point at a scratch dir instead of the operator's live sessions, tokens
+ * and audit log. Every path under the home dir must be composed from this.
+ */
+export function resolveSunatDir(): string {
+	const override = process.env.SUNAT_HOME;
+	if (override) return override;
+	return join(process.env.HOME || "", ".sunat");
+}
+
+const SUNAT_DIR = resolveSunatDir();
 const CONFIG_FILE = join(SUNAT_DIR, "config.json");
 const API_DIR = join(SUNAT_DIR, "api");
 const SESSIONS_DIR = join(SUNAT_DIR, "sessions");

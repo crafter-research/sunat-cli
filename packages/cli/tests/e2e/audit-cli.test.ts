@@ -24,7 +24,7 @@ async function runCli(args: string[], home: string): Promise<CliResult> {
 	const proc = Bun.spawn(["bun", "run", CLI, ...args], {
 		stdout: "pipe",
 		stderr: "pipe",
-		env: { ...process.env, HOME: home, CPE_DRIVER: "mock" },
+		env: { ...process.env, HOME: home, SUNAT_HOME: join(home, ".sunat"), CPE_DRIVER: "mock" },
 	});
 	const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
 	const exitCode = await proc.exited;

@@ -10,7 +10,7 @@ async function probe(action: string): Promise<string> {
 	const home = mkdtempSync(join(tmpdir(), "sunat-privacy-"));
 	homes.push(home);
 	const proc = Bun.spawn(["bun", "run", PROBE, action], {
-		env: { ...process.env, HOME: home },
+		env: { ...process.env, HOME: home, SUNAT_HOME: join(home, ".sunat") },
 		stdout: "pipe",
 		stderr: "pipe",
 	});
