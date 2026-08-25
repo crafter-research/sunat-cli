@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# State root. Export SUNAT_HOME to point this run at a scratch dir instead of
+# the operator's real ~/.sunat sessions, tokens and audit log.
+export SUNAT_HOME="${SUNAT_HOME:-$HOME/.sunat}"
+
 KNOWN_RUC="20131312955" # SUPERINTENDENCIA NACIONAL DE ADUANAS Y DE ADMINISTRACION TRIBUTARIA - SUNAT
 
 echo "→ Padron status..."

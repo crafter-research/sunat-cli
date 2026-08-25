@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { privateChildEnv } from "../data/child-process.ts";
+import { paths } from "../data/config.ts";
 import { secureExistingFile, writePrivateFile } from "../data/private-storage.ts";
 
 /**
@@ -26,8 +26,7 @@ import { secureExistingFile, writePrivateFile } from "../data/private-storage.ts
  */
 
 const SESSION = "sunat-renta";
-const CACHE_DIR = join(homedir(), ".sunat");
-const CACHE_FILE = join(CACHE_DIR, "renta-token.json");
+const CACHE_FILE = join(paths.sunatDir, "renta-token.json");
 
 export const RENTA_BASE = "https://e-renta.sunat.gob.pe";
 export const RENTA_API = `${RENTA_BASE}/v1/recaudacion/declaracionespago/renta`;
