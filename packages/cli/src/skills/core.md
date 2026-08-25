@@ -4,7 +4,23 @@ SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat-cli` if globally in
 
 Install: `npm install -g @crafter/sunat-cli`. Runs on Node, no Bun needed.
 
-RHE and F616 additionally need [agent-browser](https://github.com/vercel-labs/agent-browser) and Chrome; CPE, SIRE and GRE need a SUNAT certificate and a clave SOL. Everything else works with neither.
+RHE, F616 and the portal scrapers drive a real browser through
+[agent-browser](https://github.com/vercel-labs/agent-browser), which is a
+separate binary rather than a bundled dependency:
+
+```bash
+npm install -g agent-browser      # all platforms
+brew install agent-browser        # macOS
+agent-browser install             # download Chrome, first time only
+```
+
+CPE, SIRE and GRE need a SUNAT certificate and a clave SOL instead. Everything
+else works with neither.
+
+**Run `sunat-cli doctor` first.** It reports what is present, what is missing,
+and the command that fixes each gap. A command that needs agent-browser and
+cannot find it fails naming the tool and how to install it, rather than
+reporting that navigation failed.
 
 Current beta posture: supervised RHE/F616 beta, not autonomous filing. Real SUNAT operations require `--yes --live-sunat`, should use `--preview-only` first, and must stop if preview values cannot be parsed or reconciled.
 

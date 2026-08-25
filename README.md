@@ -17,7 +17,19 @@ sunat-cli --help
 
 That help output is the contract. Every command it prints exists in the version you have.
 
-Requires [Bun](https://bun.sh) 1.2+. RHE and F616 also need [agent-browser](https://github.com/vercel-labs/agent-browser) 0.22+ and Chrome. CPE, SIRE and GRE need a SUNAT digital certificate (PFX) and a clave SOL.
+Runs on Node, no Bun needed.
+
+RHE, F616 and the portal scrapers drive a real browser through [agent-browser](https://github.com/vercel-labs/agent-browser), a separate binary:
+
+```bash
+npm install -g agent-browser      # all platforms
+brew install agent-browser        # macOS
+agent-browser install             # download Chrome, first time only
+```
+
+CPE, SIRE and GRE need a SUNAT digital certificate (PFX) and a clave SOL instead. Everything else works with neither.
+
+Run `sunat-cli doctor` to see what is present and what each gap needs.
 
 ## Quick start
 
@@ -38,11 +50,12 @@ Output is JSON whenever stdout is not a terminal, so an agent gets parseable dat
 
 ## Commands
 
-Fourteen namespaces. Run `sunat-cli <name> --help` for any of them.
+Fifteen namespaces. Run `sunat-cli <name> --help` for any of them.
 
 | Namespace | What it does |
 |---|---|
 | `login`, `whoami`, `keychain` | authenticate and inspect the session |
+| `doctor` | what is installed, what is missing, and the command that fixes it |
 | `schema` | field specs per command, for agents |
 | `skills` | the agent manual, served by the binary |
 | `rhe`, `f616` | recibos por honorarios and the monthly declaration (personas naturales) |

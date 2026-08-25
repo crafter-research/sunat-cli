@@ -144,6 +144,10 @@ const featureHtmls = await Promise.all(features.map((f) => codeToHtml(f.code, { 
 const heroCode = `# Install globally. Runs on Node, no Bun needed
 $ npm install -g @crafter/sunat-cli
 
+# Check what is present and what each gap needs
+$ sunat-cli doctor
+● sunat-cli ready  ✓ agent-browser  ✓ node  ✓ config
+
 # Introspect the schema, versioned so agents can pin it
 $ sunat-cli schema cpe-factura
 { "version": "1.0.0", "command": "cpe factura emit", "fields": {...} }

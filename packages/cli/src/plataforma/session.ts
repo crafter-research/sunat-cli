@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isMissingBinary, missingBinaryError } from "../browser/dependency.ts";
 import { privateChildEnv } from "../data/child-process.ts";
 import { paths } from "../data/config.ts";
 import { secureExistingFile, writePrivateFile } from "../data/private-storage.ts";
@@ -62,7 +63,7 @@ export async function captureIdCacheFromSession(): Promise<string> {
 		let out = "";
 		proc.stdout.on("data", (d: Buffer) => (out += d.toString()));
 		proc.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error("network requests failed"))));
-		proc.on("error", reject);
+		proc.on("error", (err) => reject(isMissingBinary(err) ? missingBinaryError() : err));
 	});
 
 	const match = stripAnsi(requests).match(/idCache=(ey[A-Za-z0-9._-]+)/);

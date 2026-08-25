@@ -10,6 +10,7 @@ import { createLoginCommand } from "../src/commands/login.ts";
 import { createPadronCommand } from "../src/commands/padron/index.ts";
 import { createRentaCommand } from "../src/commands/renta/index.ts";
 import { createRheCommand } from "../src/commands/rhe/index.ts";
+import { createDoctorCommand } from "../src/commands/doctor.ts";
 import { createSchemaCommand } from "../src/commands/schema.ts";
 import { createSireCommand } from "../src/commands/sire/index.ts";
 import { createSkillsCommand } from "../src/commands/skills.ts";
@@ -46,6 +47,7 @@ program
 program.addCommand(createLoginCommand());
 program.addCommand(createWhoamiCommand());
 program.addCommand(createSchemaCommand());
+program.addCommand(createDoctorCommand());
 program.addCommand(createRheCommand());
 program.addCommand(createF616Command());
 program.addCommand(createSkillsCommand());

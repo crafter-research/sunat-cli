@@ -2,6 +2,7 @@ import { execSync, spawn } from "node:child_process";
 import { rmSync } from "node:fs";
 import { privateChildEnv } from "../data/child-process.ts";
 import { secureExistingFile } from "../data/private-storage.ts";
+import { isMissingBinary, missingBinaryError } from "./dependency.ts";
 
 export interface BrowserResult {
 	stdout: string;
@@ -23,7 +24,7 @@ async function run(args: string[], timeoutMs = 30000): Promise<BrowserResult> {
 		proc.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
 		proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
 		proc.on("close", (code) => resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: code || 0 }));
-		proc.on("error", reject);
+		proc.on("error", (err) => reject(isMissingBinary(err) ? missingBinaryError() : err));
 	});
 }
 
@@ -38,7 +39,7 @@ async function runRaw(args: string[], timeoutMs = 30000): Promise<BrowserResult>
 		proc.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
 		proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
 		proc.on("close", (code) => resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: code || 0 }));
-		proc.on("error", reject);
+		proc.on("error", (err) => reject(isMissingBinary(err) ? missingBinaryError() : err));
 	});
 }
 
@@ -53,7 +54,7 @@ async function runBatchFromStdin(command: string[], timeoutMs = 30000): Promise<
 		proc.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
 		proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
 		proc.on("close", (code) => resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: code || 0 }));
-		proc.on("error", reject);
+		proc.on("error", (err) => reject(isMissingBinary(err) ? missingBinaryError() : err));
 		proc.stdin.end(JSON.stringify([command]));
 	});
 }
@@ -128,7 +129,7 @@ export async function evalJS(code: string): Promise<string> {
 			if (exitCode !== 0) reject(new Error("Browser evaluation failed"));
 			else resolve(stripAnsi(stdout.trim()));
 		});
-		proc.on("error", reject);
+		proc.on("error", (err) => reject(isMissingBinary(err) ? missingBinaryError() : err));
 		proc.stdin.write(code);
 		proc.stdin.end();
 	});
