@@ -22,10 +22,10 @@ const SKILLS_DIR = packageDataDir("skills");
 /**
  * Si el usuario pidió JSON explícitamente.
  *
- * No sirve mirar `--output`: el programa reescribe "auto" a "json" cuando no
- * hay TTY, y estos comandos sirven markdown para leer. Un doc escapado dentro
- * de una cadena JSON no se lee, así que el default es texto plano y JSON solo
- * cuando aparece en argv.
+ * `skills get` sirve un documento markdown para leer, y un doc escapado dentro
+ * de una cadena JSON no se lee, así que ahí el default es texto plano aunque no
+ * haya TTY. Esa excepción vale para el documento, no para el listado: mirá
+ * `listadoQuiereJson`.
  */
 function quiereJson(): boolean {
 	const a = process.argv;
@@ -36,11 +36,21 @@ function quiereJson(): boolean {
 	return false;
 }
 
+/**
+ * El listado es una colección, no un documento, así que sigue la regla del
+ * resto del CLI: JSON cuando stdout no es un terminal, aunque nadie pase `-o`.
+ * Servía la tabla humana por una tubería, con las descripciones ya cortadas,
+ * que es exactamente lo que un agente no puede parsear.
+ */
+function listadoQuiereJson(): boolean {
+	return quiereJson() || !process.stdout.isTTY;
+}
+
 /** Primera línea con texto de un doc, para el listado. */
 function resumen(md: string): string {
 	for (const line of md.split("\n")) {
 		const t = line.trim();
-		if (t && !t.startsWith("#")) return truncateVisible(t.replace(/`/g, ""), 78);
+		if (t && !t.startsWith("#")) return t.replace(/`/g, "");
 	}
 	return "";
 }
@@ -63,11 +73,11 @@ export function createSkillsCommand(): Command {
 		.description("What documentation this version ships")
 		.action(() => {
 			const items = listar();
-			const json = quiereJson();
+			const json = listadoQuiereJson();
 			if (json) {
 				output("json", { json: { skills: items } });
 			} else {
-				for (const s of items) console.log(`  ${s.name.padEnd(12)} ${s.summary}`);
+				for (const s of items) console.log(`  ${s.name.padEnd(12)} ${truncateVisible(s.summary, 78)}`);
 			}
 			emitNextSteps(
 				items.map((s) =>
