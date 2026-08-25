@@ -10,7 +10,7 @@ import { audit } from "../../data/audit.ts";
 import { loadConfig } from "../../data/config.ts";
 import { resolveSecret } from "../../data/keychain.ts";
 import { emitNextSteps, type NextStep } from "../../utils/next-steps.ts";
-import { isHumanFormat, output, outputError } from "../../utils/output.ts";
+import { isHumanFormat, output, outputError, outputTable } from "../../utils/output.ts";
 import { bold, danger, dim, info, muted, ok as okColor, padVisible, visibleWidth } from "../../utils/style.ts";
 
 type Format = "json" | "table" | "auto";
@@ -1030,6 +1030,31 @@ export function createCpeCommand(): Command {
 			const format = getFormat(cmd);
 			try {
 				const config = loadCpeConfig();
+				if (isHuman(format)) {
+					const names = Object.keys(config.profiles ?? {});
+					if (names.length === 0) {
+						console.log(muted("No emisor profiles configured."));
+						console.log(dim("  Create one: sunat-cli cpe profile set --name <name> --ruc <ruc> --razon-social <name>"));
+					} else {
+						// The active profile is what a reader is checking for, so it
+						// carries a marker rather than being one row among equals.
+						outputTable(
+							["", "Profile", "RUC", "Razon social", "Mode"],
+							names.map((n) => {
+								const p = config.profiles[n];
+								const active = n === config.defaultProfile;
+								return [
+									active ? okColor("●") : dim("○"),
+									active ? bold(n) : n,
+									p?.emisor?.ruc ?? "-",
+									p?.emisor?.razonSocial ?? "-",
+									p?.mode ?? "-",
+								];
+							}),
+						);
+					}
+					return;
+				}
 				output(format, { json: { defaultProfile: config.defaultProfile || null, profiles: config.profiles } });
 			} catch (err) {
 				outputError(err instanceof Error ? err.message : String(err), format);
