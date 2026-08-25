@@ -15,7 +15,7 @@ import {
 import { ensureRentaToken, loginRenta } from "../../renta/login.ts";
 import { hasFreshToken, readToken } from "../../renta/session.ts";
 import { output, outputError, outputSuccess } from "../../utils/output.ts";
-import { bold, dim, info, muted, ok, warn } from "../../utils/style.ts";
+import { bold, dim, info, muted, ok, truncateVisible, warn } from "../../utils/style.ts";
 
 /**
  * F709 — Renta Anual, Persona Natural.
@@ -175,7 +175,7 @@ export function createRentaCommand(): Command {
 						headers: ["CASILLA", "DESCRIPTION", "REQ", "EDIT"],
 						rows: casillas.map((c) => [
 							c.numCas,
-							(c.descripcion || "").slice(0, 58),
+							truncateVisible(c.descripcion || "", 58),
 							c.indObligatorio ? "yes" : dim("no"),
 							c.indEditable ? ok("yes") : dim("no"),
 						]),
