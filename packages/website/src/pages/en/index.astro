@@ -1,0 +1,16 @@
+---
+import Base from "../../layouts/Base.astro";
+import Home from "../../components/Home.astro";
+import { useContent } from "../../lib/content";
+
+const t = useContent("en");
+---
+
+<Base
+	locale="en"
+	path="/"
+	title={t.meta.title}
+	description={t.meta.description}
+>
+	<Home locale="en" />
+</Base>

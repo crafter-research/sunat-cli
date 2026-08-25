@@ -1,0 +1,235 @@
+---
+import { useContent, useLegal, VERSION } from "../lib/content";
+import { altPath, localePath, type Locale } from "../lib/i18n";
+
+interface Props {
+	locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useContent(locale);
+const l = useLegal(locale);
+const other: Locale = locale === "es" ? "en" : "es";
+const repo = "https://github.com/crafter-research/sunat-cli";
+
+/**
+ * The source text carries bare identifiers (`--dry-run`, `~/.sunat/`,
+ * `*.sunat.gob.pe`) and one repo URL. Rendering them as plain prose would lose
+ * the distinction between a path and a sentence, so each line is split on the
+ * known tokens and the pieces are marked up.
+ */
+const CODE = ["--dry-run", "~/.sunat/", "*.sunat.gob.pe"];
+const LINK = "github.com/crafter-research/sunat-cli";
+
+type Piece = { kind: "text" | "code" | "link"; value: string };
+
+function pieces(line: string): Piece[] {
+	const tokens = [...CODE, LINK];
+	const pattern = new RegExp(
+		`(${tokens.map((v) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+	);
+	return line
+		.split(pattern)
+		.filter((part) => part !== "")
+		.map((part) => ({
+			kind: part === LINK ? "link" : CODE.includes(part) ? "code" : "text",
+			value: part,
+		}));
+}
+---
+
+<div class="page">
+	<header class="head">
+		<a href={localePath(locale)} class="back" aria-label={t.a11y.home}>
+			<span class="back-mark">sunat-cli</span>
+		</a>
+		<div class="head-side">
+			<a
+				class="lang"
+				href={altPath(locale, "/legal")}
+				hreflang={other}
+				lang={other}
+				data-lang-link
+				aria-label={`${t.a11y.language}: ${other === "es" ? "Espanol" : "English"}`}
+				>{other === "es" ? "ES" : "EN"}</a
+			>
+			<span class="meta">v{VERSION}</span>
+		</div>
+	</header>
+
+	<main id="main" class="prose">
+		<h1>{l.title}</h1>
+		<p class="updated meta">{l.updated}</p>
+
+		{
+			l.sections.map((s) => (
+				<section>
+					<h2>{s.heading}</h2>
+					{s.paras?.map((p) => (
+						<p>
+							{pieces(p).map((piece) =>
+								piece.kind === "code" ? (
+									<code class="mono">{piece.value}</code>
+								) : piece.kind === "link" ? (
+									<a href={repo}>{piece.value}</a>
+								) : (
+									piece.value
+								),
+							)}
+						</p>
+					))}
+					{s.list && (
+						<ul>
+							{s.list.map((item) => (
+								<li>
+									{pieces(item).map((piece) =>
+										piece.kind === "code" ? (
+											<code class="mono">{piece.value}</code>
+										) : piece.kind === "link" ? (
+											<a href={repo}>{piece.value}</a>
+										) : (
+											piece.value
+										),
+									)}
+								</li>
+							))}
+						</ul>
+					)}
+					{s.refs?.map((r) => <p class="ref">{r}</p>)}
+				</section>
+			))
+		}
+
+		<section>
+			<h2>{l.contact.heading}</h2>
+			<p>
+				{l.contact.lead}{" "}
+				<a href={`mailto:${l.contact.email}`}>{l.contact.email}</a><br />
+				{l.contact.org}
+			</p>
+		</section>
+	</main>
+
+	<footer class="foot">
+		<p>
+			<a href={localePath(locale)}>sunat-cli</a> ·
+			<a href="https://crafterstation.com">{t.footer.org}</a>
+		</p>
+	</footer>
+</div>
+
+<style>
+	.page {
+		max-width: 66ch;
+		margin: 0 auto;
+		padding: 0 var(--gutter);
+	}
+
+	.head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-4);
+		padding: var(--space-6) 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.head-side {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+	}
+
+	.back {
+		text-decoration: none;
+	}
+
+	.back-mark {
+		font-family: var(--font-pixel);
+		font-size: 1.0625rem;
+		color: var(--text);
+	}
+
+	.lang {
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		text-decoration: none;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 3px 7px;
+	}
+
+	.lang:hover {
+		color: var(--text);
+		border-color: var(--border-strong);
+	}
+
+	.prose {
+		padding: var(--space-10) 0 var(--space-12);
+	}
+
+	.prose h1 {
+		font-size: var(--text-title);
+		margin-bottom: var(--space-2);
+	}
+
+	.updated {
+		margin-bottom: var(--space-8);
+	}
+
+	.prose h2 {
+		font-size: var(--text-section);
+		margin: var(--space-8) 0 var(--space-3);
+	}
+
+	.prose p {
+		color: var(--text-2);
+		margin-bottom: var(--space-4);
+	}
+
+	.prose ul {
+		color: var(--text-2);
+		margin: 0 0 var(--space-4);
+		padding-left: 1.2em;
+	}
+
+	.prose li {
+		margin-bottom: var(--space-2);
+	}
+
+	.prose a {
+		color: var(--accent);
+	}
+
+	.prose code {
+		font-size: 0.92em;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 0.1em 0.35em;
+		word-break: break-word;
+	}
+
+	.ref {
+		border-left: 2px solid var(--accent-line);
+		padding-left: var(--space-4);
+		font-size: var(--text-compact);
+		color: var(--text-3);
+	}
+
+	.foot {
+		padding: var(--space-5) 0 var(--space-8);
+		border-top: 1px solid var(--border);
+		font-size: var(--text-meta);
+		color: var(--text-3);
+	}
+
+	.foot a {
+		color: var(--text-2);
+		text-decoration: none;
+	}
+
+	.foot a:hover {
+		color: var(--accent);
+	}
+</style>

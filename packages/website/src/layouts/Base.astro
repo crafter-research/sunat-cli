@@ -1,26 +1,40 @@
 ---
 import "../styles/tokens.css";
 import "../styles/base.css";
+import { useContent } from "../lib/content";
+import { localePath, type Locale } from "../lib/i18n";
 
 interface Props {
 	title: string;
 	description: string;
+	locale: Locale;
+	/** Path without any locale prefix, e.g. "/" or "/legal". */
 	path?: string;
 }
 
-const { title, description, path = "/" } = Astro.props;
+const { title, description, locale, path = "/" } = Astro.props;
+const t = useContent(locale);
 const site = "https://sunat-cli.crafter.ing";
-const canonical = new URL(path, site).href;
+
+const canonical = new URL(localePath(locale, path), site).href;
+const esUrl = new URL(localePath("es", path), site).href;
+const enUrl = new URL(localePath("en", path), site).href;
+const ogImage = `${site}/og.png`;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{title}</title>
 		<meta name="description" content={description} />
+
 		<link rel="canonical" href={canonical} />
+		<link rel="alternate" hreflang="es" href={esUrl} />
+		<link rel="alternate" hreflang="en" href={enUrl} />
+		<link rel="alternate" hreflang="x-default" href={esUrl} />
+
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
@@ -28,7 +42,8 @@ const canonical = new URL(path, site).href;
 		<meta property="og:description" content={description} />
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content={canonical} />
-		<meta property="og:image" content={`${site}/og.png`} />
+		<meta property="og:locale" content={locale === "es" ? "es_PE" : "en_US"} />
+		<meta property="og:image" content={ogImage} />
 		<meta property="og:image:width" content="1200" />
 		<meta property="og:image:height" content="630" />
 		<meta name="twitter:card" content="summary_large_image" />
@@ -63,9 +78,58 @@ const canonical = new URL(path, site).href;
 				}
 			})();
 		</script>
+
+		<script is:inline define:vars={{ prefixed: locale !== "es", basePath: path }}>
+			window.__sunatPrefixed = prefixed;
+
+			// Language auto-detect.
+			//
+			// The site is static, so there is no request header to read: the
+			// browser's own language list is the only signal available. It says
+			// what someone reads rather than where they are, which is the better
+			// signal anyway for a page that exists in two languages.
+			//
+			// This only ever runs on an unprefixed URL. A visitor who lands on
+			// /en asked for English by opening that address, and a shared link
+			// must survive being opened by someone whose own preference differs,
+			// so a prefixed URL is never redirected away from.
+			(() => {
+				// `/en/...` names its language in the address. Nothing to decide.
+				if (window.__sunatPrefixed) return;
+
+				let stored = null;
+				try {
+					stored = localStorage.getItem("sunat-lang");
+				} catch {
+					/* storage blocked: treat as no preference and read the browser */
+				}
+
+				const target =
+					stored === "es" || stored === "en"
+						? stored
+						: (navigator.languages?.[0] || navigator.language || "")
+									.toLowerCase()
+									.startsWith("en")
+							? "en"
+							: "es";
+
+				if (!stored) {
+					try {
+						localStorage.setItem("sunat-lang", target);
+					} catch {
+						/* not fatal: detection simply runs again next visit */
+					}
+				}
+
+				// Spanish is where an unprefixed URL already is.
+				if (target === "en") {
+					location.replace(`/en${basePath === "/" ? "" : basePath}`);
+				}
+			})();
+		</script>
 	</head>
 	<body>
-		<a class="skip" href="#main">Skip to content</a>
+		<a class="skip" href="#main">{t.a11y.skip}</a>
 		<slot />
 	</body>
 </html>

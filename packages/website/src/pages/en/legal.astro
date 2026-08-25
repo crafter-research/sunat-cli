@@ -1,0 +1,16 @@
+---
+import Base from "../../layouts/Base.astro";
+import Legal from "../../components/Legal.astro";
+import { useLegal } from "../../lib/content";
+
+const l = useLegal("en");
+---
+
+<Base
+	locale="en"
+	path="/legal"
+	title={`${l.title} — sunat-cli`}
+	description="Legal framework, user responsibility, data protection, and disclaimer for sunat-cli."
+>
+	<Legal locale="en" />
+</Base>

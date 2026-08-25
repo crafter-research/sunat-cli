@@ -52,8 +52,47 @@ for `next/font/local`, which Astro does not use, so `tokens.css` declares
 Geist Pixel only has glyphs for lowercase letters; digits and capitals fall
 back to Geist Mono. That is why it is used for the wordmark and nothing else.
 
+## Languages
+
+Spanish is the default and lives at the root; English is under `/en`. The
+product only works in Peru, so the person filing an F616 is the primary
+reader and gets the unprefixed URL.
+
+| Route | Language |
+| --- | --- |
+| `/` and `/legal` | Spanish |
+| `/en` and `/en/legal` | English |
+
+Routing is Astro's built-in i18n with `prefixDefaultLocale: false`. Both
+routes render the same `Home.astro` and `Legal.astro`, parameterised by
+locale, so a structural change lands in both at once.
+
+### Detection
+
+The site is static, so no request header is available and
+`Astro.preferredLocale` does not apply. An inline script in `Base.astro`
+reads `navigator.languages` instead, which reports what someone reads
+rather than where they are.
+
+The rules, in order:
+
+1. A URL that names its language (`/en/...`) is never redirected away
+   from. A shared link has to survive being opened by someone whose own
+   preference differs.
+2. On an unprefixed URL, a stored choice under `sunat-lang` wins.
+3. Otherwise an English-first browser goes to `/en`. Everything else,
+   including any Spanish variant and any unrecognised language, stays on
+   the Spanish default.
+
+Clicking the language switcher records the choice, so detection never
+overrides it afterwards.
+
 ## Content
 
-Copy, coverage figures, and the roadmap live in `src/lib/content.ts`.
+Copy lives in `src/lib/content.ts`, one object per locale rather than a
+shared key table. The Spanish is written for a Peruvian taxpayer and uses
+SUNAT's own vocabulary; the English explains the domain to someone who has
+never filed here. Neither is a translation of the other.
+
 `VERSION` there is maintained by hand and should track
 `packages/cli/package.json`.

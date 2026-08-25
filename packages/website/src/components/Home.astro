@@ -1,0 +1,783 @@
+---
+import { codeToHtml } from "shiki";
+import Rail from "./Rail.astro";
+import { dualThemes } from "../lib/code-theme";
+import { useContent, VERSION } from "../lib/content";
+import type { Locale } from "../lib/i18n";
+
+interface Props {
+	locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useContent(locale);
+
+const hl = (code: string) =>
+	codeToHtml(code, { lang: "bash", themes: dualThemes, defaultColor: false });
+
+const heroCode =
+	locale === "es"
+		? `# Se instala una vez. Corre sobre Node.
+$ npm install -g @crafter/sunat-cli
+
+# Pregunta qué hay y qué le falta a cada hueco
+$ sunat-cli doctor
+  listo · agent-browser · node · config
+
+# Pregunta qué acepta un comando. Versionado.
+$ sunat-cli schema cpe-factura
+  { "version": "1.0.0", "command": "cpe factura emit" }
+
+# El preview devuelve la forma real, más un hash
+$ sunat-cli cpe factura preview --params @f.json
+  { "dryRun": true, "validacion": { "ok": true } }
+
+# Confirmar. UBL 2.1, XAdES, SOAP, de punta a punta.
+$ sunat-cli cpe factura emit --params @f.json --yes
+  Aceptado · CDR 0000 · F001-1234`
+		: `# Install once. Runs on Node.
+$ npm install -g @crafter/sunat-cli
+
+# Ask what is present, and what each gap needs
+$ sunat-cli doctor
+  ready · agent-browser · node · config
+
+# Ask what a command accepts. Versioned, so pin it.
+$ sunat-cli schema cpe-factura
+  { "version": "1.0.0", "command": "cpe factura emit" }
+
+# Preview returns the real shape, plus a hash
+$ sunat-cli cpe factura preview --params @f.json
+  { "dryRun": true, "validacion": { "ok": true } }
+
+# Commit. UBL 2.1, XAdES, SOAP, end to end.
+$ sunat-cli cpe factura emit --params @f.json --yes
+  Aceptado · CDR 0000 · F001-1234`;
+
+const heroHtml = await hl(heroCode);
+const capHtml = await Promise.all(t.capabilities.items.map((c) => hl(c.code)));
+
+const sections = [
+	{ id: "capabilities", label: t.nav.capabilities },
+	{ id: "headless", label: t.nav.architecture },
+	{ id: "coverage", label: t.nav.coverage },
+	{ id: "roadmap", label: t.nav.roadmap },
+	{ id: "principles", label: t.nav.principles },
+];
+
+const rows = t.coverage.rows;
+const shipped = rows.filter((c) => c.state === "shipped").length;
+const repo = "https://github.com/crafter-research/sunat-cli";
+---
+
+<div class="shell">
+	<Rail version={VERSION} sections={sections} locale={locale} path="/" />
+
+	<div class="doc">
+		<main id="main">
+			<section class="hero">
+				<div class="gridlines" aria-hidden="true"></div>
+
+				<div class="hero-body">
+					<h1>
+						<span class="wordmark" aria-hidden="true">sunat-cli</span>
+						<span class="sr-only">sunat-cli</span>
+					</h1>
+
+					<p class="hero-lede">{t.hero.lede}</p>
+
+					<div class="hero-actions">
+						<a class="btn" href="#capabilities">{t.hero.cta}</a>
+						<code class="install mono">npm install -g @crafter/sunat-cli</code>
+					</div>
+
+					<dl class="hud">
+						{
+							t.stats.map((s) => (
+								<div class="hud-item">
+									<dt class="hud-label">{s.label}</dt>
+									<dd class="hud-value numeric">{s.value}</dd>
+									<dd class="hud-detail">{s.detail}</dd>
+								</div>
+							))
+						}
+					</dl>
+				</div>
+
+				<div class="hero-code code" set:html={heroHtml} />
+			</section>
+
+			<section class="section" id="capabilities">
+				<div class="gridlines" aria-hidden="true"></div>
+				<div class="section-head">
+					<h2>{t.capabilities.heading}</h2>
+					<p class="meta">{t.capabilities.count(t.capabilities.items.length)}</p>
+				</div>
+
+				<div class="caps">
+					{
+						t.capabilities.items.map((c, i) => (
+							<article class="cap">
+								<div class="cap-text">
+									<h3>{c.title}</h3>
+									<p class="cap-scope mono">{c.scope}</p>
+									<p class="cap-desc">{c.desc}</p>
+								</div>
+								<div class="cap-code code" set:html={capHtml[i]} />
+							</article>
+						))
+					}
+				</div>
+			</section>
+
+			<section class="section" id="headless">
+				<div class="gridlines" aria-hidden="true"></div>
+				<div class="section-head">
+					<h2>{t.architecture.heading}</h2>
+				</div>
+
+				<div class="arch">
+					<div class="arch-prose">
+						{t.architecture.prose.map((p) => <p>{p}</p>)}
+					</div>
+
+					<ol class="steps">
+						{
+							t.architecture.steps.map((s) => (
+								<li>
+									<span class="step-n numeric">{s.n}</span>
+									<div>
+										<h3>{s.title}</h3>
+										<p>{s.desc}</p>
+									</div>
+								</li>
+							))
+						}
+					</ol>
+				</div>
+			</section>
+
+			<section class="section" id="coverage">
+				<div class="gridlines" aria-hidden="true"></div>
+				<div class="section-head">
+					<h2>{t.coverage.heading}</h2>
+					<p class="meta">{t.coverage.shipped(shipped, rows.length)}</p>
+				</div>
+
+				<p class="lede cov-note">{t.coverage.note}</p>
+
+				<div class="table-wrap">
+					<table class="cov">
+						<caption class="sr-only">{t.coverage.caption}</caption>
+						<thead>
+							<tr>
+								<th scope="col">{t.coverage.th.surface}</th>
+								<th scope="col" class="cov-th-bar">{t.coverage.th.wrapped}</th>
+								<th scope="col" class="cov-th-num">{t.coverage.th.pct}</th>
+								<th scope="col">{t.coverage.th.state}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{
+								rows.map((c) => (
+									<tr>
+										<th scope="row">
+											<span class="cov-domain">{c.domain}</span>
+											<span class="cov-detail">{c.detail}</span>
+										</th>
+										<td class="cov-td-bar">
+											<div class="bar" data-state={c.state}>
+												<div class="bar-fill" style={`width:${c.pct}%`} />
+											</div>
+										</td>
+										<td class="cov-td-num numeric">{c.pct}</td>
+										<td>
+											<span class="state" data-state={c.state}>
+												{t.coverage.states[c.state]}
+											</span>
+										</td>
+									</tr>
+								))
+							}
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<section class="section" id="roadmap">
+				<div class="gridlines" aria-hidden="true"></div>
+				<div class="section-head">
+					<h2>{t.roadmap.heading}</h2>
+					<p class="meta">{t.roadmap.note}</p>
+				</div>
+
+				<div class="road">
+					{
+						t.roadmap.cols.map((col) => (
+							<section class="road-col">
+								<h3 class="road-when">{col.when}</h3>
+								<ul>
+									{col.items.map((i) => (
+										<li>
+											<a href={`${repo}/issues/${i.n}`}>
+												<span class="road-n numeric">{i.n}</span>
+												{i.t}
+											</a>
+										</li>
+									))}
+								</ul>
+							</section>
+						))
+					}
+				</div>
+			</section>
+
+			<section class="section" id="principles">
+				<div class="gridlines" aria-hidden="true"></div>
+				<div class="section-head">
+					<h2>{t.principles.heading}</h2>
+				</div>
+
+				<p class="lede">{t.principles.lede}</p>
+
+				<dl class="rules">
+					{
+						t.principles.items.map((p) => (
+							<div class="rule">
+								<dt>{p.rule}</dt>
+								<dd>{p.why}</dd>
+							</div>
+						))
+					}
+				</dl>
+			</section>
+		</main>
+
+		<footer class="foot">
+			<p>
+				<a href="https://crafterstation.com">{t.footer.org}</a> · {t.footer.tagline}
+			</p>
+			<p class="mono">
+				<a href={locale === "es" ? "/legal" : "/en/legal"}>{t.footer.legal}</a> ·
+				<a href={repo}>{t.footer.source}</a> · MIT
+			</p>
+		</footer>
+	</div>
+</div>
+
+<style is:global>
+	.code pre.shiki {
+		margin: 0;
+		padding: var(--space-5);
+		overflow-x: auto;
+		font-family: var(--font-mono);
+		font-size: var(--text-meta);
+		line-height: 1.75;
+		letter-spacing: var(--track-mono);
+		tab-size: 2;
+	}
+
+	.code pre.shiki code {
+		font-family: inherit;
+	}
+
+	.code .shiki,
+	.code .shiki span {
+		color: var(--shiki-light);
+		background-color: var(--shiki-light-bg);
+		font-style: var(--shiki-light-font-style);
+		font-weight: var(--shiki-light-font-weight);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:root:not([data-theme="light"]) .code .shiki,
+		:root:not([data-theme="light"]) .code .shiki span {
+			color: var(--shiki-dark);
+			background-color: var(--shiki-dark-bg);
+			font-style: var(--shiki-dark-font-style);
+			font-weight: var(--shiki-dark-font-weight);
+		}
+	}
+
+	:root[data-theme="dark"] .code .shiki,
+	:root[data-theme="dark"] .code .shiki span {
+		color: var(--shiki-dark);
+		background-color: var(--shiki-dark-bg);
+		font-style: var(--shiki-dark-font-style);
+		font-weight: var(--shiki-dark-font-weight);
+	}
+</style>
+<style>
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	/* ── Hero ──────────────────────────────────────────────────── */
+
+	.hero {
+		position: relative;
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+		gap: var(--space-10);
+		align-items: center;
+		padding: var(--space-16) var(--gutter) var(--space-12);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.hero-body,
+	.hero-code {
+		position: relative;
+		z-index: 1;
+		min-width: 0;
+	}
+
+	h1 {
+		margin: 0 0 var(--space-6);
+	}
+
+	.wordmark {
+		font-family: var(--font-pixel);
+		font-size: var(--text-display);
+		line-height: var(--leading-display);
+		letter-spacing: var(--track-display);
+		color: var(--accent);
+		display: block;
+		/* The single decorative gesture on the page. `--glow` resolves to
+		   `transparent` in light, where a halo would only muddy the type. */
+		text-shadow:
+			0 0 28px color-mix(in oklab, var(--glow) 22%, transparent),
+			0 0 80px color-mix(in oklab, var(--glow) 10%, transparent);
+	}
+
+	.hero-lede {
+		font-size: var(--text-lede);
+		color: var(--text-2);
+		max-width: 46ch;
+		margin-bottom: var(--space-6);
+	}
+
+	.hero-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-10);
+	}
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.6rem 1.15rem;
+		background: var(--contrast);
+		color: var(--on-contrast);
+		font-size: var(--text-compact);
+		font-weight: 500;
+		border-radius: var(--radius);
+		text-decoration: none;
+		transition: opacity var(--dur) var(--ease);
+	}
+
+	.btn:hover {
+		opacity: 0.85;
+	}
+
+	.install {
+		font-size: var(--text-meta);
+		color: var(--text-2);
+		padding: 0.6rem 0.85rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+		white-space: nowrap;
+		overflow-x: auto;
+		max-width: 100%;
+	}
+
+	/* The HUD: three peer readings, hung off one baseline. */
+	.hud {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--space-5);
+		border-top: 1px solid var(--border);
+		padding-top: var(--space-5);
+		margin: 0;
+	}
+
+	.hud-item {
+		min-width: 0;
+	}
+
+	.hud-label {
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		line-height: 1.35;
+		margin-bottom: var(--space-2);
+	}
+
+	.hud-value {
+		font-size: 2rem;
+		line-height: 1;
+		color: var(--text);
+		margin: 0 0 var(--space-1);
+	}
+
+	.hud-detail {
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		margin: 0;
+		line-height: 1.4;
+	}
+
+	.hero-code {
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--code-bg);
+	}
+
+	/* ── Capabilities ───────────────────────────────────────────── */
+
+	.caps {
+		display: grid;
+		gap: 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.cap {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: var(--space-8);
+		align-items: start;
+		padding: var(--space-6) 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.cap-text {
+		min-width: 0;
+	}
+
+	.cap h3 {
+		font-size: var(--text-section);
+		margin-bottom: var(--space-1);
+	}
+
+	.cap-scope {
+		font-size: var(--text-meta);
+		color: var(--accent);
+		margin-bottom: var(--space-3);
+	}
+
+	.cap-desc {
+		color: var(--text-2);
+		font-size: var(--text-compact);
+		max-width: 52ch;
+	}
+
+	.cap-code {
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--code-bg);
+		min-width: 0;
+	}
+
+	.cap-code :global(pre.shiki) {
+		padding: var(--space-4);
+		font-size: var(--text-micro);
+	}
+
+	/* ── Architecture ───────────────────────────────────────────── */
+
+	.arch {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: var(--space-10);
+		align-items: start;
+	}
+
+	.arch-prose p {
+		color: var(--text-2);
+		max-width: 48ch;
+	}
+
+	.arch-prose p + p {
+		margin-top: var(--space-4);
+	}
+
+	.steps {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.steps li {
+		display: grid;
+		grid-template-columns: 2.5rem minmax(0, 1fr);
+		gap: var(--space-4);
+		padding: var(--space-5) 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.step-n {
+		font-size: var(--text-meta);
+		color: var(--accent);
+		padding-top: 0.15em;
+	}
+
+	.steps h3 {
+		font-size: var(--text-body);
+		margin-bottom: var(--space-1);
+	}
+
+	.steps p {
+		font-size: var(--text-compact);
+		color: var(--text-2);
+	}
+
+	/* ── Coverage ───────────────────────────────────────────────── */
+
+	.cov-note {
+		margin-bottom: var(--space-8);
+		max-width: 70ch;
+	}
+
+	.table-wrap {
+		overflow-x: auto;
+	}
+
+	.cov {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: var(--text-compact);
+	}
+
+	.cov th,
+	.cov td {
+		text-align: left;
+		padding: var(--space-4) var(--space-4) var(--space-4) 0;
+		border-bottom: 1px solid var(--border);
+		vertical-align: baseline;
+	}
+
+	.cov thead th {
+		font-size: var(--text-micro);
+		font-weight: 400;
+		color: var(--text-3);
+		padding-bottom: var(--space-3);
+		border-bottom: 1px solid var(--border-strong);
+	}
+
+	.cov tbody th {
+		font-weight: 400;
+	}
+
+	.cov-th-num,
+	.cov-td-num {
+		text-align: right;
+		padding-right: var(--space-5);
+		width: 4rem;
+	}
+
+	.cov-th-bar,
+	.cov-td-bar {
+		width: 38%;
+		min-width: 140px;
+	}
+
+	.cov-domain {
+		display: block;
+		color: var(--text);
+	}
+
+	.cov-detail {
+		display: block;
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		margin-top: 2px;
+	}
+
+	.bar {
+		height: 6px;
+		background: var(--surface-2);
+		border-radius: 999px;
+		overflow: hidden;
+	}
+
+	.bar-fill {
+		height: 100%;
+		border-radius: 999px;
+		background: var(--accent);
+	}
+
+	.bar[data-state="untested"] .bar-fill {
+		background: var(--danger);
+	}
+
+	.bar[data-state="planned"] .bar-fill,
+	.bar[data-state="partial"] .bar-fill {
+		background: var(--warn);
+	}
+
+	.bar[data-state="shipped"] .bar-fill {
+		background: var(--ok);
+	}
+
+	.state {
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		color: var(--text-3);
+	}
+
+	.state[data-state="untested"] {
+		color: var(--danger);
+	}
+
+	/* ── Roadmap ────────────────────────────────────────────────── */
+
+	.road {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: var(--space-6);
+	}
+
+	.road-col {
+		min-width: 0;
+		border-top: 1px solid var(--border-strong);
+		padding-top: var(--space-4);
+	}
+
+	.road-when {
+		font-size: var(--text-compact);
+		color: var(--text);
+		margin-bottom: var(--space-4);
+	}
+
+	.road-col ul {
+		list-style: none;
+		padding: 0;
+		display: grid;
+		gap: var(--space-3);
+	}
+
+	.road-col a {
+		display: grid;
+		grid-template-columns: 2.25rem minmax(0, 1fr);
+		gap: var(--space-2);
+		font-size: var(--text-meta);
+		color: var(--text-2);
+		text-decoration: none;
+		line-height: 1.5;
+	}
+
+	.road-col a:hover {
+		color: var(--text);
+	}
+
+	.road-col a:hover .road-n {
+		color: var(--accent);
+	}
+
+	.road-n {
+		color: var(--text-3);
+		font-size: var(--text-micro);
+	}
+
+	/* ── Principles ─────────────────────────────────────────────── */
+
+	.rules {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 var(--space-10);
+		margin: var(--space-8) 0 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.rule {
+		padding: var(--space-5) 0;
+		border-bottom: 1px solid var(--border);
+		min-width: 0;
+	}
+
+	.rule dt {
+		font-size: var(--text-body);
+		color: var(--text);
+		margin-bottom: var(--space-2);
+	}
+
+	.rule dd {
+		margin: 0;
+		font-size: var(--text-compact);
+		color: var(--text-2);
+		max-width: 46ch;
+	}
+
+	/* ── Footer ─────────────────────────────────────────────────── */
+
+	.foot {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: var(--space-5);
+		flex-wrap: wrap;
+		padding: var(--space-6) var(--gutter);
+		font-size: var(--text-meta);
+		color: var(--text-3);
+	}
+
+	.foot a {
+		color: var(--text-2);
+		text-decoration: none;
+	}
+
+	.foot a:hover {
+		color: var(--accent);
+	}
+
+	/* ── Reflow ─────────────────────────────────────────────────── */
+
+	@media (max-width: 1100px) {
+		.road {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 900px) {
+		.hero {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-8);
+			padding-top: var(--space-10);
+		}
+		.cap,
+		.arch,
+		.rules {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-5);
+		}
+		.rules {
+			gap: 0;
+		}
+	}
+
+	@media (max-width: 620px) {
+		.hud {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-4);
+		}
+		.road {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.hero-actions {
+			align-items: stretch;
+			flex-direction: column;
+		}
+		.install {
+			white-space: normal;
+			word-break: break-all;
+		}
+	}
+</style>

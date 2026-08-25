@@ -1,20 +1,27 @@
 ---
+import { useContent } from "../lib/content";
+import { altPath, localePath, type Locale } from "../lib/i18n";
+
 interface Props {
 	version: string;
 	sections: { id: string; label: string }[];
+	locale: Locale;
+	path?: string;
 }
-const { version, sections } = Astro.props;
+const { version, sections, locale, path = "/" } = Astro.props;
+const t = useContent(locale);
+const other: Locale = locale === "es" ? "en" : "es";
 ---
 
 <header class="rail">
 	<div class="rail-top">
-		<a href="/" class="brand" aria-label="sunat-cli home">
+		<a href={localePath(locale)} class="brand" aria-label={t.a11y.home}>
 			<span class="brand-mark" aria-hidden="true">sunat-cli</span>
 		</a>
 		<p class="rail-version mono">v{version}</p>
 	</div>
 
-	<nav class="rail-nav" aria-label="Sections">
+	<nav class="rail-nav" aria-label={t.a11y.sections}>
 		<ul>
 			{
 				sections.map((s) => (
@@ -35,19 +42,29 @@ const { version, sections } = Astro.props;
 			>npm</a
 		>
 
+		<a
+			class="lang"
+			href={altPath(locale, path)}
+			hreflang={other}
+			lang={other}
+			data-lang-link
+			aria-label={`${t.a11y.language}: ${other === "es" ? "Espanol" : "English"}`}
+			>{other === "es" ? "ES" : "EN"}</a
+		>
+
 		<fieldset class="theme" id="theme-switch">
-			<legend class="sr-only">Colour theme</legend>
+			<legend class="sr-only">{t.a11y.theme}</legend>
 			<label>
 				<input type="radio" name="theme" value="light" />
-				<span>Light</span>
+				<span>{t.theme.light}</span>
 			</label>
 			<label>
 				<input type="radio" name="theme" value="system" checked />
-				<span>System</span>
+				<span>{t.theme.system}</span>
 			</label>
 			<label>
 				<input type="radio" name="theme" value="dark" />
-				<span>Dark</span>
+				<span>{t.theme.dark}</span>
 			</label>
 		</fieldset>
 	</div>
@@ -83,6 +100,20 @@ const { version, sections } = Astro.props;
 				/* same */
 			}
 		}
+	}
+
+	// An explicit click on the language link is a decision. Record it so the
+	// auto-detect script in the layout stops redirecting on later visits.
+	for (const link of document.querySelectorAll<HTMLAnchorElement>(
+		"[data-lang-link]",
+	)) {
+		link.addEventListener("click", () => {
+			try {
+				localStorage.setItem("sunat-lang", link.hreflang);
+			} catch {
+				/* storage blocked: the navigation still happens */
+			}
+		});
 	}
 
 	if (form) {
@@ -123,6 +154,7 @@ const { version, sections } = Astro.props;
 		line-height: 1;
 		color: var(--text);
 		display: block;
+		white-space: nowrap;
 	}
 
 	.rail-version {
@@ -167,6 +199,28 @@ const { version, sections } = Astro.props;
 
 	.rail-out:hover {
 		color: var(--accent);
+	}
+
+	/* Following this link is an explicit choice, so it is recorded: the
+	   auto-detect script in the layout never overrides it afterwards. */
+	.lang {
+		align-self: start;
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		text-decoration: none;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 3px 7px;
+		margin-top: var(--space-2);
+		transition:
+			color var(--dur) var(--ease),
+			border-color var(--dur) var(--ease);
+	}
+
+	.lang:hover {
+		color: var(--text);
+		border-color: var(--border-strong);
 	}
 
 	.theme {
@@ -244,9 +298,17 @@ const { version, sections } = Astro.props;
 			display: flex;
 			align-items: baseline;
 			gap: var(--space-3);
+			flex-shrink: 0;
 		}
+		/* The version is the first thing worth dropping when the bar is tight:
+		   it is also printed in the footer and on npm. */
 		.rail-version {
 			margin-top: 0;
+		}
+		@media (max-width: 460px) {
+			.rail-version {
+				display: none;
+			}
 		}
 		.rail-nav {
 			display: none;
@@ -261,6 +323,9 @@ const { version, sections } = Astro.props;
 			display: none;
 		}
 		.theme {
+			margin-top: 0;
+		}
+		.lang {
 			margin-top: 0;
 		}
 	}

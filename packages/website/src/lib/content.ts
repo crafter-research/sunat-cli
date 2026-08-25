@@ -1,174 +1,756 @@
+import type { Locale } from "./i18n";
+
 export const VERSION = "0.11.2";
 
-export const stats = [
-	{ value: "9", label: "Surfaces", detail: "one binary" },
-	{ value: "283", label: "Tests", detail: "green against beta" },
-	{ value: "0", label: "CAPTCHAs", detail: "one login, then headless" },
-];
+/**
+ * Copy lives per locale rather than as a key/value dictionary with one canonical
+ * source. Spanish is written for a Peruvian taxpayer or their contador and uses
+ * the vocabulary SUNAT itself uses; English is written for someone reading the
+ * repo who has never filed here and needs the domain explained. Neither reads
+ * like a translation of the other, which is the point.
+ */
 
-export const capabilities = [
-	{
-		title: "Electronic invoices",
-		scope: "Factura, boleta, nota de crédito, nota de débito",
-		desc: "UBL 2.1 documents, XAdES-BES signatures, SOAP straight to SUNAT. Verified end to end against the beta endpoint.",
-		code: '$ sunat-cli cpe factura emit \\\n    --params @factura.json --yes',
-	},
-	{
-		title: "Shipping notices",
-		scope: "GRE remitente, modal 02",
-		desc: "REST with JWT. The tracker is idempotent, so a retry after a timeout resolves the original submission instead of duplicating it.",
-		code: "$ sunat-cli cpe gre emit \\\n    --params @guia.json --yes",
-	},
-	{
-		title: "Sales and purchase ledgers",
-		scope: "SIRE RVIE and RCE",
-		desc: "Pull the proposal, poll the ticket, download the ZIP, push corrections back through a TUS 1.0.0 upload.",
-		code: "$ sunat-cli sire rvie propuesta \\\n    --periodo 202504 --yes",
-	},
-	{
-		title: "Daily summaries and voids",
-		scope: "Resumen diario, comunicación de baja",
-		desc: "Boletas under S/700 batch into one daily summary. Voids carry the same ticket-polling contract.",
-		code: "$ sunat-cli cpe resumen send \\\n    --fecha 2026-04-29 --yes",
-	},
-	{
-		title: "Independent worker filings",
-		scope: "RHE and F616",
-		desc: "Browser login without a CAPTCHA. Receipts issue in batch; the monthly F616 reads headless from the declaration API behind the form.",
-		code: '$ sunat-cli f616 declare \\\n    --json \'{"periodo":"2026-03"}\'',
-	},
-	{
-		title: "Lookups",
-		scope: "Padrón RUC, consulta CPE, tipo de cambio",
-		desc: "OAuth2 client credentials against the public REST surface. The padrón syncs incrementally so a local lookup answers in under a millisecond.",
-		code: "$ sunat-cli api consulta \\\n    --tipo 01 --serie F001 --numero 123",
-	},
-	{
-		title: "Secrets in the OS keychain",
-		scope: "Certificate passwords, clave SOL",
-		desc: "A hidden prompt writes to the macOS or Linux keychain, which keeps the value out of shell history, environment variables, and the process table.",
-		code: "$ sunat-cli keychain set CPE_CERT_PASSWORD",
-	},
-	{
-		title: "Schema introspection",
-		scope: "25+ versioned schemas",
-		desc: "An agent asks the binary what a command accepts instead of guessing field names. The version is part of the response, so a caller can pin it.",
-		code: "$ sunat-cli schema cpe-factura",
-	},
-];
+type Stat = { value: string; label: string; detail: string };
+type Capability = {
+	title: string;
+	scope: string;
+	desc: string;
+	code: string;
+};
+type CoverageRow = {
+	domain: string;
+	detail: string;
+	pct: number;
+	state: "shipped" | "partial" | "planned" | "untested";
+};
+type RoadmapCol = { when: string; items: { n: number; t: string }[] };
+type Principle = { rule: string; why: string };
 
-export const coverage = [
-	{
-		domain: "REST lookups",
-		detail: "Consulta CPE, padrón, tipo de cambio",
-		pct: 90,
-		state: "shipped" as const,
-	},
-	{
-		domain: "RHE and F616",
-		detail: "Personas naturales",
-		pct: 95,
-		state: "shipped" as const,
-	},
-	{
-		domain: "Invoices",
-		detail: "Factura, boleta, NC, ND",
-		pct: 85,
-		state: "shipped" as const,
-	},
-	{
-		domain: "Daily summary and void",
-		detail: "Resumen diario, comunicación de baja",
-		pct: 80,
-		state: "shipped" as const,
-	},
-	{
-		domain: "SIRE",
-		detail: "RVIE ventas and RCE compras",
-		pct: 70,
-		state: "partial" as const,
-	},
-	{
-		domain: "Shipping notices",
-		detail: "Modal 02 only, transportista pending",
-		pct: 50,
-		state: "partial" as const,
-	},
-	{
-		domain: "Drivers",
-		detail: "2 of 5: mock and sunat-direct",
-		pct: 40,
-		state: "partial" as const,
-	},
-	{
-		domain: "Void with intent token",
-		detail: "Shaped, not built",
-		pct: 30,
-		state: "planned" as const,
-	},
-	{
-		domain: "Production submissions",
-		detail: "Never run against live credentials",
-		pct: 10,
-		state: "untested" as const,
-	},
-];
+export type Content = {
+	meta: { title: string; description: string };
+	nav: {
+		capabilities: string;
+		architecture: string;
+		coverage: string;
+		roadmap: string;
+		principles: string;
+	};
+	a11y: { skip: string; sections: string; theme: string; language: string; home: string };
+	theme: { light: string; system: string; dark: string };
+	hero: { lede: string; cta: string };
+	stats: Stat[];
+	capabilities: { heading: string; count: (n: number) => string; items: Capability[] };
+	architecture: {
+		heading: string;
+		prose: string[];
+		steps: { n: string; title: string; desc: string }[];
+	};
+	coverage: {
+		heading: string;
+		shipped: (n: number, total: number) => string;
+		note: string;
+		th: { surface: string; wrapped: string; pct: string; state: string };
+		caption: string;
+		states: Record<CoverageRow["state"], string>;
+		rows: CoverageRow[];
+	};
+	roadmap: { heading: string; note: string; cols: RoadmapCol[] };
+	principles: { heading: string; lede: string; items: Principle[] };
+	footer: { org: string; tagline: string; legal: string; source: string };
+	legal: { back: string };
+};
 
-export const roadmap = [
-	{
-		when: "Now",
-		items: [{ n: 10, t: "Void with an intent token and its safety rail" }],
+const es: Content = {
+	meta: {
+		title: "sunat-cli — automatiza SUNAT desde la terminal",
+		description:
+			"CLI que envuelve nueve superficies de SUNAT: comprobantes electrónicos, SIRE, guías de remisión, recibos por honorarios y F616, y las APIs REST. Pensada para que un agente la opere sin romper nada.",
 	},
-	{
-		when: "Next",
+	nav: {
+		capabilities: "Qué cubre",
+		architecture: "Arquitectura",
+		coverage: "Cobertura",
+		roadmap: "Roadmap",
+		principles: "Diseño",
+	},
+	a11y: {
+		skip: "Saltar al contenido",
+		sections: "Secciones",
+		theme: "Tema de color",
+		language: "Idioma",
+		home: "sunat-cli, ir al inicio",
+	},
+	theme: { light: "Claro", system: "Sistema", dark: "Oscuro" },
+	hero: {
+		lede: "SUNAT expone nueve superficies distintas: SOAP con XML firmado, REST con OAuth, una cola de tickets, una carga reanudable, y un formulario que en realidad es una API JSON. Esto las envuelve todas en un binario que un agente puede manejar.",
+		cta: "Ver qué cubre",
+	},
+	stats: [
+		{ value: "9", label: "Superficies", detail: "un solo binario" },
+		{ value: "283", label: "Tests", detail: "en verde contra beta" },
+		{ value: "0", label: "CAPTCHAs", detail: "un login y después headless" },
+	],
+	capabilities: {
+		heading: "Qué cubre",
+		count: (n) => `${n} superficies`,
 		items: [
-			{ n: 11, t: "Shipping notices modal 01 and transportista" },
-			{ n: 12, t: "PSE and OSE drivers: nubefact, apisperu" },
-			{ n: 18, t: "Live verification against production" },
+			{
+				title: "Comprobantes electrónicos",
+				scope: "Factura, boleta, nota de crédito, nota de débito",
+				desc: "Documentos UBL 2.1, firma XAdES-BES y SOAP directo a SUNAT. Verificado de punta a punta contra el endpoint beta.",
+				code: "$ sunat-cli cpe factura emit \\\n    --params @factura.json --yes",
+			},
+			{
+				title: "Guías de remisión",
+				scope: "GRE remitente, modal 02",
+				desc: "REST con JWT. El tracker es idempotente, así que reintentar después de un timeout resuelve el envío original en vez de duplicarlo.",
+				code: "$ sunat-cli cpe gre emit \\\n    --params @guia.json --yes",
+			},
+			{
+				title: "Registro de ventas y compras",
+				scope: "SIRE RVIE y RCE",
+				desc: "Baja la propuesta, hace polling del ticket, descarga el ZIP y sube las correcciones por TUS 1.0.0.",
+				code: "$ sunat-cli sire rvie propuesta \\\n    --periodo 202504 --yes",
+			},
+			{
+				title: "Resumen diario y bajas",
+				scope: "Resumen diario, comunicación de baja",
+				desc: "Las boletas de menos de S/700 se agrupan en un resumen diario. Las bajas siguen el mismo contrato de ticket.",
+				code: "$ sunat-cli cpe resumen send \\\n    --fecha 2026-04-29 --yes",
+			},
+			{
+				title: "Rentas de cuarta",
+				scope: "RHE y F616",
+				desc: "Login en el navegador sin CAPTCHA. Los recibos se emiten en lote y el F616 mensual se lee headless desde la API que hay detrás del formulario.",
+				code: "$ sunat-cli f616 declare \\\n    --json '{\"periodo\":\"2026-03\"}'",
+			},
+			{
+				title: "Consultas",
+				scope: "Padrón RUC, consulta CPE, tipo de cambio",
+				desc: "OAuth2 client credentials contra la superficie REST pública. El padrón sincroniza incremental, así que una consulta local responde en menos de un milisegundo.",
+				code: "$ sunat-cli api consulta \\\n    --tipo 01 --serie F001 --numero 123",
+			},
+			{
+				title: "Secretos en el llavero del sistema",
+				scope: "Contraseña del certificado, clave SOL",
+				desc: "El prompt oculto escribe en el llavero de macOS o Linux, así el valor no queda en el historial del shell, ni en variables de entorno, ni en la tabla de procesos.",
+				code: "$ sunat-cli keychain set CPE_CERT_PASSWORD",
+			},
+			{
+				title: "Introspección de esquemas",
+				scope: "Más de 25 esquemas versionados",
+				desc: "El agente le pregunta al binario qué acepta un comando en vez de adivinar los nombres de los campos. La versión viene en la respuesta, así que se puede fijar.",
+				code: "$ sunat-cli schema cpe-factura",
+			},
 		],
 	},
-	{
-		when: "Later",
-		items: [
-			{ n: 13, t: "Facturador driver, contained Java wrapper" },
-			{ n: 14, t: "SIRE complementary reports" },
-			{ n: 15, t: "sqlite index for sub-millisecond padrón lookups" },
-			{ n: 16, t: "CI smoke jobs with a real browser" },
-			{ n: 17, t: "Resume a partial TUS upload" },
+	architecture: {
+		heading: "Headless después de un solo login",
+		prose: [
+			"La página del F616 parece un formulario. Es una aplicación de una sola página hablando con una API JSON, y los campos del formulario son la forma menos confiable de llegar ahí.",
+			"Entonces la CLI abre el navegador una vez, captura el token de sesión y lo cierra. Todas las lecturas posteriores van directo a la API que el formulario estaba llamando. Sin CAPTCHA, sin DOM que pelear, sin un proceso de navegador abierto.",
+		],
+		steps: [
+			{
+				n: "01",
+				title: "Capturar",
+				desc: "Abre el navegador una vez, inicia sesión, toma el token y lo cierra.",
+			},
+			{
+				n: "02",
+				title: "Leer headless",
+				desc: "Consulta la API de la declaración directamente con el token en caché, sin navegador corriendo.",
+			},
+			{
+				n: "03",
+				title: "Recapturar al vencer",
+				desc: "Cuando el token expira, captura de nuevo. Todo lo que pasa entre esos dos momentos es headless.",
+			},
 		],
 	},
-	{
-		when: "Backlog",
-		items: [
-			{ n: 19, t: "Cached SUNAT catalogues" },
-			{ n: 22, t: "Multi-RUC profile testing" },
+	coverage: {
+		heading: "Hasta dónde llega cada superficie",
+		shipped: (n, total) => `${n} de ${total} en producción y verificadas`,
+		note: "Los porcentajes son un juicio sobre cuánto de cada superficie está envuelto, validado contra el endpoint beta y disponible para un agente. La última fila es la que más importa y es la más baja: nada de esto se ha ejecutado con credenciales de producción.",
+		th: { surface: "Superficie", wrapped: "Cubierto", pct: "%", state: "Estado" },
+		caption: "Cobertura por superficie de SUNAT, con avance y estado",
+		states: {
+			shipped: "listo",
+			partial: "parcial",
+			planned: "planeado",
+			untested: "sin probar",
+		},
+		rows: [
+			{
+				domain: "Consultas REST",
+				detail: "Consulta CPE, padrón, tipo de cambio",
+				pct: 90,
+				state: "shipped",
+			},
+			{
+				domain: "RHE y F616",
+				detail: "Personas naturales",
+				pct: 95,
+				state: "shipped",
+			},
+			{
+				domain: "Comprobantes",
+				detail: "Factura, boleta, NC, ND",
+				pct: 85,
+				state: "shipped",
+			},
+			{
+				domain: "Resumen diario y baja",
+				detail: "Resumen diario, comunicación de baja",
+				pct: 80,
+				state: "shipped",
+			},
+			{
+				domain: "SIRE",
+				detail: "RVIE ventas y RCE compras",
+				pct: 70,
+				state: "partial",
+			},
+			{
+				domain: "Guías de remisión",
+				detail: "Solo modal 02, falta transportista",
+				pct: 50,
+				state: "partial",
+			},
+			{
+				domain: "Drivers",
+				detail: "2 de 5: mock y sunat-direct",
+				pct: 40,
+				state: "partial",
+			},
+			{
+				domain: "Baja con intent token",
+				detail: "Diseñado, no construido",
+				pct: 30,
+				state: "planned",
+			},
+			{
+				domain: "Envíos a producción",
+				detail: "Nunca ejecutado con credenciales reales",
+				pct: 10,
+				state: "untested",
+			},
 		],
 	},
-];
+	roadmap: {
+		heading: "Qué viene",
+		note: "Los números enlazan al tracker",
+		cols: [
+			{
+				when: "Ahora",
+				items: [{ n: 10, t: "Baja con intent token y su barrera de seguridad" }],
+			},
+			{
+				when: "Después",
+				items: [
+					{ n: 11, t: "Guías modal 01 y transportista" },
+					{ n: 12, t: "Drivers PSE y OSE: nubefact, apisperu" },
+					{ n: 18, t: "Verificación en vivo contra producción" },
+				],
+			},
+			{
+				when: "Más adelante",
+				items: [
+					{ n: 13, t: "Driver facturador, wrapper de Java contenido" },
+					{ n: 14, t: "Reportes complementarios de SIRE" },
+					{ n: 15, t: "Índice sqlite para consultas de padrón sub-milisegundo" },
+					{ n: 16, t: "Jobs de humo en CI con navegador real" },
+					{ n: 17, t: "Reanudar una carga TUS parcial" },
+				],
+			},
+			{
+				when: "Backlog",
+				items: [
+					{ n: 19, t: "Catálogos de SUNAT cacheados" },
+					{ n: 22, t: "Pruebas con múltiples RUC" },
+				],
+			},
+		],
+	},
+	principles: {
+		heading: "Pensada para quien la llama y no es de fiar",
+		lede: "Un agente va a equivocarse en el nombre de un campo, reintentar una llamada que ya salió bien, y seguir de largo después de un error donde debía frenar. Cada regla de acá existe porque una de esas fallas es barata de prevenir y cara de deshacer cuando del otro lado está SUNAT.",
+		items: [
+			{
+				rule: "Payloads, no sopa de flags",
+				why: "Un payload JSON sobrevive a que lo escriba un modelo; veinte flags posicionales no.",
+			},
+			{
+				rule: "Toda mutación se previsualiza",
+				why: "--dry-run devuelve la misma forma que la llamada real, con un hash, así se puede comparar antes de confirmar.",
+			},
+			{
+				rule: "JSON cuando stdout no es una terminal",
+				why: "La vista humana y la vista de máquina salen del mismo código, así que no pueden divergir.",
+			},
+			{
+				rule: "Esquemas en tiempo de ejecución",
+				why: "El binario responde qué acepta un comando, así el agente nunca inventa un nombre de campo.",
+			},
+			{
+				rule: "Validación de entrada",
+				why: "El agente no es un operador de confianza. Un RUC alucinado falla la validación antes de llegar a SUNAT.",
+			},
+			{
+				rule: "Un archivo de skill según agentskills.io",
+				why: "El descubrimiento funciona igual para cualquier agente que lea el estándar.",
+			},
+		],
+	},
+	footer: {
+		org: "Crafter Station",
+		tagline: "investigación gov-tech",
+		legal: "Legal",
+		source: "Código",
+	},
+	legal: { back: "Volver" },
+};
 
-export const principles = [
-	{
-		rule: "Payloads, not flag soup",
-		why: "A JSON payload survives being written by a model; twenty positional flags do not.",
+const en: Content = {
+	meta: {
+		title: "sunat-cli — agent-first tax automation for Peru",
+		description:
+			"A command-line tool that wraps nine SUNAT surfaces: electronic invoices, ledgers, shipping notices, independent worker filings, and REST lookups. Built so an AI agent can operate it safely.",
 	},
-	{
-		rule: "Every mutation previews first",
-		why: "--dry-run returns the same shape as the real call, with a hash, so a caller can diff before committing.",
+	nav: {
+		capabilities: "Capabilities",
+		architecture: "Architecture",
+		coverage: "Coverage",
+		roadmap: "Roadmap",
+		principles: "Agent DX",
 	},
-	{
-		rule: "JSON when stdout is not a terminal",
-		why: "The human view and the machine view come from one code path, so they cannot drift.",
+	a11y: {
+		skip: "Skip to content",
+		sections: "Sections",
+		theme: "Colour theme",
+		language: "Language",
+		home: "sunat-cli home",
 	},
-	{
-		rule: "Schemas at runtime",
-		why: "The binary answers what a command accepts, so an agent never invents a field name.",
+	theme: { light: "Light", system: "System", dark: "Dark" },
+	hero: {
+		lede: "Peru's tax authority exposes nine different surfaces: SOAP with signed XML, REST with OAuth, a ticket queue, a resumable upload, and a form that is really a JSON API. This wraps all of them in one binary an agent can drive.",
+		cta: "See what it covers",
 	},
-	{
-		rule: "Input hardening",
-		why: "The agent is not a trusted operator. A hallucinated RUC fails validation before it reaches SUNAT.",
+	stats: [
+		{ value: "9", label: "Surfaces", detail: "one binary" },
+		{ value: "283", label: "Tests", detail: "green against beta" },
+		{ value: "0", label: "CAPTCHAs", detail: "one login, then headless" },
+	],
+	capabilities: {
+		heading: "What it covers",
+		count: (n) => `${n} surfaces`,
+		items: [
+			{
+				title: "Electronic invoices",
+				scope: "Factura, boleta, nota de crédito, nota de débito",
+				desc: "UBL 2.1 documents, XAdES-BES signatures, SOAP straight to SUNAT. Verified end to end against the beta endpoint.",
+				code: "$ sunat-cli cpe factura emit \\\n    --params @factura.json --yes",
+			},
+			{
+				title: "Shipping notices",
+				scope: "GRE remitente, modal 02",
+				desc: "REST with JWT. The tracker is idempotent, so a retry after a timeout resolves the original submission instead of duplicating it.",
+				code: "$ sunat-cli cpe gre emit \\\n    --params @guia.json --yes",
+			},
+			{
+				title: "Sales and purchase ledgers",
+				scope: "SIRE RVIE and RCE",
+				desc: "Pull the proposal, poll the ticket, download the ZIP, push corrections back through a TUS 1.0.0 upload.",
+				code: "$ sunat-cli sire rvie propuesta \\\n    --periodo 202504 --yes",
+			},
+			{
+				title: "Daily summaries and voids",
+				scope: "Resumen diario, comunicación de baja",
+				desc: "Boletas under S/700 batch into one daily summary. Voids carry the same ticket-polling contract.",
+				code: "$ sunat-cli cpe resumen send \\\n    --fecha 2026-04-29 --yes",
+			},
+			{
+				title: "Independent worker filings",
+				scope: "RHE and F616",
+				desc: "Browser login without a CAPTCHA. Receipts issue in batch; the monthly F616 reads headless from the declaration API behind the form.",
+				code: "$ sunat-cli f616 declare \\\n    --json '{\"periodo\":\"2026-03\"}'",
+			},
+			{
+				title: "Lookups",
+				scope: "Padrón RUC, consulta CPE, tipo de cambio",
+				desc: "OAuth2 client credentials against the public REST surface. The padrón syncs incrementally so a local lookup answers in under a millisecond.",
+				code: "$ sunat-cli api consulta \\\n    --tipo 01 --serie F001 --numero 123",
+			},
+			{
+				title: "Secrets in the OS keychain",
+				scope: "Certificate passwords, clave SOL",
+				desc: "A hidden prompt writes to the macOS or Linux keychain, which keeps the value out of shell history, environment variables, and the process table.",
+				code: "$ sunat-cli keychain set CPE_CERT_PASSWORD",
+			},
+			{
+				title: "Schema introspection",
+				scope: "25+ versioned schemas",
+				desc: "An agent asks the binary what a command accepts instead of guessing field names. The version is part of the response, so a caller can pin it.",
+				code: "$ sunat-cli schema cpe-factura",
+			},
+		],
 	},
-	{
-		rule: "One skill file per the agentskills.io spec",
-		why: "Discovery works the same way for every agent that reads the standard.",
+	architecture: {
+		heading: "Headless after one login",
+		prose: [
+			"The F616 declaration page looks like a form. It is a single-page app talking to a JSON API, and the form fields are the least reliable way to reach it.",
+			"So the CLI opens a browser once, captures the session token, and closes it. Every read after that goes straight to the API the form was calling. No CAPTCHA, no DOM to fight, no browser process left running.",
+		],
+		steps: [
+			{
+				n: "01",
+				title: "Capture",
+				desc: "Open the browser once, log in, take the session token, close it.",
+			},
+			{
+				n: "02",
+				title: "Read headless",
+				desc: "Query the declaration API directly with the cached token, with no browser running.",
+			},
+			{
+				n: "03",
+				title: "Recapture on expiry",
+				desc: "When the token ages out, capture again. Everything between those two moments stays headless.",
+			},
+		],
 	},
-];
+	coverage: {
+		heading: "How far each surface goes",
+		shipped: (n, total) => `${n} of ${total} shipped and verified`,
+		note: "Percentages are a judgement about how much of each surface is wrapped, validated against the beta endpoint, and callable by an agent. The last row is the one that matters most and it is the lowest: nothing here has been run against production credentials.",
+		th: { surface: "Surface", wrapped: "Wrapped", pct: "%", state: "State" },
+		caption: "Coverage by SUNAT surface, with completeness and state",
+		states: {
+			shipped: "shipped",
+			partial: "partial",
+			planned: "planned",
+			untested: "untested",
+		},
+		rows: [
+			{
+				domain: "REST lookups",
+				detail: "Consulta CPE, padrón, tipo de cambio",
+				pct: 90,
+				state: "shipped",
+			},
+			{
+				domain: "RHE and F616",
+				detail: "Personas naturales",
+				pct: 95,
+				state: "shipped",
+			},
+			{
+				domain: "Invoices",
+				detail: "Factura, boleta, NC, ND",
+				pct: 85,
+				state: "shipped",
+			},
+			{
+				domain: "Daily summary and void",
+				detail: "Resumen diario, comunicación de baja",
+				pct: 80,
+				state: "shipped",
+			},
+			{
+				domain: "SIRE",
+				detail: "RVIE ventas and RCE compras",
+				pct: 70,
+				state: "partial",
+			},
+			{
+				domain: "Shipping notices",
+				detail: "Modal 02 only, transportista pending",
+				pct: 50,
+				state: "partial",
+			},
+			{
+				domain: "Drivers",
+				detail: "2 of 5: mock and sunat-direct",
+				pct: 40,
+				state: "partial",
+			},
+			{
+				domain: "Void with intent token",
+				detail: "Shaped, not built",
+				pct: 30,
+				state: "planned",
+			},
+			{
+				domain: "Production submissions",
+				detail: "Never run against live credentials",
+				pct: 10,
+				state: "untested",
+			},
+		],
+	},
+	roadmap: {
+		heading: "What is next",
+		note: "Issue numbers link to the tracker",
+		cols: [
+			{
+				when: "Now",
+				items: [{ n: 10, t: "Void with an intent token and its safety rail" }],
+			},
+			{
+				when: "Next",
+				items: [
+					{ n: 11, t: "Shipping notices modal 01 and transportista" },
+					{ n: 12, t: "PSE and OSE drivers: nubefact, apisperu" },
+					{ n: 18, t: "Live verification against production" },
+				],
+			},
+			{
+				when: "Later",
+				items: [
+					{ n: 13, t: "Facturador driver, contained Java wrapper" },
+					{ n: 14, t: "SIRE complementary reports" },
+					{ n: 15, t: "sqlite index for sub-millisecond padrón lookups" },
+					{ n: 16, t: "CI smoke jobs with a real browser" },
+					{ n: 17, t: "Resume a partial TUS upload" },
+				],
+			},
+			{
+				when: "Backlog",
+				items: [
+					{ n: 19, t: "Cached SUNAT catalogues" },
+					{ n: 22, t: "Multi-RUC profile testing" },
+				],
+			},
+		],
+	},
+	principles: {
+		heading: "Built for a caller that is not trusted",
+		lede: "An agent will get a field name wrong, retry a call that already succeeded, and read past an error it should have stopped on. Each rule below exists because one of those failures is cheap to prevent and expensive to undo when the other end is a tax authority.",
+		items: [
+			{
+				rule: "Payloads, not flag soup",
+				why: "A JSON payload survives being written by a model; twenty positional flags do not.",
+			},
+			{
+				rule: "Every mutation previews first",
+				why: "--dry-run returns the same shape as the real call, with a hash, so a caller can diff before committing.",
+			},
+			{
+				rule: "JSON when stdout is not a terminal",
+				why: "The human view and the machine view come from one code path, so they cannot drift.",
+			},
+			{
+				rule: "Schemas at runtime",
+				why: "The binary answers what a command accepts, so an agent never invents a field name.",
+			},
+			{
+				rule: "Input hardening",
+				why: "The agent is not a trusted operator. A hallucinated RUC fails validation before it reaches SUNAT.",
+			},
+			{
+				rule: "One skill file per the agentskills.io spec",
+				why: "Discovery works the same way for every agent that reads the standard.",
+			},
+		],
+	},
+	footer: {
+		org: "Crafter Station",
+		tagline: "gov-tech research",
+		legal: "Legal",
+		source: "Source",
+	},
+	legal: { back: "Back" },
+};
+
+const CONTENT: Record<Locale, Content> = { es, en };
+
+export function useContent(locale: Locale): Content {
+	return CONTENT[locale];
+}
+
+/**
+ * The legal page. Kept apart from the marketing copy above because its wording
+ * is load-bearing: it names Peruvian statutes and states what the tool does and
+ * does not do with someone's tax credentials. The Spanish is the version that
+ * matters, since those laws apply in Spanish.
+ */
+
+export type LegalContent = {
+	title: string;
+	updated: string;
+	sections: {
+		heading: string;
+		paras?: string[];
+		list?: string[];
+		refs?: string[];
+	}[];
+	contact: { heading: string; lead: string; email: string; org: string };
+};
+
+const legalEs: LegalContent = {
+	title: "Marco legal",
+	updated: "Última actualización: 25 de marzo de 2026",
+	sections: [
+		{
+			heading: "Sobre esta herramienta",
+			paras: [
+				"sunat-cli es una herramienta de automatización de código abierto que interactúa con los portales web de SUNAT (Superintendencia Nacional de Aduanas y de Administración Tributaria) en nombre de usuarios autenticados. No extrae, recopila ni almacena datos de terceros.",
+			],
+		},
+		{
+			heading: "Responsabilidad del usuario",
+			paras: [
+				"Esta herramienta automatiza el envío de formularios usando SUS credenciales (clave SOL). Usted es el único responsable de:",
+			],
+			list: [
+				"La exactitud de las declaraciones tributarias enviadas con esta herramienta",
+				"El cumplimiento de los plazos y obligaciones tributarias ante SUNAT",
+				"El resguardo de su clave SOL",
+				"Revisar toda operación con --dry-run antes de ejecutarla",
+			],
+		},
+		{
+			heading: "Base legal de la automatización",
+			paras: [
+				"La legislación peruana no prohíbe la interacción automatizada con portales web del Estado cuando la realiza el titular autenticado de la cuenta para sus propias obligaciones tributarias.",
+			],
+			refs: [
+				"Ley 27269, Ley de Firmas y Certificados Digitales: los envíos electrónicos tienen la misma validez legal que los presentados de forma manual.",
+				"Decreto Legislativo 1310, simplificación administrativa: el Estado promoverá el uso de tecnología para simplificar los procedimientos administrativos.",
+			],
+		},
+		{
+			heading: "Protección de datos",
+			paras: [
+				"sunat-cli funciona íntegramente en su máquina local. No se envían datos a servidores de terceros. Las llamadas a la API van exclusivamente a endpoints oficiales de SUNAT (*.sunat.gob.pe).",
+			],
+			list: [
+				"Los secretos se guardan en el llavero del sistema operativo; la configuración de cuenta que no es secreta vive en ~/.sunat/",
+				"Los registros de auditoría se guardan localmente, minimizados y con permisos solo para el dueño",
+				"Ciertos tokens de sesión de corta vida se cachean localmente con permisos solo para el dueño",
+				"No hay analítica ni telemetría; las operaciones tributarias solo se transmiten a endpoints oficiales de SUNAT",
+			],
+			refs: [
+				"Ley 29733, Ley de Protección de Datos Personales: todo el tratamiento de datos personales ocurre localmente y bajo control del usuario.",
+			],
+		},
+		{
+			heading: "Términos de servicio de SUNAT",
+			paras: [
+				"El portal de Operaciones en Línea de SUNAT no prohíbe explícitamente el acceso automatizado por parte de usuarios autenticados. Sin embargo:",
+			],
+			list: [
+				"Esta herramienta usa Chrome con interfaz visible, no headless, para no chocar con la detección de bots de SUNAT",
+				"Las operaciones incluyen demoras realistas entre envíos de formularios",
+				"No se intenta eludir ningún límite de tasa",
+				"La herramienta respeta el vencimiento de sesión y se reautentica correctamente",
+			],
+		},
+		{
+			heading: "Descargo de responsabilidad",
+			paras: [
+				'sunat-cli se entrega "tal cual", sin garantía. Los autores no se responsabilizan por multas tributarias, declaraciones incorrectas ni pérdidas económicas derivadas del uso de esta herramienta. Verifique siempre sus declaraciones con un contador.',
+				"Esta herramienta no está afiliada, avalada ni conectada oficialmente con SUNAT de ninguna forma. SUNAT es una marca del Estado peruano.",
+			],
+		},
+		{
+			heading: "Licencia de código abierto",
+			paras: [
+				"sunat-cli se publica bajo la licencia MIT. Código fuente: github.com/crafter-research/sunat-cli",
+			],
+		},
+	],
+	contact: {
+		heading: "Contacto",
+		lead: "Para consultas legales:",
+		email: "legal@crafterstation.com",
+		org: "Crafter Station, Lima, Perú",
+	},
+};
+
+const legalEn: LegalContent = {
+	title: "Legal framework",
+	updated: "Last updated: March 25, 2026",
+	sections: [
+		{
+			heading: "About this tool",
+			paras: [
+				"sunat-cli is an open-source automation tool that interacts with SUNAT (Superintendencia Nacional de Aduanas y de Administracion Tributaria) web portals on behalf of authenticated users. It does not scrape, collect, or store third-party data.",
+			],
+		},
+		{
+			heading: "User responsibility",
+			paras: [
+				"This tool automates form submissions using YOUR credentials (Clave SOL). You are solely responsible for:",
+			],
+			list: [
+				"The accuracy of tax declarations submitted through this tool",
+				"Compliance with SUNAT deadlines and tax obligations",
+				"Safeguarding your Clave SOL credentials",
+				"Reviewing all operations via --dry-run before execution",
+			],
+		},
+		{
+			heading: "Legal basis for automation",
+			paras: [
+				"Peruvian law does not prohibit automated interaction with government web portals when performed by the authenticated account holder for their own tax obligations.",
+			],
+			refs: [
+				"Ley 27269, Ley de Firmas y Certificados Digitales: Electronic submissions have the same legal validity as manual submissions.",
+				"Decreto Legislativo 1310, simplificacion administrativa: The State shall promote the use of technology to simplify administrative procedures.",
+			],
+		},
+		{
+			heading: "Data protection",
+			paras: [
+				"sunat-cli operates entirely on your local machine. No data is sent to third-party servers. API calls go exclusively to official SUNAT endpoints (*.sunat.gob.pe).",
+			],
+			list: [
+				"Secrets stored in the OS keychain, with non-secret account configuration under ~/.sunat/",
+				"Minimized audit logs stored locally with owner-only permissions",
+				"Selected short-lived API session tokens cached locally with owner-only permissions",
+				"No analytics or telemetry; tax operations transmit only to official SUNAT endpoints",
+			],
+			refs: [
+				"Ley 29733, Ley de Proteccion de Datos Personales: All personal data processing occurs locally under the user's control.",
+			],
+		},
+		{
+			heading: "SUNAT terms of service",
+			paras: [
+				"SUNAT's Operaciones en Linea portal does not explicitly prohibit automated access by authenticated users. However:",
+			],
+			list: [
+				"This tool uses headed Chrome (not headless) to comply with SUNAT's bot detection",
+				"Operations include realistic delays between form submissions",
+				"No rate-limiting circumvention is attempted",
+				"The tool respects session timeouts and re-authenticates properly",
+			],
+		},
+		{
+			heading: "Disclaimer",
+			paras: [
+				'sunat-cli is provided "as is" without warranty. The authors are not responsible for any tax penalties, incorrect declarations, or financial losses resulting from the use of this tool. Always verify declarations with a qualified tax professional (contador).',
+				"This tool is not affiliated with, endorsed by, or officially connected to SUNAT in any way. SUNAT is a trademark of the Peruvian government.",
+			],
+		},
+		{
+			heading: "Open source license",
+			paras: [
+				"sunat-cli is released under the MIT License. Source code: github.com/crafter-research/sunat-cli",
+			],
+		},
+	],
+	contact: {
+		heading: "Contact",
+		lead: "For legal inquiries:",
+		email: "legal@crafterstation.com",
+		org: "Crafter Station, Lima, Peru",
+	},
+};
+
+const LEGAL: Record<Locale, LegalContent> = { es: legalEs, en: legalEn };
+
+export function useLegal(locale: Locale): LegalContent {
+	return LEGAL[locale];
+}
