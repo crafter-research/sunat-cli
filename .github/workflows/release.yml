@@ -28,7 +28,7 @@ jobs:
       # in the sibling trx pipeline. The gh api call this replaces failed three
       # times across releases with no diagnostic, always after a successful
       # publish, leaving the package on npm with no tag and no release.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
