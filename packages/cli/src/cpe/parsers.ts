@@ -7,7 +7,7 @@ function todayIso(): string {
 export function parseFacturaInput(payload: string): FacturaInput {
 	const raw = JSON.parse(payload) as Record<string, unknown>;
 	if (!raw.receptor || !raw.items || !raw.totales) {
-		throw new Error("Missing required fields. Run: sunat schema cpe-factura");
+		throw new Error("Missing required fields. Run: sunat-cli schema cpe-factura");
 	}
 	return {
 		receptor: raw.receptor as FacturaInput["receptor"],
@@ -25,7 +25,7 @@ export function parseNotaInput(payload: string): NotaCreditoInput {
 	const base = parseFacturaInput(payload);
 	const raw = JSON.parse(payload) as Record<string, unknown>;
 	if (!raw.refSerie || !raw.refNumero || !raw.tipoNota) {
-		throw new Error("Nota requires refSerie, refNumero, tipoNota. Run: sunat schema cpe-nota-credito");
+		throw new Error("Nota requires refSerie, refNumero, tipoNota. Run: sunat-cli schema cpe-nota-credito");
 	}
 	return {
 		...base,

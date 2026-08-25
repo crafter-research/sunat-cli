@@ -51,6 +51,6 @@
 		"--output json": "Machine-readable JSON output",
 		"--batch <file>": "Process multiple RHEs from CSV file"
 	},
-	"auth": "Requires SOL session. Run 'sunat login' first.",
+	"auth": "Requires SOL session. Run 'sunat-cli login' first.",
 	"portal": "SOL viejo (e-menu.sunat.gob.pe/cl-ti-itmenu/) — NO CAPTCHA"
 }

@@ -359,8 +359,8 @@ Convencion: `cpe {noun} {verb} [args] [flags]`. Binario sugerido: `cpe` (corto, 
 
 | Command | Trust | Description | JSON Output |
 |---------|-------|-------------|-------------|
-| `sunat keychain set CPE_SOL_PASSWORD` | T1 | Guarda la Clave SOL mediante un prompt oculto del keychain del sistema. | `{ success, key }` |
-| `sunat keychain set CPE_CERT_PASSWORD` | T1 | Guarda la clave PFX mediante un prompt oculto del keychain del sistema. | `{ success, key }` |
+| `sunat-cli keychain set CPE_SOL_PASSWORD` | T1 | Guarda la Clave SOL mediante un prompt oculto del keychain del sistema. | `{ success, key }` |
+| `sunat-cli keychain set CPE_CERT_PASSWORD` | T1 | Guarda la clave PFX mediante un prompt oculto del keychain del sistema. | `{ success, key }` |
 | `cpe driver set facturador\|sunat-direct\|nubefact\|apisperu` | T1 | Cambia driver. Persiste en config. | `{ driver }` |
 | `cpe webhook register --url {url} --events {emit,fail,cdr} [--secret {hmac}]` | T1 | Registra webhook local que se dispara con eventos | `{ id, url, events }` |
 
@@ -815,10 +815,10 @@ Standard CS biome config (single quotes, 2 spaces, trailing comma, ordered impor
 
 ### SUNAT auth flow
 
-1. Configura RUC + user y ejecuta `sunat keychain set CPE_SOL_PASSWORD`.
+1. Configura RUC + user y ejecuta `sunat-cli keychain set CPE_SOL_PASSWORD`.
    - Persiste solo RUC + user en config. Password NO se persiste.
    - Validacion: hace `getStatus("0000000000")` a SUNAT con esos creds. Si SUNAT responde 401, falla.
-2. Configura el PFX y ejecuta `sunat keychain set CPE_CERT_PASSWORD`.
+2. Configura el PFX y ejecuta `sunat-cli keychain set CPE_CERT_PASSWORD`.
    - Copia PFX a `~/.cpe/certs/{ruc}.pfx` con perms 0600.
    - Extrae validUntil, issuer, subject.
    - Password del cert: idem env var o keychain del OS.
@@ -1024,8 +1024,8 @@ cpe schema factura.emit --json
 
 ```bash
 cpe doctor --json                                           # Verifica deps
-sunat keychain set CPE_SOL_PASSWORD
-sunat keychain set CPE_CERT_PASSWORD
+sunat-cli keychain set CPE_SOL_PASSWORD
+sunat-cli keychain set CPE_CERT_PASSWORD
 cpe driver set sunat-direct                                 # o `facturador`, `nubefact`, `apisperu`, `mock`
 cpe doctor --json                                           # Re-verifica
 ```

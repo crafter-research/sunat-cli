@@ -1,11 +1,11 @@
 ---
 name: sunat-cli
-description: SUNAT tax automation CLI for Peru. Three namespaces. (A) Personas naturales (RUC 10): emit Recibos por Honorarios (RHE), file F616 monthly declarations. (B) Empresas (RUC 20): emit Comprobantes de Pago Electronicos (CPE) — Factura, Boleta, NC, ND, Guia — under `sunat cpe ...`. Use when: (1) user mentions SUNAT, RHE, recibo por honorarios, F616, impuestos Peru, (2) user wants to emit an invoice (factura/boleta) or recibo, (3) user asks about CPE, UBL 2.1, XAdES, OSE, PSE, Facturador SUNAT, (4) user says "emitir recibo", "emitir factura", "declarar F616", "anular comprobante". (C) Renta Anual (F709) read-only: consult the annual income-tax return, its casillas, filings and constancias under `sunat renta ...` — use when the user mentions renta anual, declaracion jurada anual, F709, or DJ anual. Package: @crafter/sunat-cli (npm).
+description: SUNAT tax automation CLI for Peru. Three namespaces. (A) Personas naturales (RUC 10): emit Recibos por Honorarios (RHE), file F616 monthly declarations. (B) Empresas (RUC 20): emit Comprobantes de Pago Electronicos (CPE) — Factura, Boleta, NC, ND, Guia — under `sunat-cli cpe ...`. Use when: (1) user mentions SUNAT, RHE, recibo por honorarios, F616, impuestos Peru, (2) user wants to emit an invoice (factura/boleta) or recibo, (3) user asks about CPE, UBL 2.1, XAdES, OSE, PSE, Facturador SUNAT, (4) user says "emitir recibo", "emitir factura", "declarar F616", "anular comprobante". (C) Renta Anual (F709) read-only: consult the annual income-tax return, its casillas, filings and constancias under `sunat-cli renta ...` — use when the user mentions renta anual, declaracion jurada anual, F709, or DJ anual. Package: @crafter/sunat-cli (npm).
 ---
 
 # sunat-cli
 
-SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat` if globally installed).
+SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat-cli` if globally installed).
 
 Install: `npx skills add Railly/sunat-cli -g`
 
@@ -15,7 +15,7 @@ Three ways to provide credentials (priority order):
 
 1. **Non-secret flags**: `sunat-cli login --ruc 10XXXXXXXXX --user XXXXXXXX`
 2. **Env vars**: `SUNAT_RUC`, `SUNAT_USER`, `SUNAT_PASSWORD`
-3. **OS keychain**: `sunat keychain set SUNAT_PASSWORD`
+3. **OS keychain**: `sunat-cli keychain set SUNAT_PASSWORD`
 4. **Interactive prompts**: just run `sunat-cli login` and it asks step by step
 
 ```bash
@@ -30,11 +30,11 @@ RUC and usuario are saved to `~/.sunat/config.json` after first login. Password 
 Secrets resolve as env var → OS keychain → clear error. Env vars always win, which keeps CI predictable.
 
 ```bash
-sunat keychain set CPE_CERT_PASSWORD
-sunat keychain set CPE_SOL_PASSWORD
-sunat keychain set SUNAT_API_CLIENT_SECRET
-sunat keychain list
-sunat keychain clear CPE_CERT_PASSWORD
+sunat-cli keychain set CPE_CERT_PASSWORD
+sunat-cli keychain set CPE_SOL_PASSWORD
+sunat-cli keychain set SUNAT_API_CLIENT_SECRET
+sunat-cli keychain list
+sunat-cli keychain clear CPE_CERT_PASSWORD
 ```
 
 macOS prompts `security add-generic-password` through stdin, with `-w` as the final argument.
@@ -44,7 +44,7 @@ Linux stores secrets through `secret-tool` / libsecret.
 
 ```bash
 # Emit single RHE
-sunat rhe emit --json '{
+sunat-cli rhe emit --json '{
   "empresa": "Cliente Ejemplo",
   "tipoDoc": "SIN DOCUMENTO",
   "descripcion": "Servicios de desarrollo de software",
@@ -54,16 +54,16 @@ sunat rhe emit --json '{
 }'
 
 # Preview without submitting
-sunat rhe emit --json '...' --dry-run
+sunat-cli rhe emit --json '...' --dry-run
 
 # Batch from CSV
-sunat rhe emit --batch recibos.csv
+sunat-cli rhe emit --batch recibos.csv
 
 # List issued RHEs
-sunat rhe list
+sunat-cli rhe list
 
 # Verify registration
-sunat rhe verify --month 2026-03
+sunat-cli rhe verify --month 2026-03
 ```
 
 **RHE fields**: See `references/schemas.md` for full field specs.
@@ -78,18 +78,18 @@ Key rules:
 
 ```bash
 # Single month
-sunat f616 declare --json '{
+sunat-cli f616 declare --json '{
   "periodo": "2026-03"
 }'
 
 # Preview
-sunat f616 declare --json '...' --dry-run
+sunat-cli f616 declare --json '...' --dry-run
 
 # Batch multiple months
-sunat f616 declare --batch --months "2025-03..2026-02"
+sunat-cli f616 declare --batch --months "2025-03..2026-02"
 
 # Check status
-sunat f616 status
+sunat-cli f616 status
 ```
 
 SUNAT prefills income and withholdings from registered RHE. The CLI only sets the period, so verify the prefilled amounts before submitting.
@@ -106,17 +106,17 @@ For empresas with RUC 20 emitting Factura, Boleta, NC, ND, Guia. NOT for RUC 10
 
 ```bash
 # Driver introspection
-sunat cpe doctor              # Health check active driver (default: mock)
-sunat cpe info                # Driver info (name, mode, version)
-sunat cpe --driver mock doctor
+sunat-cli cpe doctor              # Health check active driver (default: mock)
+sunat-cli cpe info                # Driver info (name, mode, version)
+sunat-cli cpe --driver mock doctor
 
 # Schemas
-sunat schema cpe-factura
-sunat schema cpe-boleta
-sunat schema cpe-nota-credito
+sunat-cli schema cpe-factura
+sunat-cli schema cpe-boleta
+sunat-cli schema cpe-nota-credito
 
 # Preview a Factura (T0, no submit)
-sunat cpe factura preview --params '{
+sunat-cli cpe factura preview --params '{
   "receptor": {"tipoDoc":"6","numDoc":"20123456789","rznSocial":"ACME SAC"},
   "items": [{"codigo":"P001","descripcion":"Consultoria","cantidad":1,"unidad":"NIU","valorUnitario":1000,"igvPct":18}],
   "totales": {"valorVenta":1000,"igv":180,"total":1180},
@@ -125,9 +125,9 @@ sunat cpe factura preview --params '{
 }'
 
 # Emit (T2, requires --yes)
-sunat cpe factura emit --params '...' --yes
-sunat cpe boleta emit --params '...' --yes
-sunat cpe nc emit --params '...' --yes
+sunat-cli cpe factura emit --params '...' --yes
+sunat-cli cpe boleta emit --params '...' --yes
+sunat-cli cpe nc emit --params '...' --yes
 ```
 
 **Drivers** (`--driver <name>` or `$CPE_DRIVER`):
@@ -144,20 +144,20 @@ Threshold S/700 dictates path:
 
 ```bash
 # Individual boleta (>= S/700) — same flow as factura
-sunat cpe boleta emit --params '{...}' --yes
+sunat-cli cpe boleta emit --params '{...}' --yes
 
 # Boleta < S/700 — queue first
-sunat cpe boleta queue --params '{...}'
-sunat cpe boleta queue:list                   # list all pending dates
-sunat cpe boleta queue:list --fecha 2026-04-29 # entries for one date
+sunat-cli cpe boleta queue --params '{...}'
+sunat-cli cpe boleta queue:list                   # list all pending dates
+sunat-cli cpe boleta queue:list --fecha 2026-04-29 # entries for one date
 
 # At end of day (or next day, plazo 7 days), send the resumen
-sunat cpe --driver sunat-direct resumen send --fecha 2026-04-29 --correlativo 1 --yes --wait
+sunat-cli cpe --driver sunat-direct resumen send --fecha 2026-04-29 --correlativo 1 --yes --wait
 # Returns ticket; --wait polls getStatus until CDR (max 5min)
 
 # Or fire-and-forget
-sunat cpe --driver sunat-direct resumen send --fecha 2026-04-29 --correlativo 1 --yes
-sunat cpe --driver sunat-direct resumen status --ticket 1234567890123 --wait
+sunat-cli cpe --driver sunat-direct resumen send --fecha 2026-04-29 --correlativo 1 --yes
+sunat-cli cpe --driver sunat-direct resumen status --ticket 1234567890123 --wait
 ```
 
 ### Comunicación de Baja (anular CPE post-emisión)
@@ -165,7 +165,7 @@ sunat cpe --driver sunat-direct resumen status --ticket 1234567890123 --wait
 Plazo 7 días desde fechaEmision del documento a anular.
 
 ```bash
-sunat cpe --driver sunat-direct baja send --params '{
+sunat-cli cpe --driver sunat-direct baja send --params '{
   "fechaEmisionDocs": "2026-04-29",
   "entries": [
     { "tipoDoc": "03", "serie": "B001", "numero": 100, "motivo": "Anulacion por error en datos" }
@@ -181,7 +181,7 @@ Returns `cdrCode=0` (Aceptado) end-to-end.
 
 ```bash
 # 1. Save a profile (replace with YOUR RUC + razon social)
-sunat cpe profile set --name beta --ruc 20131312955 --razon-social "ACME SAC" \
+sunat-cli cpe profile set --name beta --ruc 20131312955 --razon-social "ACME SAC" \
   --mode beta --cert-path /abs/path/to/cert.pfx --sol-usuario MODATOS1 --default
 
 # 2. Set sensitive vars or keychain secrets (NEVER commit)
@@ -190,17 +190,17 @@ export CPE_CERT_PASSWORD='your-pfx-password'
 export CPE_SOL_PASSWORD='your-clave-sol'
 
 # Keychain alternative for local machines
-sunat keychain set CPE_CERT_PASSWORD
-sunat keychain set CPE_SOL_PASSWORD
+sunat-cli keychain set CPE_CERT_PASSWORD
+sunat-cli keychain set CPE_SOL_PASSWORD
 
 # 3. Verify
-sunat cpe --driver sunat-direct doctor
+sunat-cli cpe --driver sunat-direct doctor
 # Checks: config_resolved, cert_file_exists, cert_loaded (validUntil),
 #         cert_expiry_warning (if <30 days), sunat_reachable (WSDL ping),
 #         stale_pendings (alerts if there are pending audit entries >1h old)
 
 # 4. Emit a real Factura against SUNAT beta
-sunat cpe --driver sunat-direct factura emit --params '{...}' --yes
+sunat-cli cpe --driver sunat-direct factura emit --params '{...}' --yes
 # Returns CDR responseCode=0 (Aceptado) on success.
 
 # 5. Re-running with the same serie+numero returns cached CDR (idempotent)
@@ -251,7 +251,7 @@ export CPE_SOL_PASSWORD='clave-sol'
 
 ```bash
 # Submit (sign + zip + base64 + POST + optional polling)
-sunat cpe gre emit --params '{
+sunat-cli cpe gre emit --params '{
   "tipoDoc": "09",
   "serie": "T001",
   "numero": 1,
@@ -271,7 +271,7 @@ sunat cpe gre emit --params '{
 }' --yes --wait
 
 # Independent status check
-sunat cpe gre status --ticket 20240100000001 --wait
+sunat-cli cpe gre status --ticket 20240100000001 --wait
 ```
 
 Async response codes:
@@ -294,7 +294,7 @@ export SUNAT_API_CLIENT_SECRET=...
 ```
 
 ```bash
-sunat cpe consulta \
+sunat-cli cpe consulta \
   --ruc-emisor 20131312955 --tipo 01 --serie F001 --numero 1234 \
   --fecha 2026-04-29 --monto 118
 # Returns: estadoCp (Aceptado/Anulado), estadoRuc (Activo/Baja), condDomiRuc (Habido/No Habido)
@@ -321,45 +321,45 @@ export SUNAT_PASSWORD='clave-sol'
 Monthly RVIE (Ventas) workflow:
 ```bash
 # 1. See available periodos
-sunat sire ventas periodos
+sunat-cli sire ventas periodos
 
 # 2. Download SUNAT's pre-built proposal for the period (async — returns ticket)
-sunat sire ventas propuesta --periodo 202404 --wait --out propuesta-202404.zip
+sunat-cli sire ventas propuesta --periodo 202404 --wait --out propuesta-202404.zip
 
 # 3. Review the .zip contents (TXT con todos tus comprobantes)
 
 # 4a. Accept as-is
-sunat sire ventas aceptar --periodo 202404 --yes
+sunat-cli sire ventas aceptar --periodo 202404 --yes
 
 # 4b. Or replace SUNAT's proposal with your own .zip (T2, TUS.IO upload)
-sunat sire ventas reemplazar --periodo 202404 --file mi-propuesta.zip --yes --wait
+sunat-cli sire ventas reemplazar --periodo 202404 --file mi-propuesta.zip --yes --wait
 
 # 4c. Or import additional comprobantes not in the proposal
-sunat sire ventas importar --periodo 202404 --file extra.zip --tipo propuesta --yes --wait
+sunat-cli sire ventas importar --periodo 202404 --file extra.zip --tipo propuesta --yes --wait
 # --tipo: propuesta | preliminar | ajustes | ajustes-anteriores
 
 # 5. Download the final RVIE PDF/TXT once accepted
-sunat sire ventas descargar --periodo 202404 --wait --out rvie-202404.zip
+sunat-cli sire ventas descargar --periodo 202404 --wait --out rvie-202404.zip
 ```
 
 Same flow for RCE (Compras):
 ```bash
-sunat sire compras periodos
-sunat sire compras propuesta --periodo 202404 --wait --out compras-202404.zip
-sunat sire compras ticket --num 20240100000123 --wait
+sunat-cli sire compras periodos
+sunat-cli sire compras propuesta --periodo 202404 --wait --out compras-202404.zip
+sunat-cli sire compras ticket --num 20240100000123 --wait
 ```
 
 Polling: `--wait` polls getStatus with backoff (2s/4s/8s/16s/30s, max 5min).
 Without `--wait`, returns the ticket and you poll independently with
-`sunat sire {ventas|compras} ticket --num <id> [--wait]`.
+`sunat-cli sire {ventas|compras} ticket --num <id> [--wait]`.
 
 ### Tipo de Cambio oficial SUNAT
 
 ```bash
-sunat tipo-cambio                       # today's USD/PEN
-sunat tipo-cambio --fecha 2026-04-15    # historical (immutable)
-sunat tipo-cambio --force               # bypass cache
-sunat tipo-cambio cached --fecha 2026-04-15  # cache-only, no scrape
+sunat-cli tipo-cambio                       # today's USD/PEN
+sunat-cli tipo-cambio --fecha 2026-04-15    # historical (immutable)
+sunat-cli tipo-cambio --force               # bypass cache
+sunat-cli tipo-cambio cached --fecha 2026-04-15  # cache-only, no scrape
 ```
 
 Scrapes the official SUNAT portal via agent-browser (WAF blocks direct
@@ -369,10 +369,10 @@ since SUNAT TCs are immutable.
 ### Padrón RUC online (single lookup, no padrón sync)
 
 ```bash
-sunat padron ruc-online 20131312955   # ~5-10s, drives SUNAT portal via browser
+sunat-cli padron ruc-online 20131312955   # ~5-10s, drives SUNAT portal via browser
 ```
 
-For batch: always use `sunat padron ruc/batch` (offline padrón, instantaneous).
+For batch: always use `sunat-cli padron ruc/batch` (offline padrón, instantaneous).
 
 ### Padrón Reducido del RUC (offline)
 
@@ -380,13 +380,13 @@ Local copy of the SUNAT RUC registry. ~370MB ZIP, ~600MB TXT, ~3.5M entries.
 Refreshes automatically every 24h. No auth, no captcha, no third-party API.
 
 ```bash
-sunat padron status                 # see if synced + how stale
-sunat padron sync                   # downloads if missing or >24h old; --force to override
-sunat padron ruc 20131312955        # lookup razon social, estado, condicion, dirección
+sunat-cli padron status                 # see if synced + how stale
+sunat-cli padron sync                   # downloads if missing or >24h old; --force to override
+sunat-cli padron ruc 20131312955        # lookup razon social, estado, condicion, dirección
 echo "20131312955
 20100070970
-20536557858" | sunat padron batch   # batch lookup via stdin
-sunat padron batch --file rucs.csv  # or from CSV (RUC in first column)
+20536557858" | sunat-cli padron batch   # batch lookup via stdin
+sunat-cli padron batch --file rucs.csv  # or from CSV (RUC in first column)
 ```
 
 First lookup after sync takes 5-15s (streaming scan of 600MB). Batch is one
@@ -395,15 +395,15 @@ scan regardless of N RUCs.
 ### API & Schema
 
 ```bash
-sunat api token              # Validate OAuth2 credentials without printing the token
-sunat schema rhe             # JSON schema for RHE fields
-sunat schema f616            # JSON schema for F616 fields
-sunat schema cpe-factura     # JSON schema for Factura Electronica
-sunat schema cpe-boleta      # JSON schema for Boleta de Venta
-sunat schema cpe-nota-credito
+sunat-cli api token              # Validate OAuth2 credentials without printing the token
+sunat-cli schema rhe             # JSON schema for RHE fields
+sunat-cli schema f616            # JSON schema for F616 fields
+sunat-cli schema cpe-factura     # JSON schema for Factura Electronica
+sunat-cli schema cpe-boleta      # JSON schema for Boleta de Venta
+sunat-cli schema cpe-nota-credito
 ```
 
-Use `sunat schema <resource>` to get machine-readable field definitions before constructing payloads.
+Use `sunat-cli schema <resource>` to get machine-readable field definitions before constructing payloads.
 
 ## Renta Anual — F709 (Persona Natural)
 
@@ -492,18 +492,18 @@ All commands support `--output <format>`:
 ## Common Workflows
 
 **Monthly routine (4ta categoria)**:
-1. `sunat login --nueva-plataforma`
-2. `sunat f616 declare --json '{"periodo":"2026-03"}' --dry-run`
+1. `sunat-cli login --nueva-plataforma`
+2. `sunat-cli f616 declare --json '{"periodo":"2026-03"}' --dry-run`
 3. Review dry-run output
 4. Remove `--dry-run` to submit
 
 **Emit an RHE**:
-1. `sunat login`
-2. `sunat rhe emit --json '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA"}'`
-3. `sunat rhe verify --month 2026-03`
+1. `sunat-cli login`
+2. `sunat-cli rhe emit --json '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA"}'`
+3. `sunat-cli rhe verify --month 2026-03`
 
 ## Error Handling
 
-- Session expired: re-run `sunat login`
+- Session expired: re-run `sunat-cli login`
 - reCAPTCHA required: only for Nueva Plataforma, one-time per session
 - Network timeout: retry, SUNAT portals are slow

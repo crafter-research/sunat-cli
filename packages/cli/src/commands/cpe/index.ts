@@ -53,7 +53,7 @@ function notImplemented(verb: string, format: Format): never {
 
 export function createCpeCommand(): Command {
 	const cpe = new Command("cpe").description(
-		"Comprobantes de Pago Electronicos (CPE) for empresas con RUC 20. Factura, Boleta, NC, ND, Guia. NOT for personas naturales — use 'sunat rhe'.",
+		"Comprobantes de Pago Electronicos (CPE) for empresas con RUC 20. Factura, Boleta, NC, ND, Guia. NOT for personas naturales — use 'sunat-cli rhe'.",
 	);
 
 	cpe.option(
@@ -93,7 +93,7 @@ export function createCpeCommand(): Command {
 	factura
 		.command("preview")
 		.description("Build + sign + validate locally. Does NOT submit. T0.")
-		.requiredOption("--params <json>", "JSON payload (see: sunat schema cpe-factura)")
+		.requiredOption("--params <json>", "JSON payload (see: sunat-cli schema cpe-factura)")
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
@@ -193,7 +193,7 @@ export function createCpeCommand(): Command {
 	boleta
 		.command("preview")
 		.description("Build + sign + validate locally. Does NOT submit. T0.")
-		.requiredOption("--params <json>", "JSON payload (see: sunat schema cpe-boleta)")
+		.requiredOption("--params <json>", "JSON payload (see: sunat-cli schema cpe-boleta)")
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
@@ -275,7 +275,7 @@ export function createCpeCommand(): Command {
 						fechaEmision: input.fechaEmision,
 						file: queued.file,
 						totalQueuedToday: queued.total,
-						hint: `When done emitting boletas for the day, run: sunat cpe resumen send --fecha ${input.fechaEmision}`,
+						hint: `When done emitting boletas for the day, run: sunat-cli cpe resumen send --fecha ${input.fechaEmision}`,
 					},
 				});
 			} catch (err) {
@@ -393,14 +393,14 @@ export function createCpeCommand(): Command {
 		.allowUnknownOption(true)
 		.helpOption(false)
 		.action(() => {
-			console.error("Use 'sunat cpe gre <verb>' instead. 'cpe guia' is an alias placeholder.");
+			console.error("Use 'sunat-cli cpe gre <verb>' instead. 'cpe guia' is an alias placeholder.");
 			process.exit(1);
 		});
 
 	gre
 		.command("emit")
 		.description("Sign + zip + base64 + POST a Guía de Remisión via SUNAT GRE REST API. Async — returns ticket. T2.")
-		.requiredOption("--params <json>", "JSON payload (run: sunat schema cpe-gre)")
+		.requiredOption("--params <json>", "JSON payload (run: sunat-cli schema cpe-gre)")
 		.option("--dry-run", "Build + sign locally, do NOT submit")
 		.option("--yes", "Skip T2 confirmation")
 		.option("--wait", "After submit, poll the ticket until completed/rejected")
@@ -415,7 +415,7 @@ export function createCpeCommand(): Command {
 				const ctx = resolveCpeContext();
 				const input = JSON.parse(opts.params);
 				if (!input.envio || !input.destinatario || !input.items?.length) {
-					outputError("GRE requires destinatario, envio, items. Run: sunat schema cpe-gre", format);
+					outputError("GRE requires destinatario, envio, items. Run: sunat-cli schema cpe-gre", format);
 					return;
 				}
 				input.tipoDoc = input.tipoDoc || "09";
@@ -475,7 +475,7 @@ export function createCpeCommand(): Command {
 							submitted: true,
 							filename,
 							numTicket: sendResp.numTicket,
-							hint: `Poll status with: sunat cpe gre status --ticket ${sendResp.numTicket}`,
+							hint: `Poll status with: sunat-cli cpe gre status --ticket ${sendResp.numTicket}`,
 						},
 					});
 					audit({
@@ -614,7 +614,7 @@ export function createCpeCommand(): Command {
 							ticket: submitResult.ticket,
 							id: submitResult.id,
 							submitted: queued.length,
-							hint: `Poll status with: sunat cpe resumen status --ticket ${submitResult.ticket}`,
+							hint: `Poll status with: sunat-cli cpe resumen status --ticket ${submitResult.ticket}`,
 						},
 					});
 					return;
@@ -765,7 +765,7 @@ export function createCpeCommand(): Command {
 							ticket: submitResult.ticket,
 							id: submitResult.id,
 							submitted: raw.entries.length,
-							hint: `Poll status with: sunat cpe resumen status --ticket ${submitResult.ticket}`,
+							hint: `Poll status with: sunat-cli cpe resumen status --ticket ${submitResult.ticket}`,
 						},
 					});
 					return;
@@ -941,7 +941,7 @@ export function createCpeCommand(): Command {
 			try {
 				const config = loadCpeConfig();
 				if (!config.profiles[name]) {
-					outputError(`CPE profile "${name}" not found. Run: sunat cpe profile list`, format);
+					outputError(`CPE profile "${name}" not found. Run: sunat-cli cpe profile list`, format);
 					return;
 				}
 				config.defaultProfile = name;

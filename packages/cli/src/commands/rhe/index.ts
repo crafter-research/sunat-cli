@@ -71,7 +71,7 @@ export function createRheCommand(): Command {
 						output(format, { json: { success: true, ...result } });
 					}
 				} else {
-					outputError("Provide --json or --batch. Use 'sunat schema rhe' to see fields.", format);
+					outputError("Provide --json or --batch. Use 'sunat-cli schema rhe' to see fields.", format);
 				}
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);

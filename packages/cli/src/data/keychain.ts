@@ -122,5 +122,5 @@ export function resolveSecret(envNames: readonly string[]): string | undefined {
 }
 
 export function missingSecretMessage(envNames: readonly string[], label = "Secret"): string {
-	return `${label} missing. Set ${envNames.join(" or ")} env var, or store it with: sunat keychain set ${envNames[0]}`;
+	return `${label} missing. Set ${envNames.join(" or ")} env var, or store it with: sunat-cli keychain set ${envNames[0]}`;
 }

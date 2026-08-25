@@ -84,7 +84,7 @@ export function resolveCpeContext(profileName?: string): ResolvedCpeContext {
 	const emisorRuc = process.env.CPE_EMISOR_RUC || profile?.emisor.ruc;
 	const emisorRznSocial = process.env.CPE_EMISOR_RAZON_SOCIAL || profile?.emisor.razonSocial;
 	if (!emisorRuc)
-		throw new Error("Emisor RUC not configured. Set CPE_EMISOR_RUC env var or run 'sunat cpe profile set'.");
+		throw new Error("Emisor RUC not configured. Set CPE_EMISOR_RUC env var or run 'sunat-cli cpe profile set'.");
 	if (!emisorRznSocial) throw new Error("Emisor razonSocial not configured. Set CPE_EMISOR_RAZON_SOCIAL env var.");
 
 	const mode = (process.env.CPE_MODE || profile?.mode || "beta") as "beta" | "prod";

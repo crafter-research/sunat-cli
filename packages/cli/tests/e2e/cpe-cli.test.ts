@@ -58,7 +58,7 @@ afterEach(() => {
 	}
 });
 
-describe("sunat cpe — E2E", () => {
+describe("sunat-cli cpe — E2E", () => {
 	test("--help lists cpe namespace", async () => {
 		const result = await runCli(["--help"]);
 		expect(result.exitCode).toBe(0);

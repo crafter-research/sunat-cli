@@ -199,7 +199,7 @@ export function parsePadronLine(line: string): PadronEntry | null {
 export async function lookupRuc(ruc: string): Promise<PadronEntry | null> {
 	if (!/^\d{11}$/.test(ruc)) return null;
 	if (!existsSync(TXT_PATH)) {
-		throw new Error("Padrón not synced. Run: sunat padron sync");
+		throw new Error("Padrón not synced. Run: sunat-cli padron sync");
 	}
 
 	return new Promise((resolve, reject) => {
@@ -242,7 +242,7 @@ export async function lookupRucBatch(rucs: string[]): Promise<Map<string, Padron
 		}
 	}
 	if (wanted.size === 0) return result;
-	if (!existsSync(TXT_PATH)) throw new Error("Padrón not synced. Run: sunat padron sync");
+	if (!existsSync(TXT_PATH)) throw new Error("Padrón not synced. Run: sunat-cli padron sync");
 
 	return new Promise((resolve, reject) => {
 		const stream = createReadStream(TXT_PATH, { encoding: "latin1" });

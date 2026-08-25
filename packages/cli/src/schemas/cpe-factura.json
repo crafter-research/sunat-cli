@@ -1,7 +1,7 @@
 {
 	"command": "cpe factura emit",
 	"description": "Emit a Factura Electronica (CPE tipo 01) for a RUC 20 emisor. Trust level T2.",
-	"audience": "Empresa emisora con RUC 20. NOT for personas naturales (use 'sunat rhe emit').",
+	"audience": "Empresa emisora con RUC 20. NOT for personas naturales (use 'sunat-cli rhe emit').",
 	"fields": {
 		"receptor": {
 			"type": "object",

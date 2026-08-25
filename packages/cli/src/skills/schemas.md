@@ -51,10 +51,10 @@ Portal: Nueva Plataforma (e-menu.sunat.gob.pe/cl-ti-itmenu2/), menu code 55.1.3.
 There is no payload: the amount comes from a row loaded into the form.
 
 ```bash
-sunat f616 declarar periodo 2026-03
-sunat f616 declarar ingreso --fecha 03/03/2026 --monto 21016 --cliente "CLIENTE EJEMPLO"
-sunat f616 declarar estado     # casilla 355 has the figure SUNAT will charge
-sunat f616 declarar bandeja
+sunat-cli f616 declarar periodo 2026-03
+sunat-cli f616 declarar ingreso --fecha 03/03/2026 --monto 21016 --cliente "CLIENTE EJEMPLO"
+sunat-cli f616 declarar estado     # casilla 355 has the figure SUNAT will charge
+sunat-cli f616 declarar bandeja
 ```
 
 Income row fields (the modal's, not a CLI schema):

@@ -222,7 +222,7 @@ export class SunatDirectDriver implements CpeDriver {
 		// Above the threshold, they go individually via sendBill — same path as factura.
 		if (!boletaRequiresIndividualSubmission(input.totales.total)) {
 			throw new Error(
-				`Boleta total S/${input.totales.total.toFixed(2)} < S/700: must be sent via daily summary. Use 'sunat cpe boleta queue' + 'sunat cpe resumen send' (coming in next phase). Or set --force-individual to override (not recommended; SUNAT may reject).`,
+				`Boleta total S/${input.totales.total.toFixed(2)} < S/700: must be sent via daily summary. Use 'sunat-cli cpe boleta queue' + 'sunat-cli cpe resumen send' (coming in next phase). Or set --force-individual to override (not recommended; SUNAT may reject).`,
 			);
 		}
 

@@ -32,7 +32,7 @@ export function createPadronCommand(): Command {
 			const format = getFormat(cmd);
 			const meta = loadMeta();
 			if (!meta) {
-				output(format, { json: { synced: false, hint: "Run: sunat padron sync" } });
+				output(format, { json: { synced: false, hint: "Run: sunat-cli padron sync" } });
 				return;
 			}
 			output(format, {

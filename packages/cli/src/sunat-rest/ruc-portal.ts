@@ -5,7 +5,7 @@
  * + reCAPTCHA in 2024. Workaround: drive a real Chrome via agent-browser,
  * fill the form, parse the rendered detail page.
  *
- * For BATCH lookups always prefer `sunat padron ruc/batch` (offline,
+ * For BATCH lookups always prefer `sunat-cli padron ruc/batch` (offline,
  * instantaneous after sync). This module is for ad-hoc single-RUC checks
  * when you don't want to download the 370MB padrón.
  */

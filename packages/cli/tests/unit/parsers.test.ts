@@ -71,7 +71,7 @@ describe("parseFacturaInput", () => {
 			parseFacturaInput("{}");
 			expect.unreachable();
 		} catch (err) {
-			expect((err as Error).message).toContain("sunat schema cpe-factura");
+			expect((err as Error).message).toContain("sunat-cli schema cpe-factura");
 		}
 	});
 
@@ -129,7 +129,7 @@ describe("parseNotaInput", () => {
 			parseNotaInput(JSON.stringify(broken));
 			expect.unreachable();
 		} catch (err) {
-			expect((err as Error).message).toContain("sunat schema cpe-nota-credito");
+			expect((err as Error).message).toContain("sunat-cli schema cpe-nota-credito");
 		}
 	});
 

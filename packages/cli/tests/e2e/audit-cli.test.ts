@@ -37,7 +37,7 @@ afterEach(() => {
 	}
 });
 
-describe("sunat audit — E2E", () => {
+describe("sunat-cli audit — E2E", () => {
 	test("audit compact archives old active months and keeps recent monthly logs active", async () => {
 		const home = createTempHome();
 		const auditDir = join(home, ".sunat", "audit");

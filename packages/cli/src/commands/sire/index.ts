@@ -81,7 +81,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 					output(format, {
 						json: {
 							numTicket,
-							hint: `Poll status with: sunat sire ${libroAlias} ticket --num ${numTicket}`,
+							hint: `Poll status with: sunat-cli sire ${libroAlias} ticket --num ${numTicket}`,
 						},
 					});
 					return;
@@ -132,7 +132,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 						statusDesc: result.statusDesc,
 						archivoReporte: archivos,
 						hint: archivos[0]
-							? `Download with: sunat sire ${libroAlias} archivo --nombre ${archivos[0].nomArchivoReporte} --periodo ${opts.periodo} --out path`
+							? `Download with: sunat-cli sire ${libroAlias} archivo --nombre ${archivos[0].nomArchivoReporte} --periodo ${opts.periodo} --out path`
 							: undefined,
 					},
 				});
@@ -308,7 +308,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 						numTicket: result.numTicket || null,
 						uploadUrl: result.uploadUrl,
 						hint: result.numTicket
-							? `Poll status with: sunat sire ${libroAlias} ticket --num ${result.numTicket}`
+							? `Poll status with: sunat-cli sire ${libroAlias} ticket --num ${result.numTicket}`
 							: "No ticket extracted from upload location. Inspect uploadUrl + run consultaestadotickets manually.",
 					},
 				});
@@ -359,7 +359,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 						details: result as unknown as Record<string, unknown>,
 					});
 					output(format, {
-						json: { ...result, hint: `Poll status with: sunat sire ventas ticket --num ${result.numTicket}` },
+						json: { ...result, hint: `Poll status with: sunat-cli sire ventas ticket --num ${result.numTicket}` },
 					});
 				} catch (err) {
 					outputError(err instanceof Error ? err.message : String(err), format);
@@ -379,7 +379,7 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 					const creds = resolveSireCreds();
 					const numTicket = await descargarRvie(opts.periodo, creds);
 					if (!opts.wait) {
-						output(format, { json: { numTicket, hint: `Poll: sunat sire ventas ticket --num ${numTicket}` } });
+						output(format, { json: { numTicket, hint: `Poll: sunat-cli sire ventas ticket --num ${numTicket}` } });
 						return;
 					}
 					const result = await pollTicket({ creds, numTicket, timeoutMs: Number.parseInt(opts.timeout, 10) });

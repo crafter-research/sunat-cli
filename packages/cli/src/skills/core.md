@@ -1,6 +1,6 @@
 # sunat-cli
 
-SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat` if globally installed).
+SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat-cli` if globally installed).
 
 Install: `npm install -g @crafter/sunat-cli`
 
@@ -27,7 +27,7 @@ RUC and usuario are saved to `~/.sunat/config.json` after first login. Password 
 
 ```bash
 # Emit single RHE
-sunat rhe emit --json '{
+sunat-cli rhe emit --json '{
   "empresa": "Cliente Ejemplo",
   "tipoDoc": "SIN DOCUMENTO",
   "descripcion": "Servicios de desarrollo de software",
@@ -37,19 +37,19 @@ sunat rhe emit --json '{
 }'
 
 # Preview without submitting
-sunat rhe emit --json '...' --dry-run
+sunat-cli rhe emit --json '...' --dry-run
 
 # Batch from CSV
-sunat rhe emit --batch recibos.csv
+sunat-cli rhe emit --batch recibos.csv
 
 # List issued RHEs
-sunat rhe list
+sunat-cli rhe list
 
 # Verify registration
-sunat rhe verify --month 2026-03
+sunat-cli rhe verify --month 2026-03
 ```
 
-**RHE fields**: `sunat skills get schemas` for the full field specs.
+**RHE fields**: `sunat-cli skills get schemas` for the full field specs.
 
 Key rules:
 - `tipoDoc`: Use `SIN DOCUMENTO` for foreign companies (no RUC/DNI)
@@ -69,8 +69,8 @@ Two paths, and they do different things.
 **Reading (T0, headless):**
 
 ```bash
-sunat f616 periodo 2026-03      # opens a period through the API
-sunat f616 oficios              # profession catalog
+sunat-cli f616 periodo 2026-03      # opens a period through the API
+sunat-cli f616 oficios              # profession catalog
 ```
 
 `periodo` returns the comprobantes already registered, the due date (`fec_ven`),
@@ -80,11 +80,11 @@ is cached.
 **Filling the form (T2, needs a browser):**
 
 ```bash
-sunat f616 declarar estado
-sunat f616 declarar periodo 2025-11
-sunat f616 declarar ingreso --fecha 17/11/2025 --monto 21054 --cliente "CLIENTE EJEMPLO"
-sunat f616 declarar bandeja
-sunat f616 declarar constancias --dir ~/Downloads/constancias
+sunat-cli f616 declarar estado
+sunat-cli f616 declarar periodo 2025-11
+sunat-cli f616 declarar ingreso --fecha 17/11/2025 --monto 21054 --cliente "CLIENTE EJEMPLO"
+sunat-cli f616 declarar bandeja
+sunat-cli f616 declarar constancias --dir ~/Downloads/constancias
 ```
 
 This is what unlocks filing months that went by: **the F616 does not need the RHE
@@ -115,12 +115,12 @@ then ignored by the code. Prefer `declarar`.
 ### API & Schema
 
 ```bash
-sunat api token              # Validate OAuth2 credentials without printing the token
-sunat schema rhe             # JSON schema for RHE fields
-sunat schema f616            # JSON schema for F616 fields
+sunat-cli api token              # Validate OAuth2 credentials without printing the token
+sunat-cli schema rhe             # JSON schema for RHE fields
+sunat-cli schema f616            # JSON schema for F616 fields
 ```
 
-Use `sunat schema <resource>` to get machine-readable field definitions before constructing payloads.
+Use `sunat-cli schema <resource>` to get machine-readable field definitions before constructing payloads.
 
 ## Output Formats
 
@@ -131,12 +131,12 @@ All commands support `--output <format>`:
 ## Common Workflows
 
 **Monthly routine (4ta categoria)**:
-1. `sunat login --nueva-plataforma`
+1. `sunat-cli login --nueva-plataforma`
 2. Open the F616 in the browser (menu → Trabajadores Independientes - 616)
-3. `sunat f616 declarar periodo 2026-07`
-4. `sunat f616 declarar ingreso --fecha 14/07/2026 --monto <bruto en soles> --cliente "<nombre>"`
-5. `sunat f616 declarar estado` and check casilla 355 against your own figure
-6. `sunat f616 declarar bandeja`
+3. `sunat-cli f616 declarar periodo 2026-07`
+4. `sunat-cli f616 declarar ingreso --fecha 14/07/2026 --monto <bruto en soles> --cliente "<nombre>"`
+5. `sunat-cli f616 declarar estado` and check casilla 355 against your own figure
+6. `sunat-cli f616 declarar bandeja`
 7. Present and pay from the portal yourself
 
 **Filing months that went by**: same loop, one period at a time, **reloading the
@@ -144,13 +144,13 @@ form between periods**. Eight periods spanning nine months were filed this way o
 2026-08-22 without emitting a single RHE.
 
 **Emit an RHE**:
-1. `sunat login`
-2. `sunat rhe emit --json '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA","tipoCambio":3.75}' --dry-run`
-3. `sunat rhe verify --month 2026-03`
+1. `sunat-cli login`
+2. `sunat-cli rhe emit --json '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA","tipoCambio":3.75}' --dry-run`
+3. `sunat-cli rhe verify --month 2026-03`
 
 ## Error Handling
 
-- Session expired: re-run `sunat login`
+- Session expired: re-run `sunat-cli login`
 - `Error en la invocación`: enter Nueva Plataforma from SOL viejo, not direct URL login
 - reCAPTCHA required: keep browser flow supervised
 - Network timeout: retry, SUNAT portals are slow
@@ -158,7 +158,7 @@ form between periods**. Eight periods spanning nine months were filed this way o
 ## More
 
 ```bash
-sunat skills get schemas     # field specs for RHE and F616 rows
-sunat skills get endpoints   # the SUNAT endpoints behind each command
-sunat skills list            # everything this version ships
+sunat-cli skills get schemas     # field specs for RHE and F616 rows
+sunat-cli skills get endpoints   # the SUNAT endpoints behind each command
+sunat-cli skills list            # everything this version ships
 ```

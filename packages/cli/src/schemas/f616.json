@@ -38,6 +38,6 @@
 	"computed": {
 		"pagoACuenta": "Computed by SUNAT from its own prefilled figures, not by this CLI."
 	},
-	"auth": "Requires Nueva Plataforma session. Run 'sunat login --nueva-plataforma' first.",
+	"auth": "Requires Nueva Plataforma session. Run 'sunat-cli login --nueva-plataforma' first.",
 	"portal": "Nueva Plataforma (e-menu.sunat.gob.pe/cl-ti-itmenu2/) — requires reCAPTCHA v2 (one-time)"
 }

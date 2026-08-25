@@ -50,9 +50,9 @@ export function getCredentials(): { ruc: string; usuario: string; password: stri
 	const usuario = process.env.SUNAT_USER || config.usuario;
 	const password = resolveSecret(["SUNAT_PASSWORD"]);
 
-	if (!ruc) throw new Error("RUC not configured. Set SUNAT_RUC env var or run: sunat config set ruc <value>");
+	if (!ruc) throw new Error("RUC not configured. Set SUNAT_RUC env var or run: sunat-cli config set ruc <value>");
 	if (!usuario)
-		throw new Error("Usuario not configured. Set SUNAT_USER env var or run: sunat config set usuario <value>");
+		throw new Error("Usuario not configured. Set SUNAT_USER env var or run: sunat-cli config set usuario <value>");
 	if (!password) throw new Error(missingSecretMessage(["SUNAT_PASSWORD"], "Password"));
 
 	return { ruc, usuario, password };

@@ -28,11 +28,11 @@ async function getOrPromptCredentials(
 
 	if (!isTTY) {
 		throw new Error(
-			"Missing credentials. Pass --ruc and --user, set SUNAT_RUC, SUNAT_USER and SUNAT_PASSWORD, or store SUNAT_PASSWORD with sunat keychain set",
+			"Missing credentials. Pass --ruc and --user, set SUNAT_RUC, SUNAT_USER and SUNAT_PASSWORD, or store SUNAT_PASSWORD with sunat-cli keychain set",
 		);
 	}
 
-	p.intro("sunat login -- first time setup");
+	p.intro("sunat-cli login -- first time setup");
 
 	if (!ruc) {
 		const value = await p.text({
