@@ -1,87 +1,34 @@
 ---
+import Base from "../layouts/Base.astro";
+import { VERSION } from "../lib/content";
 ---
 
-<html lang="es">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Legal — sunat-cli</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-		<style>
-			* { margin: 0; padding: 0; box-sizing: border-box; }
-			html { scroll-behavior: smooth; }
-			body {
-				font-family: 'Inter', system-ui, sans-serif;
-				font-size: 15px;
-				line-height: 1.8;
-				color: #1A1A1A;
-				background: #FFFFFF;
-				-webkit-font-smoothing: antialiased;
-			}
-			nav {
-				position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-				background: rgba(255,255,255,0.85);
-				backdrop-filter: blur(12px);
-				border-bottom: 1px solid #D1D5DB;
-			}
-			.nav-inner {
-				max-width: 720px; margin: 0 auto; padding: 0 24px;
-				height: 56px; display: flex; align-items: center;
-			}
-			.nav-brand {
-				font-weight: 700; font-size: 15px; color: #1A3567;
-				text-decoration: none;
-			}
-			.nav-brand span { color: #C41E3A; }
-			.content {
-				max-width: 720px;
-				margin: 0 auto;
-				padding: 100px 24px 80px;
-			}
-			h1 { font-size: 28px; font-weight: 700; color: #1A3567; margin-bottom: 8px; letter-spacing: -0.02em; }
-			.subtitle { font-size: 14px; color: #9CA3AF; margin-bottom: 40px; }
-			h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; color: #1A1A1A; }
-			p { color: #4B5563; margin-bottom: 16px; }
-			ul { color: #4B5563; margin-bottom: 16px; padding-left: 24px; }
-			li { margin-bottom: 6px; }
-			a { color: #1A3567; }
-			.legal-ref {
-				font-size: 13px;
-				color: #9CA3AF;
-				border-left: 2px solid #D1D5DB;
-				padding-left: 12px;
-				margin: 12px 0 20px;
-				font-style: italic;
-			}
-			footer {
-				padding: 32px 24px; border-top: 1px solid #D1D5DB;
-				text-align: center; font-size: 13px; color: #9CA3AF;
-			}
-		</style>
-	</head>
-	<body>
-		<nav>
-			<div class="nav-inner">
-				<a href="/" class="nav-brand">sunat<span>/</span>cli</a>
-			</div>
-		</nav>
+<Base
+	title="Legal — sunat-cli"
+	description="Legal framework, user responsibility, data protection, and disclaimer for sunat-cli."
+	path="/legal"
+>
+	<div class="page">
+		<header class="head">
+			<a href="/" class="back">
+				<span class="back-mark">sunat-cli</span>
+			</a>
+			<span class="meta">v{VERSION}</span>
+		</header>
 
-		<main class="content">
-			<h1>Legal Framework</h1>
-			<p class="subtitle">Last updated: March 25, 2026</p>
+		<main id="main" class="prose">
+			<h1>Legal framework</h1>
+			<p class="updated meta">Last updated: March 25, 2026</p>
 
-			<h2>About This Tool</h2>
+			<h2>About this tool</h2>
 			<p>
 				sunat-cli is an open-source automation tool that interacts with SUNAT
 				(Superintendencia Nacional de Aduanas y de Administracion Tributaria)
-				web portals on behalf of authenticated users. It does not scrape, collect,
-				or store third-party data.
+				web portals on behalf of authenticated users. It does not scrape,
+				collect, or store third-party data.
 			</p>
 
-			<h2>User Responsibility</h2>
+			<h2>User responsibility</h2>
 			<p>
 				This tool automates form submissions using YOUR credentials (Clave SOL).
 				You are solely responsible for:
@@ -90,48 +37,64 @@
 				<li>The accuracy of tax declarations submitted through this tool</li>
 				<li>Compliance with SUNAT deadlines and tax obligations</li>
 				<li>Safeguarding your Clave SOL credentials</li>
-				<li>Reviewing all operations via <code>--dry-run</code> before execution</li>
+				<li>
+					Reviewing all operations via <code class="mono">--dry-run</code> before
+					execution
+				</li>
 			</ul>
 
-			<h2>Legal Basis for Automation</h2>
+			<h2>Legal basis for automation</h2>
 			<p>
-				Peruvian law does not prohibit automated interaction with government
-				web portals when performed by the authenticated account holder for
-				their own tax obligations.
+				Peruvian law does not prohibit automated interaction with government web
+				portals when performed by the authenticated account holder for their own
+				tax obligations.
 			</p>
-			<div class="legal-ref">
+			<p class="ref">
 				Ley 27269 — Ley de Firmas y Certificados Digitales: Electronic
 				submissions have the same legal validity as manual submissions.
-			</div>
-			<div class="legal-ref">
+			</p>
+			<p class="ref">
 				Decreto Legislativo 1310 — Simplificacion administrativa: The State
-				shall promote the use of technology to simplify administrative procedures.
-			</div>
+				shall promote the use of technology to simplify administrative
+				procedures.
+			</p>
 
-			<h2>Data Protection</h2>
+			<h2>Data protection</h2>
 			<p>
 				sunat-cli operates entirely on your local machine. No data is sent to
-				third-party servers. API calls go exclusively to official SUNAT endpoints
-				(<code>*.sunat.gob.pe</code>).
+				third-party servers. API calls go exclusively to official SUNAT
+				endpoints (<code class="mono">*.sunat.gob.pe</code>).
 			</p>
 			<ul>
-				<li>Secrets stored in the OS keychain, with non-secret account configuration under <code>~/.sunat/</code></li>
+				<li>
+					Secrets stored in the OS keychain, with non-secret account
+					configuration under <code class="mono">~/.sunat/</code>
+				</li>
 				<li>Minimized audit logs stored locally with owner-only permissions</li>
-				<li>Selected short-lived API session tokens cached locally with owner-only permissions</li>
-				<li>No analytics or telemetry; tax operations transmit only to official SUNAT endpoints</li>
+				<li>
+					Selected short-lived API session tokens cached locally with owner-only
+					permissions
+				</li>
+				<li>
+					No analytics or telemetry; tax operations transmit only to official
+					SUNAT endpoints
+				</li>
 			</ul>
-			<div class="legal-ref">
+			<p class="ref">
 				Ley 29733 — Ley de Proteccion de Datos Personales: All personal data
 				processing occurs locally under the user's control.
-			</div>
+			</p>
 
-			<h2>SUNAT Terms of Service</h2>
+			<h2>SUNAT terms of service</h2>
 			<p>
 				SUNAT's Operaciones en Linea portal does not explicitly prohibit
 				automated access by authenticated users. However:
 			</p>
 			<ul>
-				<li>This tool uses headed Chrome (not headless) to comply with SUNAT's bot detection</li>
+				<li>
+					This tool uses headed Chrome (not headless) to comply with SUNAT's bot
+					detection
+				</li>
 				<li>Operations include realistic delays between form submissions</li>
 				<li>No rate-limiting circumvention is attempted</li>
 				<li>The tool respects session timeouts and re-authenticates properly</li>
@@ -145,26 +108,125 @@
 				with a qualified tax professional (contador).
 			</p>
 			<p>
-				This tool is not affiliated with, endorsed by, or officially connected
-				to SUNAT in any way. SUNAT is a trademark of the Peruvian government.
+				This tool is not affiliated with, endorsed by, or officially connected to
+				SUNAT in any way. SUNAT is a trademark of the Peruvian government.
 			</p>
 
-			<h2>Open Source License</h2>
+			<h2>Open source license</h2>
 			<p>
-				sunat-cli is released under the MIT License.
-				Source code: <a href="https://github.com/crafter-research/sunat-cli">github.com/crafter-research/sunat-cli</a>
+				sunat-cli is released under the MIT License. Source code: <a
+					href="https://github.com/crafter-research/sunat-cli"
+					>github.com/crafter-research/sunat-cli</a
+				>
 			</p>
 
 			<h2>Contact</h2>
 			<p>
-				For legal inquiries: <a href="mailto:legal@crafterstation.com">legal@crafterstation.com</a><br/>
+				For legal inquiries: <a href="mailto:legal@crafterstation.com"
+					>legal@crafterstation.com</a
+				><br />
 				Crafter Station — Lima, Peru
 			</p>
 		</main>
 
-		<footer>
-			<a href="/">sunat-cli</a> — <a href="https://crafterstation.com">Crafter Station</a>, Lima, Peru
+		<footer class="foot">
+			<p><a href="/">sunat-cli</a> · <a href="https://crafterstation.com">Crafter Station</a></p>
 		</footer>
+	</div>
+</Base>
 
-	</body>
-</html>
+<style>
+	.page {
+		max-width: 66ch;
+		margin: 0 auto;
+		padding: 0 var(--gutter);
+	}
+
+	.head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-4);
+		padding: var(--space-6) 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.back {
+		text-decoration: none;
+	}
+
+	.back-mark {
+		font-family: var(--font-pixel);
+		font-size: 1.0625rem;
+		color: var(--text);
+	}
+
+	.prose {
+		padding: var(--space-10) 0 var(--space-12);
+	}
+
+	.prose h1 {
+		font-size: var(--text-title);
+		margin-bottom: var(--space-2);
+	}
+
+	.updated {
+		margin-bottom: var(--space-8);
+	}
+
+	.prose h2 {
+		font-size: var(--text-section);
+		margin: var(--space-8) 0 var(--space-3);
+	}
+
+	.prose p {
+		color: var(--text-2);
+		margin-bottom: var(--space-4);
+	}
+
+	.prose ul {
+		color: var(--text-2);
+		margin: 0 0 var(--space-4);
+		padding-left: 1.2em;
+	}
+
+	.prose li {
+		margin-bottom: var(--space-2);
+	}
+
+	.prose a {
+		color: var(--accent);
+	}
+
+	.prose code {
+		font-family: var(--font-mono);
+		font-size: 0.92em;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 0.1em 0.35em;
+	}
+
+	.ref {
+		border-left: 2px solid var(--accent-line);
+		padding-left: var(--space-4);
+		font-size: var(--text-compact);
+		color: var(--text-3);
+	}
+
+	.foot {
+		padding: var(--space-5) 0 var(--space-8);
+		border-top: 1px solid var(--border);
+		font-size: var(--text-meta);
+		color: var(--text-3);
+	}
+
+	.foot a {
+		color: var(--text-2);
+		text-decoration: none;
+	}
+
+	.foot a:hover {
+		color: var(--accent);
+	}
+</style>

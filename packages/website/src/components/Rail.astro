@@ -1,0 +1,267 @@
+---
+interface Props {
+	version: string;
+	sections: { id: string; label: string }[];
+}
+const { version, sections } = Astro.props;
+---
+
+<header class="rail">
+	<div class="rail-top">
+		<a href="/" class="brand" aria-label="sunat-cli home">
+			<span class="brand-mark" aria-hidden="true">sunat-cli</span>
+		</a>
+		<p class="rail-version mono">v{version}</p>
+	</div>
+
+	<nav class="rail-nav" aria-label="Sections">
+		<ul>
+			{
+				sections.map((s) => (
+					<li>
+						<a href={`#${s.id}`}>{s.label}</a>
+					</li>
+				))
+			}
+		</ul>
+	</nav>
+
+	<div class="rail-bottom">
+		<a
+			class="rail-out"
+			href="https://github.com/crafter-research/sunat-cli">GitHub</a
+		>
+		<a class="rail-out" href="https://www.npmjs.com/package/@crafter/sunat-cli"
+			>npm</a
+		>
+
+		<fieldset class="theme" id="theme-switch">
+			<legend class="sr-only">Colour theme</legend>
+			<label>
+				<input type="radio" name="theme" value="light" />
+				<span>Light</span>
+			</label>
+			<label>
+				<input type="radio" name="theme" value="system" checked />
+				<span>System</span>
+			</label>
+			<label>
+				<input type="radio" name="theme" value="dark" />
+				<span>Dark</span>
+			</label>
+		</fieldset>
+	</div>
+</header>
+
+<script>
+	const KEY = "sunat-theme";
+	const root = document.documentElement;
+	const form = document.getElementById("theme-switch");
+
+	function read(): "light" | "dark" | "system" {
+		try {
+			const v = localStorage.getItem(KEY);
+			return v === "light" || v === "dark" ? v : "system";
+		} catch {
+			return "system";
+		}
+	}
+
+	function apply(value: "light" | "dark" | "system") {
+		if (value === "system") {
+			delete root.dataset.theme;
+			try {
+				localStorage.removeItem(KEY);
+			} catch {
+				/* storage blocked: the in-page choice still holds for this visit */
+			}
+		} else {
+			root.dataset.theme = value;
+			try {
+				localStorage.setItem(KEY, value);
+			} catch {
+				/* same */
+			}
+		}
+	}
+
+	if (form) {
+		const current = read();
+		const input = form.querySelector<HTMLInputElement>(
+			`input[value="${current}"]`,
+		);
+		if (input) input.checked = true;
+
+		form.addEventListener("change", (e) => {
+			const t = e.target as HTMLInputElement;
+			if (t.name === "theme") apply(t.value as "light" | "dark" | "system");
+		});
+	}
+</script>
+
+<style>
+	.rail {
+		position: sticky;
+		top: 0;
+		align-self: start;
+		max-height: 100dvh;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		padding: var(--space-6) var(--space-5);
+		gap: var(--space-8);
+	}
+
+	.brand {
+		text-decoration: none;
+		display: block;
+	}
+
+	.brand-mark {
+		font-family: var(--font-pixel);
+		font-size: 1.0625rem;
+		line-height: 1;
+		color: var(--text);
+		display: block;
+	}
+
+	.rail-version {
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		margin-top: var(--space-2);
+	}
+
+	.rail-nav ul {
+		list-style: none;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+
+	.rail-nav a {
+		display: block;
+		padding: var(--space-1) 0;
+		font-size: var(--text-compact);
+		color: var(--text-2);
+		text-decoration: none;
+		transition: color var(--dur) var(--ease);
+	}
+
+	.rail-nav a:hover {
+		color: var(--text);
+	}
+
+	.rail-bottom {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		align-items: start;
+	}
+
+	.rail-out {
+		font-size: var(--text-compact);
+		color: var(--text-2);
+		text-decoration: none;
+	}
+
+	.rail-out:hover {
+		color: var(--accent);
+	}
+
+	.theme {
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 2px;
+		margin-top: var(--space-3);
+		display: flex;
+		gap: 2px;
+		min-inline-size: 0;
+	}
+
+	.theme label {
+		flex: 1;
+	}
+
+	.theme input {
+		position: absolute;
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+	}
+
+	.theme span {
+		display: block;
+		text-align: center;
+		padding: 4px 6px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--text-3);
+		border-radius: 2px;
+		cursor: pointer;
+		white-space: nowrap;
+		transition:
+			color var(--dur) var(--ease),
+			background var(--dur) var(--ease);
+	}
+
+	.theme input:checked + span {
+		background: var(--surface-2);
+		color: var(--text);
+	}
+
+	.theme input:focus-visible + span {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	@media (max-width: 900px) {
+		.rail {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			max-height: none;
+			overflow: visible;
+			flex-direction: row;
+			align-items: center;
+			flex-wrap: nowrap;
+			gap: var(--space-4);
+			padding: var(--space-3) var(--gutter);
+			border-bottom: 1px solid var(--border);
+			background: color-mix(in oklab, var(--bg) 88%, transparent);
+			backdrop-filter: blur(10px);
+		}
+		.rail-top {
+			display: flex;
+			align-items: baseline;
+			gap: var(--space-3);
+		}
+		.rail-version {
+			margin-top: 0;
+		}
+		.rail-nav {
+			display: none;
+		}
+		.rail-bottom {
+			flex-direction: row;
+			align-items: center;
+			gap: var(--space-4);
+			margin-left: auto;
+		}
+		.rail-out {
+			display: none;
+		}
+		.theme {
+			margin-top: 0;
+		}
+	}
+</style>

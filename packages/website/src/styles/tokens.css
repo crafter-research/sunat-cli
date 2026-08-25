@@ -1,0 +1,168 @@
+/* sunat-cli design tokens
+   Amber terminal on graphite. Light, dark, system.
+   Every colour pair below is contrast-checked at its intended use. */
+
+@font-face {
+	font-family: "Geist";
+	src: url("/fonts/Geist-Variable.woff2") format("woff2-variations");
+	font-weight: 100 900;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Mono";
+	src: url("/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+	font-weight: 100 900;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Pixel";
+	src: url("/fonts/GeistPixel-Square.woff2") format("woff2");
+	font-weight: 500;
+	font-display: block;
+}
+
+:root {
+	--font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+	--font-pixel: "Geist Pixel", "Geist Mono", ui-monospace, monospace;
+
+	--text-display: clamp(2.75rem, 1.4rem + 5.2vw, 5.5rem);
+	--text-title: clamp(1.75rem, 1.25rem + 1.9vw, 2.5rem);
+	--text-section: 1.375rem;
+	--text-lede: 1.0625rem;
+	--text-body: 0.9375rem;
+	--text-compact: 0.875rem;
+	--text-meta: 0.8125rem;
+	--text-micro: 0.75rem;
+
+	--leading-display: 0.94;
+	--leading-title: 1.1;
+	--leading-body: 1.65;
+	--leading-compact: 1.45;
+
+	--track-display: -0.035em;
+	--track-title: -0.02em;
+	--track-mono: -0.01em;
+
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-8: 3rem;
+	--space-10: 4rem;
+	--space-12: 6rem;
+	--space-16: 8rem;
+
+	--radius: 6px;
+	--radius-sm: 4px;
+
+	--rail: 232px;
+	--gutter: clamp(1.25rem, 0.5rem + 2.5vw, 3rem);
+	--measure: 60ch;
+
+	--ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--dur: 200ms;
+}
+
+/* Light is the base. Every token is defined here unconditionally. */
+:root {
+	--bg: #fafaf8;
+	--surface: #f1f0ec;
+	--surface-2: #e9e8e2;
+	--contrast: #14181a;
+	--border: #e2e0da;
+	--border-strong: #cbc8bf;
+	--hairline: #eceae4;
+
+	--text: #17191a;
+	--text-2: #4b5155;
+	--text-3: #6b7276;
+	--on-contrast: #f4f3f0;
+	--on-contrast-2: #a8adb0;
+
+	--accent: #8f5a02;
+	--accent-hover: #6f4602;
+	--accent-quiet: #f6ecd8;
+	--accent-line: #e4cd9c;
+
+	--danger: #c62a2f;
+	--warn: #a35a05;
+	--ok: #196b3c;
+
+	--glow: transparent;
+
+	--code-bg: #edece6;
+	--code-fg: #494f53;
+
+	color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #0b0d0c;
+		--surface: #14181a;
+		--surface-2: #1b2022;
+		--contrast: #f4f3f0;
+		--border: #232a2c;
+		--border-strong: #333b3e;
+		--hairline: #171c1e;
+
+		--text: #ededec;
+		--text-2: #a6adb0;
+		--text-3: #8b9296;
+		--on-contrast: #14181a;
+		--on-contrast-2: #4b5155;
+
+		--accent: #ffb020;
+		--accent-hover: #ffc457;
+		--accent-quiet: #1e1808;
+		--accent-line: #4a3a11;
+
+		--danger: #e5484d;
+		--warn: #ffb020;
+		--ok: #46b17b;
+
+		--glow: #ffb020;
+
+		--code-bg: #111517;
+		--code-fg: #a6adb0;
+
+		color-scheme: dark;
+	}
+}
+
+:root[data-theme="dark"] {
+	--bg: #0b0d0c;
+	--surface: #14181a;
+	--surface-2: #1b2022;
+	--contrast: #f4f3f0;
+	--border: #232a2c;
+	--border-strong: #333b3e;
+	--hairline: #171c1e;
+
+	--text: #ededec;
+	--text-2: #a6adb0;
+	--text-3: #8b9296;
+	--on-contrast: #14181a;
+	--on-contrast-2: #4b5155;
+
+	--accent: #ffb020;
+	--accent-hover: #ffc457;
+	--accent-quiet: #1e1808;
+	--accent-line: #4a3a11;
+
+	--danger: #e5484d;
+	--warn: #ffb020;
+	--ok: #46b17b;
+
+	--glow: #ffb020;
+
+	--code-bg: #111517;
+	--code-fg: #a6adb0;
+
+	color-scheme: dark;
+}

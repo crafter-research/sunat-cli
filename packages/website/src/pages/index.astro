@@ -1,665 +1,824 @@
 ---
 import { codeToHtml } from "shiki";
+import Base from "../layouts/Base.astro";
+import Rail from "../components/Rail.astro";
+import { dualThemes } from "../lib/code-theme";
+import {
+	VERSION,
+	capabilities,
+	coverage,
+	principles,
+	roadmap,
+	stats,
+} from "../lib/content";
 
-const sunatTheme = {
-	name: "sunat",
-	type: "dark" as const,
-	settings: [
-		{
-			scope: [
-				"comment",
-				"comment.line",
-				"comment.line.number-sign",
-				"comment.line.number-sign.shell",
-				"punctuation.definition.comment",
-			],
-			settings: { foreground: "#64748B", fontStyle: "italic" },
-		},
-		{
-			scope: ["string", "string.quoted", "string.quoted.double", "string.quoted.single"],
-			settings: { foreground: "#FCA5A5" },
-		},
-		{ scope: ["constant", "constant.numeric", "constant.language"], settings: { foreground: "#C41E3A" } },
-		{ scope: ["keyword", "keyword.operator", "keyword.control"], settings: { foreground: "#93C5FD" } },
-		{ scope: ["entity.name.function", "support.function"], settings: { foreground: "#FFFFFF" } },
-		{ scope: ["variable", "variable.other", "variable.parameter"], settings: { foreground: "#D1D5DB" } },
-		{ scope: ["punctuation", "meta.brace"], settings: { foreground: "#94A3B8" } },
-		{ scope: ["source", "text"], settings: { foreground: "#CBD5E1" } },
-	],
-	colors: {
-		"editor.background": "#0F172A",
-		"editor.foreground": "#CBD5E1",
-	},
-};
+const hl = (code: string) =>
+	codeToHtml(code, { lang: "bash", themes: dualThemes, defaultColor: false });
 
-const features = [
-	{
-		title: "CPE Emission (Factura, Boleta, NC, ND)",
-		desc: "UBL 2.1 + XAdES-BES + SOAP directo a SUNAT. End-to-end verified against beta.",
-		code: '$ sunat-cli cpe factura emit \\\n  --params \'{"serie":"F001",...}\' --yes',
-	},
-	{
-		title: "GRE Remitente (Guía Modal 02)",
-		desc: "REST API + JWT. Tracker idempotente, retries con backoff.",
-		code: "$ sunat-cli cpe gre emit \\\n  --params @guia.json --yes",
-	},
-	{
-		title: "SIRE RVIE + RCE",
-		desc: "Propuesta de ventas/compras, ticket polling, descarga ZIP, importar via TUS 1.0.0.",
-		code: "$ sunat-cli sire rvie propuesta \\\n  --periodo 202504 --yes",
-	},
-	{
-		title: "Resumen Diario + Baja",
-		desc: "Boletas <S/700 batched, comunicación de baja con ticket polling.",
-		code: "$ sunat-cli cpe resumen send \\\n  --fecha 2026-04-29 --yes",
-	},
-	{
-		title: "RHE + F616 (personas naturales)",
-		desc: "Browser login without CAPTCHA. RHE in batch, F616 mensual read headless from the declaration API.",
-		code: '$ sunat-cli f616 declare --json \'{"periodo":"2026-03"}\'',
-	},
-	{
-		title: "OS Keychain Secrets",
-		desc: "Store cert passwords and clave SOL in the macOS/Linux keychain. Hidden prompt keeps secrets out of shell history and env vars.",
-		code: "$ sunat-cli keychain set CPE_CERT_PASSWORD\n# prompts without echo",
-	},
-	{
-		title: "Multi-Emisor Profiles",
-		desc: "Manage several RUC from one machine. Set a profile per emisor, switch with one command.",
-		code: "$ sunat-cli cpe profile use acme",
-	},
-	{
-		title: "Schema Introspection",
-		desc: "Agents self-serve field definitions at runtime. 25+ schemas exposed.",
-		code: "$ sunat-cli schema cpe-factura\n# Returns JSON schema of all fields",
-	},
-	{
-		title: "Padrón RUC + Consulta CPE",
-		desc: "REST OAuth2 client_credentials. Padrón sync incremental, lookup local sub-ms.",
-		code: "$ sunat-cli api consulta \\\n  --tipo 01 --serie F001 --numero 123",
-	},
-	{
-		title: "Tipo de Cambio SBS",
-		desc: "Scrape diario, cache local, fallback a fecha hábil previa.",
-		code: "$ sunat-cli tipo-cambio --fecha hoy\n# {compra: 3.752, venta: 3.758}",
-	},
-];
-
-const coverage = [
-	{ domain: "REST APIs (Consulta CPE, Padrón, Tipo Cambio)", pct: 90, color: "green", status: "shipped" },
-	{ domain: "RHE + F616 (personas naturales)", pct: 95, color: "green", status: "shipped" },
-	{ domain: "CPE Factura / Boleta / NC / ND", pct: 85, color: "green", status: "shipped" },
-	{ domain: "Resumen Diario + Comunicación de Baja", pct: 80, color: "green", status: "shipped" },
-	{ domain: "SIRE (RVIE Ventas + RCE Compras)", pct: 70, color: "yellow", status: "shipped, partial" },
-	{ domain: "GRE Remitente + Transportista", pct: 50, color: "yellow", status: "modal 02 only" },
-	{ domain: "CPE void T3 (intent-token)", pct: 30, color: "orange", status: "shaped" },
-	{ domain: "Drivers (mock, sunat-direct, facturador, PSE/OSE)", pct: 40, color: "orange", status: "2 of 5" },
-	{ domain: "Producción end-to-end (live)", pct: 10, color: "red", status: "untested" },
-];
-
-const overallAgentReady = Math.round(coverage.reduce((sum, c) => sum + c.pct, 0) / coverage.length);
-
-const roadmap = [
-	{
-		when: "Now",
-		label: "P0",
-		color: "var(--red)",
-		items: [{ n: 10, t: "cpe void T3: intent-token flow + safety rail", area: "cpe" }],
-	},
-	{
-		when: "Next",
-		label: "P1",
-		color: "#D93F0B",
-		items: [
-			{ n: 11, t: "GRE modal 01 (transporte público) + Transportista doc 31", area: "rest" },
-			{ n: 12, t: "Drivers nubefact + apisperu (PSE/OSE adapters)", area: "driver" },
-			{ n: 18, t: "Live verification — production submissions", area: "verify" },
-		],
-	},
-	{
-		when: "Later",
-		label: "P2",
-		color: "#FBCA04",
-		items: [
-			{ n: 13, t: "Driver facturador (Java wrapper, contained)", area: "driver" },
-			{ n: 14, t: "SIRE reportes complementarios (resumen, inconsistencias, CAR)", area: "sire" },
-			{ n: 15, t: "sqlite index for padrón (sub-ms RUC lookups)", area: "rest" },
-			{ n: 16, t: "CI smoke jobs with Chrome + agent-browser", area: "infra" },
-			{ n: 17, t: "TUS auto-resume on partial upload failure", area: "sire" },
-		],
-	},
-	{
-		when: "Backlog",
-		label: "P3",
-		color: "#0E8A16",
-		items: [
-			{ n: 19, t: "Catálogos SUNAT cacheados (Cat 02, 03, 06, 51)", area: "cpe" },
-			{ n: 22, t: "Multi-RUC profile testing + multi-emisor support", area: "cpe" },
-		],
-	},
-];
-
-const featureHtmls = await Promise.all(features.map((f) => codeToHtml(f.code, { lang: "bash", theme: sunatTheme })));
-
-const heroCode = `# Install globally. Runs on Node, no Bun needed
+const heroCode = `# Install once. Runs on Node.
 $ npm install -g @crafter/sunat-cli
 
-# Check what is present and what each gap needs
+# Ask what is present, and what each gap needs
 $ sunat-cli doctor
-● sunat-cli ready  ✓ agent-browser  ✓ node  ✓ config
+  ready · agent-browser · node · config
 
-# Introspect the schema, versioned so agents can pin it
+# Ask what a command accepts. Versioned, so pin it.
 $ sunat-cli schema cpe-factura
-{ "version": "1.0.0", "command": "cpe factura emit", "fields": {...} }
+  { "version": "1.0.0", "command": "cpe factura emit" }
 
-# Always preview first
-$ sunat-cli cpe factura preview --params "$(cat factura.json)"
-{ "dryRun": true, "hash": "sha256:...", "validacion": {"ok": true} }
+# Preview returns the real shape, plus a hash
+$ sunat-cli cpe factura preview --params @f.json
+  { "dryRun": true, "validacion": { "ok": true } }
 
-# Ship it. UBL 2.1 + XAdES + SOAP, end to end
-$ sunat-cli cpe factura emit --params "$(cat factura.json)" --yes
-✓ Aceptado · CDR 0000 · F001-1234`;
+# Commit. UBL 2.1, XAdES, SOAP, end to end.
+$ sunat-cli cpe factura emit --params @f.json --yes
+  Aceptado · CDR 0000 · F001-1234`;
 
-const heroCodeHtml = await codeToHtml(heroCode, { lang: "bash", theme: sunatTheme });
+const heroHtml = await hl(heroCode);
+const capHtml = await Promise.all(capabilities.map((c) => hl(c.code)));
 
-const principles = [
-	"--params payloads over flags",
-	"--dry-run for all mutations",
-	"JSON when stdout is not a terminal",
-	"Schema introspection at runtime",
-	"Input hardening against hallucinations",
-	"SKILL.md per agentskills.io spec",
+const sections = [
+	{ id: "capabilities", label: "Capabilities" },
+	{ id: "headless", label: "Architecture" },
+	{ id: "coverage", label: "Coverage" },
+	{ id: "roadmap", label: "Roadmap" },
+	{ id: "principles", label: "Agent DX" },
 ];
 
-const stats = [
-	{ value: `${overallAgentReady}%`, label: "Agent-ready" },
-	{ value: "9", label: "SUNAT domains" },
-	{ value: "283", label: "Tests passing" },
-	{ value: "0", label: "CAPTCHAs" },
-];
+const shipped = coverage.filter((c) => c.state === "shipped").length;
 ---
 
-<html lang="es">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>sunat-cli — Agent-First Tax Automation for Peru</title>
-		<meta name="description" content="Agent-first CLI for SUNAT tax automation. Emit RHE, declare F616, verify via API. Built for AI agents. Open source by Crafter Station." />
-		<meta property="og:title" content="sunat-cli — Agent-First Tax Automation" />
-		<meta property="og:description" content="Automate SUNAT taxes: RHE, F616, OAuth2 API. Built for AI agents as primary consumers." />
-		<meta property="og:type" content="website" />
-		<meta property="og:url" content="https://sunat-cli.crafter.ing" />
-		<meta property="og:image" content="https://sunat-cli.crafter.ing/og.png" />
-		<meta property="og:image:width" content="1200" />
-		<meta property="og:image:height" content="630" />
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:image" content="https://sunat-cli.crafter.ing/og-twitter.png" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-		<style>
-			* { margin: 0; padding: 0; box-sizing: border-box; }
-			html { scroll-behavior: smooth; }
+<Base
+	title="sunat-cli — agent-first tax automation for Peru"
+	description="A command-line tool that wraps nine SUNAT surfaces: electronic invoices, ledgers, shipping notices, independent worker filings, and REST lookups. Built so an AI agent can operate it safely."
+>
+	<div class="shell">
+		<Rail version={VERSION} sections={sections} />
 
-			:root {
-				--blue: #1A3567;
-				--blue-light: #2B4A8A;
-				--red: #C41E3A;
-				--bg: #FFFFFF;
-				--bg-alt: #F8FAFC;
-				--bg-dark: #0F172A;
-				--border: #E2E8F0;
-				--text: #0F172A;
-				--text-2: #475569;
-				--text-3: #94A3B8;
-			}
+		<div class="doc">
+			<main id="main">
+				<!-- Hero -->
+				<section class="hero">
+					<div class="gridlines" aria-hidden="true"></div>
 
-			body {
-				font-family: 'Inter', system-ui, sans-serif;
-				font-size: 15px;
-				line-height: 1.6;
-				color: var(--text);
-				background: var(--bg);
-				-webkit-font-smoothing: antialiased;
-			}
+					<div class="hero-body">
+						<h1>
+							<span class="wordmark" aria-hidden="true">sunat-cli</span>
+							<span class="sr-only">sunat-cli</span>
+						</h1>
 
-			.mono { font-family: 'JetBrains Mono', monospace; }
-			.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-
-			/* Nav */
-			nav {
-				position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-				background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
-				border-bottom: 1px solid var(--border);
-			}
-			.nav-inner {
-				max-width: 1080px; margin: 0 auto; padding: 0 24px;
-				height: 56px; display: flex; align-items: center; justify-content: space-between;
-			}
-			.nav-brand { font-weight: 700; font-size: 15px; color: var(--blue); text-decoration: none; }
-			.nav-brand span { color: var(--red); }
-			.nav-links { display: flex; gap: 24px; align-items: center; }
-			.nav-links a { color: var(--text-2); text-decoration: none; font-size: 13px; font-weight: 500; }
-			.nav-links a:hover { color: var(--text); }
-			.nav-cta { background: var(--blue) !important; color: white !important; padding: 6px 16px; border-radius: 6px; }
-			.nav-cta:hover { background: var(--blue-light) !important; }
-
-			/* Hero */
-			.hero { padding: 120px 24px 60px; }
-			.hero-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-			.hero-badge {
-				display: inline-flex; align-items: center; gap: 6px;
-				padding: 4px 12px; background: var(--bg-alt); border: 1px solid var(--border);
-				border-radius: 999px; font-size: 12px; color: var(--text-2); margin-bottom: 20px;
-			}
-			.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
-			.hero h1 {
-				font-size: 40px; font-weight: 700; line-height: 1.15;
-				letter-spacing: -0.03em; color: var(--blue); margin-bottom: 16px;
-			}
-			.hero h1 .accent { color: var(--red); }
-			.hero-desc { font-size: 16px; color: var(--text-2); line-height: 1.7; margin-bottom: 24px; }
-			.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-			.btn {
-				display: inline-flex; align-items: center; padding: 10px 22px;
-				border-radius: 8px; font-size: 14px; font-weight: 600;
-				text-decoration: none; border: none; cursor: pointer; transition: all 150ms;
-			}
-			.btn-primary { background: var(--red); color: white; }
-			.btn-primary:hover { background: #A8182F; }
-			.btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
-			.btn-outline:hover { border-color: var(--text-2); }
-			.install-cmd { font-size: 13px; color: var(--text-3); }
-			.install-cmd code { color: var(--text); }
-
-			.hero-code {
-				border-radius: 12px; overflow: hidden;
-				box-shadow: 0 8px 32px rgba(15,23,42,0.2);
-			}
-			.hero-code :global(pre) {
-				padding: 24px !important; font-size: 12.5px !important;
-				line-height: 1.8 !important; margin: 0 !important;
-			}
-			.hero-code :global(code) { font-family: 'JetBrains Mono', monospace !important; }
-
-			/* Stats */
-			.stats { padding: 40px 24px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-			.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-			.stat { text-align: center; padding: 12px; }
-			.stat:not(:last-child) { border-right: 1px solid var(--border); }
-			.stat-value { font-size: 32px; font-weight: 700; color: var(--blue); line-height: 1; }
-			.stat-label { font-size: 11px; color: var(--text-3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
-
-			/* Features */
-			.features { padding: 80px 24px; background: var(--bg-alt); }
-			.section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red); margin-bottom: 8px; }
-			.section-title { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 40px; }
-			.features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-			.feature-card {
-				background: white; border: 1px solid var(--border); border-radius: 12px;
-				padding: 24px; transition: border-color 200ms, box-shadow 200ms;
-			}
-			.feature-card:hover { border-color: var(--blue); box-shadow: 0 4px 12px rgba(26,53,103,0.06); }
-			.feature-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-			.feature-desc { font-size: 14px; color: var(--text-2); margin-bottom: 16px; line-height: 1.6; }
-			.feature-code { border-radius: 8px; overflow: hidden; }
-			.feature-code :global(pre) {
-				padding: 12px 16px !important; font-size: 12px !important;
-				line-height: 1.7 !important; margin: 0 !important;
-			}
-			.feature-code :global(code) { font-family: 'JetBrains Mono', monospace !important; }
-
-			/* Headless */
-			.headless { padding: 80px 24px; }
-			.headless-grid {
-				display: grid; grid-template-columns: 1fr 1fr;
-				gap: 40px; align-items: start;
-			}
-			.headless-desc {
-				font-size: 15px; color: var(--text-2); line-height: 1.7;
-				max-width: 480px;
-			}
-			.headless-desc p:not(:last-child) { margin-bottom: 16px; }
-			.headless-steps {
-				list-style: none; padding: 0; margin: 0;
-				display: flex; flex-direction: column; gap: 14px;
-			}
-			.headless-step {
-				display: grid; grid-template-columns: 28px 1fr; gap: 14px;
-				align-items: start; padding: 16px 20px;
-				background: var(--bg-alt); border: 1px solid var(--border);
-				border-radius: 10px;
-			}
-			.headless-num {
-				font-family: 'JetBrains Mono', monospace; font-size: 13px;
-				font-weight: 600; color: var(--red);
-				width: 28px; height: 28px; border-radius: 6px;
-				display: flex; align-items: center; justify-content: center;
-				background: white; border: 1px solid var(--border);
-			}
-			.headless-step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-			.headless-step-desc { font-size: 13px; color: var(--text-2); line-height: 1.6; }
-
-			/* Coverage */
-			.coverage { padding: 80px 24px; }
-			.coverage-headline {
-				display: flex; align-items: baseline; gap: 16px;
-				margin-bottom: 8px; flex-wrap: wrap;
-			}
-			.coverage-pct {
-				font-size: 56px; font-weight: 700; color: var(--blue);
-				letter-spacing: -0.04em; line-height: 1;
-			}
-			.coverage-pct .accent { color: var(--red); }
-			.coverage-sub {
-				font-size: 14px; color: var(--text-2); max-width: 640px;
-				line-height: 1.7; margin-bottom: 32px;
-			}
-			.coverage-table {
-				display: grid; gap: 14px; max-width: 880px;
-			}
-			.cov-row {
-				display: grid; grid-template-columns: 1fr 200px 90px;
-				gap: 16px; align-items: center; padding: 12px 0;
-				border-bottom: 1px solid var(--border);
-			}
-			.cov-row:last-child { border-bottom: none; }
-			.cov-domain { font-size: 14px; font-weight: 500; color: var(--text); }
-			.cov-status {
-				font-size: 11px; color: var(--text-3); text-transform: uppercase;
-				letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace;
-			}
-			.cov-bar {
-				height: 8px; background: var(--bg-alt); border-radius: 999px;
-				overflow: hidden; position: relative;
-			}
-			.cov-fill {
-				height: 100%; border-radius: 999px;
-				transition: width 600ms ease-out;
-			}
-			.cov-fill.green { background: linear-gradient(90deg, #16A34A, #22C55E); }
-			.cov-fill.yellow { background: linear-gradient(90deg, #CA8A04, #EAB308); }
-			.cov-fill.orange { background: linear-gradient(90deg, #EA580C, #F97316); }
-			.cov-fill.red { background: linear-gradient(90deg, #B91C1C, #DC2626); }
-			.cov-pct {
-				font-family: 'JetBrains Mono', monospace; font-size: 13px;
-				font-weight: 600; color: var(--text); text-align: right;
-			}
-
-			/* Roadmap */
-			.roadmap { padding: 80px 24px; background: var(--bg-alt); }
-			.roadmap-grid {
-				display: grid; grid-template-columns: repeat(4, 1fr);
-				gap: 16px;
-			}
-			.roadmap-col {
-				background: white; border: 1px solid var(--border);
-				border-radius: 12px; padding: 20px;
-				display: flex; flex-direction: column; min-height: 240px;
-			}
-			.roadmap-head {
-				display: flex; align-items: baseline; justify-content: space-between;
-				padding-bottom: 12px; margin-bottom: 12px;
-				border-bottom: 1px solid var(--border);
-			}
-			.roadmap-when { font-size: 14px; font-weight: 700; color: var(--text); }
-			.roadmap-pill {
-				font-size: 10px; font-weight: 700; padding: 3px 8px;
-				border-radius: 4px; color: white; letter-spacing: 0.06em;
-				font-family: 'JetBrains Mono', monospace;
-			}
-			.roadmap-list {
-				list-style: none; padding: 0; margin: 0;
-				display: flex; flex-direction: column; gap: 10px;
-			}
-			.roadmap-item {
-				font-size: 12.5px; line-height: 1.5; color: var(--text-2);
-				padding-left: 14px; position: relative;
-			}
-			.roadmap-item::before {
-				content: "›"; position: absolute; left: 0;
-				color: var(--text-3); font-family: 'JetBrains Mono', monospace;
-			}
-			.roadmap-item a {
-				color: var(--text-2); text-decoration: none;
-				border-bottom: 1px dashed transparent;
-			}
-			.roadmap-item a:hover { color: var(--blue); border-bottom-color: var(--blue); }
-			.roadmap-area {
-				display: inline-block; font-family: 'JetBrains Mono', monospace;
-				font-size: 10px; color: var(--text-3); margin-left: 4px;
-			}
-
-			/* Agent DX */
-			.agent-dx { padding: 80px 24px; background: var(--blue); color: white; }
-			.agent-dx .section-label { color: rgba(255,255,255,0.4); }
-			.agent-dx .section-title { color: white; }
-			.agent-dx-desc { color: rgba(255,255,255,0.65); max-width: 560px; font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
-			.principles { display: flex; flex-wrap: wrap; gap: 8px; }
-			.principle {
-				padding: 8px 16px; border: 1px solid rgba(255,255,255,0.15);
-				border-radius: 6px; font-size: 13px; color: rgba(255,255,255,0.8);
-				background: rgba(255,255,255,0.05);
-			}
-
-			footer {
-				padding: 32px 24px; border-top: 1px solid var(--border);
-				text-align: center; font-size: 13px; color: var(--text-3);
-			}
-			footer a { color: var(--blue); text-decoration: none; }
-			footer a:hover { text-decoration: underline; }
-
-			@media (max-width: 768px) {
-				.hero-inner { grid-template-columns: 1fr; }
-				.hero h1 { font-size: 32px; }
-				.features-grid { grid-template-columns: 1fr; }
-				.stats-grid { grid-template-columns: repeat(2, 1fr); }
-				.stat:nth-child(2) { border-right: none; }
-				.stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--border); }
-				.nav-links a:not(.nav-cta) { display: none; }
-				.coverage-pct { font-size: 40px; }
-				.cov-row { grid-template-columns: 1fr 60px; gap: 8px; }
-				.cov-row .cov-bar { grid-column: 1 / -1; order: 3; }
-				.roadmap-grid { grid-template-columns: 1fr; }
-				.headless-grid { grid-template-columns: 1fr; gap: 28px; }
-			}
-		</style>
-	</head>
-	<body>
-		<nav>
-			<div class="nav-inner">
-				<a href="#" class="nav-brand">sunat<span>/</span>cli</a>
-				<div class="nav-links">
-					<a href="#features">Features</a>
-					<a href="#headless">Architecture</a>
-					<a href="#coverage">Coverage</a>
-					<a href="#roadmap">Roadmap</a>
-					<a href="#agent-dx">Agent DX</a>
-					<a href="https://github.com/crafter-research/sunat-cli" class="nav-cta">GitHub</a>
-				</div>
-			</div>
-		</nav>
-
-		<section class="hero">
-			<div class="container">
-				<div class="hero-inner">
-					<div>
-						<div class="hero-badge">
-							<span class="dot"></span>
-							<span class="mono">crafter station / gov-tech · v0.6.1</span>
-						</div>
-						<h1>Mapping SUNAT,<br/>making it <span class="accent">agent-ready</span></h1>
-						<p class="hero-desc">
-							Agent-first CLI for Peru's tax authority. CPE emission (UBL 2.1 + XAdES + SOAP),
-							SIRE filing, GRE shipping notices, REST OAuth APIs, RHE/F616 — all under one binary.
+						<p class="hero-lede">
+							Peru's tax authority exposes nine different surfaces: SOAP with
+							signed XML, REST with OAuth, a ticket queue, a resumable upload,
+							and a form that is really a JSON API. This wraps all of them in
+							one binary an agent can drive.
 						</p>
+
 						<div class="hero-actions">
-							<a href="https://github.com/crafter-research/sunat-cli" class="btn btn-primary">Get started</a>
-							<a href="#features" class="btn btn-outline">Learn more</a>
+							<a class="btn" href="#capabilities">See what it covers</a>
+							<code class="install mono">npm install -g @crafter/sunat-cli</code>
 						</div>
-						<p class="install-cmd mono">$ <code>npm install -g @crafter/sunat-cli</code></p>
-					</div>
-					<div class="hero-code" set:html={heroCodeHtml} />
-				</div>
-			</div>
-		</section>
 
-		<section class="stats">
-			<div class="container">
-				<div class="stats-grid">
-					{stats.map((s) => (
-						<div class="stat">
-							<div class="stat-value">{s.value}</div>
-							<div class="stat-label">{s.label}</div>
+						<dl class="hud">
+							{
+								stats.map((s) => (
+									<div class="hud-item">
+										<dt class="hud-label">{s.label}</dt>
+										<dd class="hud-value numeric">{s.value}</dd>
+										<dd class="hud-detail">{s.detail}</dd>
+									</div>
+								))
+							}
+						</dl>
+					</div>
+
+					<div class="hero-code code" set:html={heroHtml} />
+				</section>
+
+				<!-- Capabilities -->
+				<section class="section" id="capabilities">
+					<div class="gridlines" aria-hidden="true"></div>
+					<div class="section-head">
+						<h2>What it covers</h2>
+						<p class="meta">{capabilities.length} surfaces</p>
+					</div>
+
+					<div class="caps">
+						{
+							capabilities.map((c, i) => (
+								<article class="cap">
+									<div class="cap-text">
+										<h3>{c.title}</h3>
+										<p class="cap-scope mono">{c.scope}</p>
+										<p class="cap-desc">{c.desc}</p>
+									</div>
+									<div class="cap-code code" set:html={capHtml[i]} />
+								</article>
+							))
+						}
+					</div>
+				</section>
+
+				<!-- Architecture -->
+				<section class="section" id="headless">
+					<div class="gridlines" aria-hidden="true"></div>
+					<div class="section-head">
+						<h2>Headless after one login</h2>
+					</div>
+
+					<div class="arch">
+						<div class="arch-prose">
+							<p>
+								The F616 declaration page looks like a form. It is a
+								single-page app talking to a JSON API, and the form fields are
+								the least reliable way to reach it.
+							</p>
+							<p>
+								So the CLI opens a browser once, captures the session token,
+								and closes it. Every read after that goes straight to the API
+								the form was calling. No CAPTCHA, no DOM to fight, no browser
+								process left running.
+							</p>
 						</div>
-					))}
-				</div>
-			</div>
-		</section>
 
-		<section class="features" id="features">
-			<div class="container">
-				<p class="section-label mono">Capabilities</p>
-				<h2 class="section-title">Everything SUNAT, one command</h2>
-				<div class="features-grid">
-					{features.map((f, i) => (
-						<div class="feature-card">
-							<h3 class="feature-title">{f.title}</h3>
-							<p class="feature-desc">{f.desc}</p>
-							<div class="feature-code" set:html={featureHtmls[i]} />
-						</div>
-					))}
-				</div>
-			</div>
-		</section>
-
-		<section class="headless" id="headless">
-			<div class="container">
-				<p class="section-label mono">Architecture</p>
-				<h2 class="section-title">Headless after one login</h2>
-				<div class="headless-grid">
-					<div class="headless-desc">
-						<p>
-							The F616 declaration form is a single-page app over a JSON API.
-							Instead of driving the DOM on every run, the CLI opens a browser
-							once to capture a session token (the IdCache), then closes it.
-						</p>
-						<p>
-							From there, <span class="mono">f616 periodo</span> and
-							<span class="mono">f616 oficios</span> read the API directly,
-							headless, for the lifetime of that token. No CAPTCHA to solve,
-							no form fields to fight.
-						</p>
+						<ol class="steps">
+							<li>
+								<span class="step-n numeric">01</span>
+								<div>
+									<h3>Capture</h3>
+									<p>
+										Open the browser once, log in, take the session token,
+										close it.
+									</p>
+								</div>
+							</li>
+							<li>
+								<span class="step-n numeric">02</span>
+								<div>
+									<h3>Read headless</h3>
+									<p>
+										Query the declaration API directly with the cached token,
+										with no browser running.
+									</p>
+								</div>
+							</li>
+							<li>
+								<span class="step-n numeric">03</span>
+								<div>
+									<h3>Recapture on expiry</h3>
+									<p>
+										When the token ages out, capture again. Everything between
+										those two moments stays headless.
+									</p>
+								</div>
+							</li>
+						</ol>
 					</div>
-					<ol class="headless-steps">
-						<li class="headless-step">
-							<span class="headless-num">1</span>
-							<div>
-								<div class="headless-step-title">Capture</div>
-								<div class="headless-step-desc">Open the browser once, log in, grab the session token, close it.</div>
-							</div>
-						</li>
-						<li class="headless-step">
-							<span class="headless-num">2</span>
-							<div>
-								<div class="headless-step-title">Read headless</div>
-								<div class="headless-step-desc">Query the declaration API behind the form with the cached token, no browser running.</div>
-							</div>
-						</li>
-						<li class="headless-step">
-							<span class="headless-num">3</span>
-							<div>
-								<div class="headless-step-title">Refresh on expiry</div>
-								<div class="headless-step-desc">When the token ages out, capture again. Everything in between stays headless.</div>
-							</div>
-						</li>
-					</ol>
-				</div>
-			</div>
-		</section>
+				</section>
 
-		<section class="coverage" id="coverage">
-			<div class="container">
-				<p class="section-label mono">Coverage</p>
-				<div class="coverage-headline">
-					<div class="coverage-pct">
-						{overallAgentReady}<span class="accent">%</span>
+				<!-- Coverage -->
+				<section class="section" id="coverage">
+					<div class="gridlines" aria-hidden="true"></div>
+					<div class="section-head">
+						<h2>How far each surface goes</h2>
+						<p class="meta">{shipped} of {coverage.length} shipped and verified</p>
 					</div>
-					<h2 class="section-title" style="margin-bottom: 0;">SUNAT mapped & agent-ready</h2>
-				</div>
-				<p class="coverage-sub">
-					Per-domain breakdown of how much of each SUNAT surface is wrapped, validated against
-					the beta endpoint, and exposed as an agent-callable command. Green = shipped & verified.
-					Yellow = partial. Orange/Red = shaped or needs production credentials.
+
+					<p class="lede cov-note">
+						Percentages are a judgement about how much of each surface is
+						wrapped, validated against the beta endpoint, and callable by an
+						agent. The last row is the one that matters most and it is the
+						lowest: nothing here has been run against production credentials.
+					</p>
+
+					<div class="table-wrap">
+						<table class="cov">
+							<caption class="sr-only">
+								Coverage by SUNAT surface, with completeness and state
+							</caption>
+							<thead>
+								<tr>
+									<th scope="col">Surface</th>
+									<th scope="col" class="cov-th-bar">Wrapped</th>
+									<th scope="col" class="cov-th-num">%</th>
+									<th scope="col">State</th>
+								</tr>
+							</thead>
+							<tbody>
+								{
+									coverage.map((c) => (
+										<tr>
+											<th scope="row">
+												<span class="cov-domain">{c.domain}</span>
+												<span class="cov-detail">{c.detail}</span>
+											</th>
+											<td class="cov-td-bar">
+												<div class="bar" data-state={c.state}>
+													<div class="bar-fill" style={`width:${c.pct}%`} />
+												</div>
+											</td>
+											<td class="cov-td-num numeric">{c.pct}</td>
+											<td>
+												<span class="state" data-state={c.state}>
+													{c.state}
+												</span>
+											</td>
+										</tr>
+									))
+								}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<!-- Roadmap -->
+				<section class="section" id="roadmap">
+					<div class="gridlines" aria-hidden="true"></div>
+					<div class="section-head">
+						<h2>What is next</h2>
+						<p class="meta">Issue numbers link to the tracker</p>
+					</div>
+
+					<div class="road">
+						{
+							roadmap.map((col) => (
+								<section class="road-col">
+									<h3 class="road-when">{col.when}</h3>
+									<ul>
+										{col.items.map((i) => (
+											<li>
+												<a
+													href={`https://github.com/crafter-research/sunat-cli/issues/${i.n}`}
+												>
+													<span class="road-n numeric">{i.n}</span>
+													{i.t}
+												</a>
+											</li>
+										))}
+									</ul>
+								</section>
+							))
+						}
+					</div>
+				</section>
+
+				<!-- Principles -->
+				<section class="section" id="principles">
+					<div class="gridlines" aria-hidden="true"></div>
+					<div class="section-head">
+						<h2>Built for a caller that is not trusted</h2>
+					</div>
+
+					<p class="lede">
+						An agent will get a field name wrong, retry a call that already
+						succeeded, and read past an error it should have stopped on. Each
+						rule below exists because one of those failures is cheap to prevent
+						and expensive to undo when the other end is a tax authority.
+					</p>
+
+					<dl class="rules">
+						{
+							principles.map((p) => (
+								<div class="rule">
+									<dt>{p.rule}</dt>
+									<dd>{p.why}</dd>
+								</div>
+							))
+						}
+					</dl>
+				</section>
+			</main>
+
+			<footer class="foot">
+				<p>
+					<a href="https://crafterstation.com">Crafter Station</a> · gov-tech
+					research
 				</p>
-				<div class="coverage-table">
-					{coverage.map((c) => (
-						<div class="cov-row">
-							<div>
-								<div class="cov-domain">{c.domain}</div>
-								<div class="cov-status">{c.status}</div>
-							</div>
-							<div class="cov-bar">
-								<div class={`cov-fill ${c.color}`} style={`width: ${c.pct}%`}></div>
-							</div>
-							<div class="cov-pct">{c.pct}%</div>
-						</div>
-					))}
-				</div>
-			</div>
-		</section>
-
-		<section class="roadmap" id="roadmap">
-			<div class="container">
-				<p class="section-label mono">Roadmap</p>
-				<h2 class="section-title">What's shipping next</h2>
-				<div class="roadmap-grid">
-					{roadmap.map((col) => (
-						<div class="roadmap-col">
-							<div class="roadmap-head">
-								<span class="roadmap-when">{col.when}</span>
-								<span class="roadmap-pill" style={`background: ${col.color}`}>{col.label}</span>
-							</div>
-							<ul class="roadmap-list">
-								{col.items.map((item) => (
-									<li class="roadmap-item">
-										<a href={`https://github.com/crafter-research/sunat-cli/issues/${item.n}`}>
-											#{item.n} · {item.t}
-										</a>
-										<span class="roadmap-area">[{item.area}]</span>
-									</li>
-								))}
-							</ul>
-						</div>
-					))}
-				</div>
-			</div>
-		</section>
-
-		<section class="agent-dx" id="agent-dx">
-			<div class="container">
-				<p class="section-label mono">Design philosophy</p>
-				<h2 class="section-title">Agent DX first</h2>
-				<p class="agent-dx-desc">
-					Following Justin Poehnelt's "Rewrite Your CLI for AI Agents" principles
-					and the agentskills.io specification. The agent is not a trusted operator.
+				<p class="mono">
+					<a href="/legal">Legal</a> · <a
+						href="https://github.com/crafter-research/sunat-cli">Source</a
+					> · MIT
 				</p>
-				<div class="principles">
-					{principles.map((p) => (
-						<div class="principle mono">{p}</div>
-					))}
-				</div>
-			</div>
-		</section>
+			</footer>
+		</div>
+	</div>
+</Base>
 
-		<footer>
-			<div class="container">
-				<a href="https://crafterstation.com">Crafter Station</a> — Gov-Tech Research, Lima, Peru
-				 · <a href="/legal">Legal</a>
-			</div>
-		</footer>
+<style is:global>
+	.code pre.shiki {
+		margin: 0;
+		padding: var(--space-5);
+		overflow-x: auto;
+		font-family: var(--font-mono);
+		font-size: var(--text-meta);
+		line-height: 1.75;
+		letter-spacing: var(--track-mono);
+		tab-size: 2;
+	}
 
-	</body>
-</html>
+	.code pre.shiki code {
+		font-family: inherit;
+	}
+
+	.code .shiki,
+	.code .shiki span {
+		color: var(--shiki-light);
+		background-color: var(--shiki-light-bg);
+		font-style: var(--shiki-light-font-style);
+		font-weight: var(--shiki-light-font-weight);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:root:not([data-theme="light"]) .code .shiki,
+		:root:not([data-theme="light"]) .code .shiki span {
+			color: var(--shiki-dark);
+			background-color: var(--shiki-dark-bg);
+			font-style: var(--shiki-dark-font-style);
+			font-weight: var(--shiki-dark-font-weight);
+		}
+	}
+
+	:root[data-theme="dark"] .code .shiki,
+	:root[data-theme="dark"] .code .shiki span {
+		color: var(--shiki-dark);
+		background-color: var(--shiki-dark-bg);
+		font-style: var(--shiki-dark-font-style);
+		font-weight: var(--shiki-dark-font-weight);
+	}
+</style>
+
+<style>
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	/* ── Hero ──────────────────────────────────────────────────── */
+
+	.hero {
+		position: relative;
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+		gap: var(--space-10);
+		align-items: center;
+		padding: var(--space-16) var(--gutter) var(--space-12);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.hero-body,
+	.hero-code {
+		position: relative;
+		z-index: 1;
+		min-width: 0;
+	}
+
+	h1 {
+		margin: 0 0 var(--space-6);
+	}
+
+	.wordmark {
+		font-family: var(--font-pixel);
+		font-size: var(--text-display);
+		line-height: var(--leading-display);
+		letter-spacing: var(--track-display);
+		color: var(--accent);
+		display: block;
+		/* The single decorative gesture on the page. `--glow` resolves to
+		   `transparent` in light, where a halo would only muddy the type. */
+		text-shadow:
+			0 0 28px color-mix(in oklab, var(--glow) 22%, transparent),
+			0 0 80px color-mix(in oklab, var(--glow) 10%, transparent);
+	}
+
+	.hero-lede {
+		font-size: var(--text-lede);
+		color: var(--text-2);
+		max-width: 46ch;
+		margin-bottom: var(--space-6);
+	}
+
+	.hero-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-10);
+	}
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.6rem 1.15rem;
+		background: var(--contrast);
+		color: var(--on-contrast);
+		font-size: var(--text-compact);
+		font-weight: 500;
+		border-radius: var(--radius);
+		text-decoration: none;
+		transition: opacity var(--dur) var(--ease);
+	}
+
+	.btn:hover {
+		opacity: 0.85;
+	}
+
+	.install {
+		font-size: var(--text-meta);
+		color: var(--text-2);
+		padding: 0.6rem 0.85rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+		white-space: nowrap;
+		overflow-x: auto;
+		max-width: 100%;
+	}
+
+	/* The HUD: three peer readings, hung off one baseline. */
+	.hud {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--space-5);
+		border-top: 1px solid var(--border);
+		padding-top: var(--space-5);
+		margin: 0;
+	}
+
+	.hud-item {
+		min-width: 0;
+	}
+
+	.hud-label {
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		line-height: 1.35;
+		margin-bottom: var(--space-2);
+	}
+
+	.hud-value {
+		font-size: 2rem;
+		line-height: 1;
+		color: var(--text);
+		margin: 0 0 var(--space-1);
+	}
+
+	.hud-detail {
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		margin: 0;
+		line-height: 1.4;
+	}
+
+	.hero-code {
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--code-bg);
+	}
+
+	/* ── Capabilities ───────────────────────────────────────────── */
+
+	.caps {
+		display: grid;
+		gap: 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.cap {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: var(--space-8);
+		align-items: start;
+		padding: var(--space-6) 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.cap-text {
+		min-width: 0;
+	}
+
+	.cap h3 {
+		font-size: var(--text-section);
+		margin-bottom: var(--space-1);
+	}
+
+	.cap-scope {
+		font-size: var(--text-meta);
+		color: var(--accent);
+		margin-bottom: var(--space-3);
+	}
+
+	.cap-desc {
+		color: var(--text-2);
+		font-size: var(--text-compact);
+		max-width: 52ch;
+	}
+
+	.cap-code {
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius);
+		overflow: hidden;
+		background: var(--code-bg);
+		min-width: 0;
+	}
+
+	.cap-code :global(pre.shiki) {
+		padding: var(--space-4);
+		font-size: var(--text-micro);
+	}
+
+	/* ── Architecture ───────────────────────────────────────────── */
+
+	.arch {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: var(--space-10);
+		align-items: start;
+	}
+
+	.arch-prose p {
+		color: var(--text-2);
+		max-width: 48ch;
+	}
+
+	.arch-prose p + p {
+		margin-top: var(--space-4);
+	}
+
+	.steps {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.steps li {
+		display: grid;
+		grid-template-columns: 2.5rem minmax(0, 1fr);
+		gap: var(--space-4);
+		padding: var(--space-5) 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.step-n {
+		font-size: var(--text-meta);
+		color: var(--accent);
+		padding-top: 0.15em;
+	}
+
+	.steps h3 {
+		font-size: var(--text-body);
+		margin-bottom: var(--space-1);
+	}
+
+	.steps p {
+		font-size: var(--text-compact);
+		color: var(--text-2);
+	}
+
+	/* ── Coverage ───────────────────────────────────────────────── */
+
+	.cov-note {
+		margin-bottom: var(--space-8);
+		max-width: 70ch;
+	}
+
+	.table-wrap {
+		overflow-x: auto;
+	}
+
+	.cov {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: var(--text-compact);
+	}
+
+	.cov th,
+	.cov td {
+		text-align: left;
+		padding: var(--space-4) var(--space-4) var(--space-4) 0;
+		border-bottom: 1px solid var(--border);
+		vertical-align: baseline;
+	}
+
+	.cov thead th {
+		font-size: var(--text-micro);
+		font-weight: 400;
+		color: var(--text-3);
+		padding-bottom: var(--space-3);
+		border-bottom: 1px solid var(--border-strong);
+	}
+
+	.cov tbody th {
+		font-weight: 400;
+	}
+
+	.cov-th-num,
+	.cov-td-num {
+		text-align: right;
+		padding-right: var(--space-5);
+		width: 4rem;
+	}
+
+	.cov-th-bar,
+	.cov-td-bar {
+		width: 38%;
+		min-width: 140px;
+	}
+
+	.cov-domain {
+		display: block;
+		color: var(--text);
+	}
+
+	.cov-detail {
+		display: block;
+		font-size: var(--text-micro);
+		color: var(--text-3);
+		margin-top: 2px;
+	}
+
+	.bar {
+		height: 6px;
+		background: var(--surface-2);
+		border-radius: 999px;
+		overflow: hidden;
+	}
+
+	.bar-fill {
+		height: 100%;
+		border-radius: 999px;
+		background: var(--accent);
+	}
+
+	.bar[data-state="untested"] .bar-fill {
+		background: var(--danger);
+	}
+
+	.bar[data-state="planned"] .bar-fill,
+	.bar[data-state="partial"] .bar-fill {
+		background: var(--warn);
+	}
+
+	.bar[data-state="shipped"] .bar-fill {
+		background: var(--ok);
+	}
+
+	.state {
+		font-family: var(--font-mono);
+		font-size: var(--text-micro);
+		color: var(--text-3);
+	}
+
+	.state[data-state="untested"] {
+		color: var(--danger);
+	}
+
+	/* ── Roadmap ────────────────────────────────────────────────── */
+
+	.road {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: var(--space-6);
+	}
+
+	.road-col {
+		min-width: 0;
+		border-top: 1px solid var(--border-strong);
+		padding-top: var(--space-4);
+	}
+
+	.road-when {
+		font-size: var(--text-compact);
+		color: var(--text);
+		margin-bottom: var(--space-4);
+	}
+
+	.road-col ul {
+		list-style: none;
+		padding: 0;
+		display: grid;
+		gap: var(--space-3);
+	}
+
+	.road-col a {
+		display: grid;
+		grid-template-columns: 2.25rem minmax(0, 1fr);
+		gap: var(--space-2);
+		font-size: var(--text-meta);
+		color: var(--text-2);
+		text-decoration: none;
+		line-height: 1.5;
+	}
+
+	.road-col a:hover {
+		color: var(--text);
+	}
+
+	.road-col a:hover .road-n {
+		color: var(--accent);
+	}
+
+	.road-n {
+		color: var(--text-3);
+		font-size: var(--text-micro);
+	}
+
+	/* ── Principles ─────────────────────────────────────────────── */
+
+	.rules {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 var(--space-10);
+		margin: var(--space-8) 0 0;
+		border-top: 1px solid var(--border);
+	}
+
+	.rule {
+		padding: var(--space-5) 0;
+		border-bottom: 1px solid var(--border);
+		min-width: 0;
+	}
+
+	.rule dt {
+		font-size: var(--text-body);
+		color: var(--text);
+		margin-bottom: var(--space-2);
+	}
+
+	.rule dd {
+		margin: 0;
+		font-size: var(--text-compact);
+		color: var(--text-2);
+		max-width: 46ch;
+	}
+
+	/* ── Footer ─────────────────────────────────────────────────── */
+
+	.foot {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: var(--space-5);
+		flex-wrap: wrap;
+		padding: var(--space-6) var(--gutter);
+		font-size: var(--text-meta);
+		color: var(--text-3);
+	}
+
+	.foot a {
+		color: var(--text-2);
+		text-decoration: none;
+	}
+
+	.foot a:hover {
+		color: var(--accent);
+	}
+
+	/* ── Reflow ─────────────────────────────────────────────────── */
+
+	@media (max-width: 1100px) {
+		.road {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 900px) {
+		.hero {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-8);
+			padding-top: var(--space-10);
+		}
+		.cap,
+		.arch,
+		.rules {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-5);
+		}
+		.rules {
+			gap: 0;
+		}
+	}
+
+	@media (max-width: 620px) {
+		.hud {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-4);
+		}
+		.road {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.hero-actions {
+			align-items: stretch;
+			flex-direction: column;
+		}
+		.install {
+			white-space: normal;
+			word-break: break-all;
+		}
+	}
+</style>
