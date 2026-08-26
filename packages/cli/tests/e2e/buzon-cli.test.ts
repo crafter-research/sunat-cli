@@ -74,8 +74,25 @@ describe("sunat-cli buzon", () => {
 			source: "SUNAT Buzón SOL legacy visor",
 			readOnlyBoundary: "metadata-only",
 			overview: { foldersObserved: 0, alertsObserved: 0 },
-			summaries: [],
-			changes: { baselineCreated: false, newCount: 1, knownCount: 2, missingCount: 0, totalCount: 3 },
+			summaries: [
+				{
+					kind: "message",
+					pagesFetched: 1,
+					observedCount: 0,
+					reportedTotalsObserved: [],
+					reportedRecordsObserved: [],
+					countMismatch: false,
+				},
+				{
+					kind: "notification",
+					pagesFetched: 1,
+					observedCount: 0,
+					reportedTotalsObserved: [],
+					reportedRecordsObserved: [],
+					countMismatch: false,
+				},
+			],
+			changes: { baselineCreated: false, newCount: 0, knownCount: 0, missingCount: 0, totalCount: 0 },
 			items: [],
 		};
 		const result = await run(["-o", "json", "buzon", "status"], state);

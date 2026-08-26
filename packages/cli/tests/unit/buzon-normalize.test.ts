@@ -44,7 +44,7 @@ describe("Buzón metadata normalization", () => {
 		const generated = Array.from({ length: 64 }, (_, index) => ({
 			codMensaje: index + 1,
 			desAsunto: `Row ${index}\u001b[31m\nvalue`,
-			cantidadArchAdj: index % 3 === 0 ? -1 : String(index % 4),
+			cantidadArchAdj: index === 63 ? "1.5" : index % 3 === 0 ? -1 : String(index % 4),
 		}));
 		const result = normalizeBuzonPages("message", [
 			{
@@ -58,6 +58,7 @@ describe("Buzón metadata normalization", () => {
 		expect(new Set(result.items.map((item) => item.id)).size).toBe(64);
 		expect(result.items.every((item) => !item.subject.includes("\u001b") && !item.subject.includes("\n"))).toBe(true);
 		expect(result.items.every((item) => item.attachmentCountObserved >= 0)).toBe(true);
+		expect(result.items.find((item) => item.id === "message:64")?.attachmentCountObserved).toBe(0);
 		expect(result.summary.countMismatch).toBe(false);
 	});
 });

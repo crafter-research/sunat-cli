@@ -27,13 +27,21 @@ function item(id: string): BuzonItem {
 }
 
 function result(items: BuzonItem[]): Omit<BuzonListResult, "changes"> {
+	const summary = (kind: "message" | "notification") => ({
+		kind,
+		pagesFetched: 1,
+		observedCount: items.filter((entry) => entry.kind === kind).length,
+		reportedTotalsObserved: [],
+		reportedRecordsObserved: [],
+		countMismatch: false,
+	});
 	return {
 		version: "1.0.0",
 		fetchedAt: new Date().toISOString(),
 		source: "SUNAT Buzón SOL legacy visor",
 		readOnlyBoundary: "metadata-only",
 		overview: { foldersObserved: 0, alertsObserved: 0 },
-		summaries: [],
+		summaries: [summary("message"), summary("notification")],
 		items,
 	};
 }
@@ -105,6 +113,14 @@ describe("private Buzón state", () => {
 		applyBuzonChanges(result([item("message:1")]));
 		const state = JSON.parse(readFileSync(paths.buzonState, "utf8"));
 		delete state.changes.totalCount;
+		writeFileSync(paths.buzonState, JSON.stringify(state), { mode: 0o600 });
+		expect(() => readBuzonState()).toThrow(BuzonStateError);
+	});
+
+	test("rejects internally contradictory counts", () => {
+		applyBuzonChanges(result([item("message:1")]));
+		const state = JSON.parse(readFileSync(paths.buzonState, "utf8"));
+		state.changes.totalCount = 99;
 		writeFileSync(paths.buzonState, JSON.stringify(state), { mode: 0o600 });
 		expect(() => readBuzonState()).toThrow(BuzonStateError);
 	});

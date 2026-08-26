@@ -26,8 +26,8 @@ function nullableString(value: unknown): boolean {
 	return value === null || typeof value === "string";
 }
 
-function nonnegativeNumber(value: unknown): boolean {
-	return typeof value === "number" && Number.isFinite(value) && value >= 0;
+function nonnegativeInteger(value: unknown): boolean {
+	return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function validItem(value: unknown): boolean {
@@ -66,7 +66,7 @@ function validItem(value: unknown): boolean {
 		typeof value.urgentObserved === "boolean" &&
 		typeof value.starredObserved === "boolean" &&
 		typeof value.noticeObserved === "boolean" &&
-		nonnegativeNumber(value.attachmentCountObserved) &&
+		nonnegativeInteger(value.attachmentCountObserved) &&
 		nullableString(value.folderCodeObserved) &&
 		nullableString(value.labelCodeObserved) &&
 		typeof value.newSincePrevious === "boolean" &&
@@ -89,12 +89,12 @@ function validSummary(value: unknown): boolean {
 		return false;
 	return (
 		(value.kind === "message" || value.kind === "notification") &&
-		nonnegativeNumber(value.pagesFetched) &&
-		nonnegativeNumber(value.observedCount) &&
+		nonnegativeInteger(value.pagesFetched) &&
+		nonnegativeInteger(value.observedCount) &&
 		Array.isArray(value.reportedTotalsObserved) &&
-		value.reportedTotalsObserved.every(nonnegativeNumber) &&
+		value.reportedTotalsObserved.every(nonnegativeInteger) &&
 		Array.isArray(value.reportedRecordsObserved) &&
-		value.reportedRecordsObserved.every(nonnegativeNumber) &&
+		value.reportedRecordsObserved.every(nonnegativeInteger) &&
 		typeof value.countMismatch === "boolean"
 	);
 }
@@ -120,22 +120,35 @@ function validState(value: unknown): value is StoredBuzonState {
 		!exactKeys(value.changes, ["baselineCreated", "newCount", "knownCount", "missingCount", "totalCount"])
 	)
 		return false;
+	if (!Array.isArray(value.items) || !value.items.every(validItem)) return false;
+	if (!Array.isArray(value.summaries) || !value.summaries.every(validSummary)) return false;
+	const newCount = value.items.filter((item) => record(item) && item.newSincePrevious === true).length;
+	const summaryKinds = new Set(value.summaries.map((summary) => (record(summary) ? summary.kind : null)));
+	const summariesMatch = value.summaries.every(
+		(summary) =>
+			record(summary) &&
+			value.items.filter((item) => record(item) && item.kind === summary.kind).length === summary.observedCount,
+	);
 	return (
 		value.version === "1.0.0" &&
 		typeof value.fetchedAt === "string" &&
 		value.source === "SUNAT Buzón SOL legacy visor" &&
 		value.readOnlyBoundary === "metadata-only" &&
-		nonnegativeNumber(value.overview.foldersObserved) &&
-		nonnegativeNumber(value.overview.alertsObserved) &&
-		Array.isArray(value.summaries) &&
-		value.summaries.every(validSummary) &&
+		nonnegativeInteger(value.overview.foldersObserved) &&
+		nonnegativeInteger(value.overview.alertsObserved) &&
+		value.summaries.length === 2 &&
+		summaryKinds.size === 2 &&
+		summaryKinds.has("message") &&
+		summaryKinds.has("notification") &&
+		summariesMatch &&
 		typeof value.changes.baselineCreated === "boolean" &&
-		nonnegativeNumber(value.changes.newCount) &&
-		nonnegativeNumber(value.changes.knownCount) &&
-		nonnegativeNumber(value.changes.missingCount) &&
-		nonnegativeNumber(value.changes.totalCount) &&
-		Array.isArray(value.items) &&
-		value.items.every(validItem)
+		nonnegativeInteger(value.changes.newCount) &&
+		nonnegativeInteger(value.changes.knownCount) &&
+		nonnegativeInteger(value.changes.missingCount) &&
+		nonnegativeInteger(value.changes.totalCount) &&
+		value.changes.totalCount === value.items.length &&
+		value.changes.newCount === newCount &&
+		value.changes.knownCount === value.items.length - newCount
 	);
 }
 

@@ -9,7 +9,7 @@ function scalarString(value: unknown): string | null {
 
 function observedNumber(value: unknown): number | null {
 	const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-	return Number.isFinite(number) && number >= 0 ? number : null;
+	return Number.isSafeInteger(number) && number >= 0 ? number : null;
 }
 
 export function cleanBuzonText(value: unknown): string {
