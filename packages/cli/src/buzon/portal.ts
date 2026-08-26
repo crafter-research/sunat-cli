@@ -5,7 +5,7 @@ import { getCredentials } from "../data/config.ts";
 import { normalizeBuzonPages, pageEnd, pageRows } from "./normalize.ts";
 import type { BuzonKind, BuzonOverview, RawBuzonPage } from "./types.ts";
 
-const MENU_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm";
+const MENU_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*";
 const DETAIL_PATH = "/ol-ti-itvisornoti/visor/obtenerDetalleNotiMen";
 const DETAIL_ROUTE = `**${DETAIL_PATH}*`;
 const LIST_PATH = "/ol-ti-itvisornoti/visor/listNotiMenPag";

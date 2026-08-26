@@ -3,7 +3,7 @@ import { paths } from "../data/config.ts";
 import { solveReCaptcha } from "./captcha.ts";
 import * as browser from "./client.ts";
 
-const SOL_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm";
+const SOL_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*";
 const NUEVA_PLATAFORMA_URL =
 	"https://api-seguridad.sunat.gob.pe/oauth2/login?originalUrl=https://e-menu.sunat.gob.pe/cl-ti-itmenu2/AutenticaMenuInternetPlataforma.htm";
 

@@ -107,8 +107,6 @@ Period format is `MMAAAA`, **6 characters, no slash**, and **the range cannot
 exceed 6 months**. There is no general "constancia de no adeudo" for internal
 taxes; this listing is the closest thing, and it exports to a file.
 
-## Login
-
 ## Buzón SOL metadata
 
 Base: `https://ww1.sunat.gob.pe/ol-ti-itvisornoti/visor`
@@ -134,7 +132,7 @@ have contradicted each other live. The CLI preserves them separately.
 ## Login
 
 ```
-GET e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm
+GET e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*
 GET api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-.../oauth2/authen
 GET api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-.../oauth2/loginMenuSol
 ```
