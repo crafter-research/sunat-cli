@@ -5,14 +5,18 @@
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | empresa | string(100) | yes | - | Company/person name receiving the service |
-| tipoDoc | enum | no | SIN DOCUMENTO | SIN DOCUMENTO, RUC, DNI, CARNET DE EXTRANJERIA, PASAPORTE, CED. DIPLOMATICA DE IDENTIDAD |
+| tipoDoc | enum | no | SIN DOCUMENTO | Only SIN DOCUMENTO is verified. RUC/DNI require an uncaptured validation transition. |
 | descripcion | string(200) | yes | - | Service description |
-| monto | number | yes | - | Total amount (0.01-1000000). USD auto-converts to PEN |
+| monto | number | yes | - | Total amount (0.01-1000000). The captured flow used PEN; preview USD before live use. |
 | moneda | enum | no | PEN | PEN or USD |
 | medioPago | enum | no | TRANSFERENCIA | DEPOSITO, GIRO, TRANSFERENCIA, ORDEN DE PAGO, TARJETA DEBITO, TARJETA CREDITO, CHEQUE, EFECTIVO |
-| fechaEmision | date | no | today | The portal refuses anything older than 2 days. **Accepted by the CLI but never written to the form**, and returned in the result as if it had been |
+| fechaEmision | date | no | today | YYYY-MM-DD. Written as DD/MM/YYYY. The observed portal accepts today or the previous 2 days. |
 
 Portal: SOL viejo (e-menu.sunat.gob.pe/cl-ti-itmenu/) -- no captcha.
+
+`--dry-run` validates locally. `--preview-only` sends the stateful form endpoint
+through the server draft, renders it in the iframe and stops at the reconciled
+`Emitir Recibo` page. Submission requires `--yes --live-sunat`.
 
 ## F616 Declare Fields
 

@@ -87,6 +87,24 @@ SUNAT publishes a rate for every calendar day, weekends included.
 | `15.1.1.1.1` | Consulta de Valores Pendientes de Pago |
 | `12.1.1.1.4` | Consulta de Declaraciones Juradas y Pagos |
 
+### RHE emission
+
+Menu SOL action `11.5.1.1.2` mints a fresh entry URL. A direct GET of that URL
+needs no imported browser cookies and creates the RHE form session. Every later
+stage posts to `/ol-ti-itreciboelectronico/cpelec001Alias`:
+
+| Stage | `accion` |
+|---|---|
+| Deduction | `RHEDeduccion1` |
+| Identity | `CapturaDatosReciboHonorariosIdentidad` |
+| Details and server preview | `CapturaDatosReciboHonorarios` |
+| Production submission | `GrabaReciboHonorarios` |
+
+The entry URL carries six required query fields: `accion`, `p`, `tenc`, `prg`,
+`fecenv` and `usub`. Treat the whole URL as a secret. Direct HTTP is verified
+through preview for `CONTADO` + `SIN DOCUMENTO`; the final submission remains a
+browser confirmation. The raw HAR is private and excluded from the repository.
+
 ### Reporte Tributario para Terceros
 
 `/ol-ti-itreportetri/reportetri.htm` → tick `#chkAceptar`, then `#btnAceptar`,

@@ -182,11 +182,11 @@ authorizes rather than a residual browser session.
 
 ## RHE / F616 — Personas Naturales (legacy, pre-existing)
 
-These predate the agent-first refactor and use the older agent-browser scraping path. Not part of recent PRs but documenting for completeness:
+These surfaces still need browser bootstrap, but RHE no longer fills identity and detail fields through DOM automation:
 
-- ⚠️ **Browser scraping** — uses `agent-browser` to drive the SOL portal directly. Brittle to UI changes. Currently working but expect maintenance.
+- ⚠️ **Browser boundary** — RHE uses direct HTTP through preview, but Menu SOL bootstrap and the final legal confirmation still depend on the headed portal.
 - ⚠️ **reCAPTCHA via mouse coordinates** — F616 (Nueva Plataforma) requires solving reCAPTCHA. Solved via coordinate injection. Documented as fragile in `CLAUDE.md`.
-- ✅ **RHE emission**: verified working against the SUNAT portal.
+- ⚠️ **RHE emission**: direct deduction, identity and details POSTs were replayed with varied inputs and rendered back into the live draft preview for `CONTADO` + `SIN DOCUMENTO`. `GrabaReciboHonorarios` was not called during implementation, so a new production emission is still unverified.
 - ✅ **F616 declaration**: verified working against the SUNAT portal.
 
 ---

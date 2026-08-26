@@ -43,36 +43,37 @@ Linux stores secrets through `secret-tool` / libsecret.
 ### RHE (Recibo por Honorarios)
 
 ```bash
-# Emit single RHE
+# Build and reconcile one RHE draft in SUNAT
 sunat-cli rhe emit --params '{
   "empresa": "Cliente Ejemplo",
   "tipoDoc": "SIN DOCUMENTO",
   "descripcion": "Servicios de desarrollo de software",
   "monto": 6700,
-  "moneda": "USD",
+  "moneda": "PEN",
   "medioPago": "TRANSFERENCIA"
-}'
+}' --preview-only
 
-# Preview without submitting
+# Validate locally without opening SUNAT
 sunat-cli rhe emit --params '...' --dry-run
 
-# Batch from CSV
-sunat-cli rhe emit --batch recibos.csv
+# Reach SUNAT's server preview by direct HTTP and render it for review
+sunat-cli rhe emit --params '...' --preview-only
 
-# List issued RHEs
-sunat-cli rhe list
+# Emit only after visually checking the preview
+sunat-cli rhe emit --params '...' --yes --live-sunat
 
-# Verify registration
-sunat-cli rhe verify --month 2026-03
+# Validate a CSV batch locally
+sunat-cli rhe emit --batch recibos.csv --dry-run
 ```
 
 **RHE fields**: See `references/schemas.md` for full field specs.
 
 Key rules:
-- `tipoDoc`: Use `SIN DOCUMENTO` for foreign companies (no RUC/DNI)
-- `moneda`: USD auto-converts to PEN at SUNAT exchange rate
-- `fechaEmision`: Max 2-3 days retroactive
-- Auth: SOL viejo portal, no captcha
+- `tipoDoc`: Only `SIN DOCUMENTO` is verified. RUC/DNI need a separate authorized capture.
+- `fechaEmision`: Sent as DD/MM/YYYY and reconciled against the rendered preview. The observed portal accepts today or the previous 2 days.
+- The observed path is `CONTADO`, non-gratuito, inciso A, no withholding and fully paid at emission.
+- Auth: headed SOL bootstrap; direct HTTP through preview; browser confirmation for the final legal submission.
+- Live batches are disabled. Validate CSV with `--dry-run`, then preview and emit each RHE individually.
 
 ### F616 (Monthly Tax Declaration)
 
@@ -550,8 +551,8 @@ not as an error.
 
 **Emit an RHE**:
 1. `sunat-cli login`
-2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA"}'`
-3. `sunat-cli rhe verify --month 2026-03`
+2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Agosto 2026","monto":6700,"moneda":"PEN","medioPago":"TRANSFERENCIA"}' --preview-only`
+3. Check the headed browser, then rerun with `--yes --live-sunat`
 
 ## Error Handling
 

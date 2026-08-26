@@ -124,3 +124,33 @@ describe("deprecation notice shape", () => {
 		expect(stderr.match(/--json is deprecated/g)).toHaveLength(1);
 	});
 });
+
+describe("RHE live boundary", () => {
+	test("requires both live acknowledgements before opening SUNAT", async () => {
+		const { stderr } = await run(["rhe", "emit", "--params", RHE_PAYLOAD]);
+		expect(stderr).toContain("requires both --yes and --live-sunat");
+	});
+
+	test("documents the portal preview and live acknowledgements", async () => {
+		const { stdout } = await run(["rhe", "emit", "--help"]);
+		expect(stdout).toContain("--preview-only");
+		expect(stdout).toContain("--yes");
+		expect(stdout).toContain("--live-sunat");
+	});
+
+	test("publishes the gated RHE contract as schema v2", async () => {
+		const { stdout } = await run(["schema", "rhe"]);
+		expect(JSON.parse(stdout).version).toBe("2.0.0");
+	});
+
+	test("rejects unsupported document-backed recipients during dry-run", async () => {
+		const payload = JSON.stringify({ ...JSON.parse(RHE_PAYLOAD), tipoDoc: "RUC" });
+		const { stderr } = await run(["rhe", "emit", "--params", payload, "--dry-run"]);
+		expect(stderr).toContain("supports tipoDoc SIN DOCUMENTO only");
+	});
+
+	test("disables live batch emission before reading the CSV", async () => {
+		const { stderr } = await run(["rhe", "emit", "--batch", "missing.csv", "--yes", "--live-sunat"]);
+		expect(stderr).toContain("Live RHE batch emission is disabled");
+	});
+});

@@ -95,25 +95,37 @@ agent-browser eval "ejecuta('MenuInternetPlataforma.htm?action=iconExecute&code=
 
 ## RHE Emission Workflow (SOL viejo)
 
-### Form Structure (3 steps)
+Observed from an authorized Chrome HAR captured on 2026-08-26. The raw HAR stays
+outside the repository because it carries cookies, tokens, request bodies and tax
+data. SHA-256: `18ae5b873812b8386839a8dab7244e5d3242832295257f1fcda0613a9ce68710`.
 
-**Step 1: Pre-question**
-- "Deduccion adicional de renta (3 UIT)?" → "No" is pre-selected
-- Click "Continuar"
+All form transitions POST to
+`/ol-ti-itreciboelectronico/cpelec001Alias` inside the authenticated iframe:
 
-**Step 2: Client Info**
-- Tipo Documento: dropdown → select "SIN DOCUMENTO" for foreign companies
-- When SIN DOCUMENTO selected: numero field disables, nombre field enables
-- Fill empresa name in nombre field
-- Click "Continuar"
+| Stage | Action | Observed contract |
+|---|---|---|
+| Menu bootstrap | GET `accion=EmisionRHE` | fresh `p`, `tenc`, `prg`, `fecenv`, `usub` query bundle |
+| Deduction | `RHEDeduccion1` | `inddeduccion=0`, `deduccion=0` |
+| Identity | `CapturaDatosReciboHonorariosIdentidad` | `formaPago=CONTADO`, `tipdoc=-`, `nombrecliente` |
+| Details | `CapturaDatosReciboHonorarios` | `motivo`, `fecemi`, `cantidad`, `moneda`, `mediopago`, renta/payment indicators |
+| Submit | `GrabaReciboHonorarios` | reached only from the rendered `Emitir Recibo` preview |
+| Confirmation | rendered document | exposes download, print and `Registrar Pagos` controls |
 
-**Step 3: Service Details + Amount**
-Fields (refs change each load, find by type/label):
-- Descripcion: first enabled textbox in iframe
-- Medio de Pago: combobox containing "Seleccione Medio de Pago"
-- Moneda: combobox showing "SOL" (change to "DOLAR DE NORTE AMERICA" for USD)
-- Monto Total: textbox with value "0.0"
-- Click "Continuar" → preview → "Emitir"/"Aceptar" → confirmation
+The captured recipient path was `SIN DOCUMENTO`. RUC and DNI add a separate
+`Validar RUC o DNI` transition that was not present, so the CLI must not claim
+that path until another authorized capture proves it.
+
+The captured receipt used `CONTADO`, `PEN`, service not gratuito, fourth-category
+inciso A, no withholding, full payment at emission, and payment medium code
+`001`. Payment medium codes observed in the form run from `001` through `013`;
+the CLI maps its existing eight public values to `001` through `008`.
+
+Live recon showed that a fresh Menu SOL entry URL can bootstrap a separate HTTP
+session without importing browser cookies. The CLI keeps the authenticated
+browser open for supervision, sends deduction, identity and details directly by
+HTTP, renders the returned draft back into the iframe, then reconciles client,
+description, date, currency and totals. `GrabaReciboHonorarios` remains a DOM
+confirmation and runs only when both `--yes` and `--live-sunat` are present.
 
 ### Gotchas
 
@@ -122,17 +134,13 @@ Fields (refs change each load, find by type/label):
    agent-browser eval "window.onbeforeunload = null"
    ```
 
-2. **Iframes everywhere**: SOL wraps every form in an iframe. agent-browser reads refs inside iframes automatically — no frame switching needed.
+2. **Iframes everywhere**: SOL wraps the form in a cross-origin iframe. CDP supplies the execution context that carries the form-session cookies and renders the direct HTTP preview.
 
 3. **Backend endpoint**: POST `https://ww1.sunat.gob.pe/ol-ti-itreciboelectronico/cpelec001Alias`
 
-4. **Date restriction**: SUNAT allows max 2-3 days retroactive for RHE dates. For regularizacion, all RHEs get today's date.
+4. **Date restriction**: the observed portal accepts today or the previous two days. This is portal behavior, not a published SUNAT contract.
 
-5. **Medio de Pago values** (exact strings SUNAT expects):
-   - "Deposito en Cuenta"
-   - "Transferencia de Fondos"
-   - "Tarjeta de Debito"
-   - "Efectivo - por operaciones donde no existe obligacion de utilizar Medios de Pago"
+5. **Medio de Pago values** are submitted as codes. `001` is deposit, `003` transfer, `005` debit card and `008` cash where no payment-medium obligation exists.
 
 ---
 
@@ -246,11 +254,11 @@ The JWT payload contains the API base URLs:
 | GRE Emision Comprobantes | `/v1/contribuyente/gem` | Guias de Remision (NOT RHE) |
 | MIGE RCE y RVIE - SIRE | `/v1/contribuyente/migeigv` | Registro compras/ventas |
 
-### Important: No RHE API Exists
+### Important: No public RHE issuance API exists
 
-The GRE (Guia de Remision Electronica) endpoint is for shipping guides, **not** Recibos por Honorarios. There is no public REST API for emitting RHE — browser automation is the only way.
+The GRE (Guia de Remision Electronica) endpoint is for shipping guides, **not** Recibos por Honorarios. SUNAT does not publish a REST API for issuing RHE. The legacy issuer is nevertheless a replayable, stateful HTML endpoint through the legally invalid preview. Menu SOL must still mint the entry URL, and the final legal confirmation stays supervised in the browser.
 
-The API is useful for **verification** after emitting RHE via browser.
+The public API remains useful for **verification** after issuance.
 
 ---
 

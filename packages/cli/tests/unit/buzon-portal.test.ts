@@ -15,7 +15,7 @@ describe("Buzón portal boundary", () => {
 		expect(AUTH_SOURCE).toContain("MenuInternet.htm?pestana=*&agrupacion=*");
 		expect(PORTAL_SOURCE).toContain("SOL_MENU_URL");
 		expect(F616_SOURCE).toContain("SOL_MENU_URL");
-		expect(RHE_SOURCE).toContain("SOL_MENU_URL");
+		expect(RHE_SOURCE).toContain('connect({ pageUrl: "MenuInternet", origin: "ww1.sunat.gob.pe", probe })');
 		expect(F616_SOURCE).not.toContain('browser.open("https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm"');
 		expect(route).toBeGreaterThan(-1);
 		expect(click).toBeGreaterThan(route);

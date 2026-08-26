@@ -10,9 +10,9 @@
 		},
 		"tipoDoc": {
 			"type": "enum",
-			"values": ["SIN DOCUMENTO", "RUC", "DNI", "CARNET DE EXTRANJERIA", "PASAPORTE", "CED. DIPLOMATICA DE IDENTIDAD"],
+			"values": ["SIN DOCUMENTO"],
 			"default": "SIN DOCUMENTO",
-			"description": "Client document type. Use SIN DOCUMENTO for foreign companies."
+			"description": "Verified recipient path. RUC and DNI require a separate validation transition not present in the captured flow."
 		},
 		"descripcion": {
 			"type": "string",
@@ -31,7 +31,7 @@
 			"type": "enum",
 			"values": ["PEN", "USD"],
 			"default": "PEN",
-			"description": "Currency. PEN for soles, USD for dollars (auto-converts)."
+			"description": "Currency. PEN was present in the captured flow; reconcile USD with --preview-only before live use."
 		},
 		"medioPago": {
 			"type": "enum",
@@ -52,13 +52,15 @@
 			"type": "date",
 			"format": "YYYY-MM-DD",
 			"default": "today",
-			"description": "Emission date. SUNAT allows max 2-3 days retroactive."
+			"description": "Emission date. The observed portal accepts today or the previous 2 days."
 		}
 	},
 	"flags": {
-		"--dry-run": "Preview the RHE without submitting to SUNAT",
+		"--dry-run": "Validate and print the payload without opening SUNAT",
+		"--preview-only": "Fill SUNAT, reconcile the rendered preview, and stop before Emitir Recibo",
+		"--yes --live-sunat": "Required together to invoke the production submission",
 		"--output json": "Machine-readable JSON output",
-		"--batch <file>": "Process multiple RHEs from CSV file"
+		"--batch <file>": "Validate multiple RHEs from CSV with --dry-run; live batches are disabled"
 	},
 	"auth": "Requires SOL session. Run 'sunat-cli login' first.",
 	"portal": "SOL viejo (e-menu.sunat.gob.pe/cl-ti-itmenu/) — NO CAPTCHA"

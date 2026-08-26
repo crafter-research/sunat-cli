@@ -4,7 +4,8 @@ SUNAT tax automation via `npx @crafter/sunat-cli` (or `sunat-cli` if globally in
 
 Install: `npm install -g @crafter/sunat-cli`. Runs on Node, no Bun needed.
 
-RHE, F616 and the portal scrapers drive a real browser through
+RHE uses a real browser for SOL bootstrap and final confirmation, with direct
+HTTP form transitions through the server preview. F616 and portal scrapers use
 [agent-browser](https://github.com/vercel-labs/agent-browser), which is a
 separate binary rather than a bundled dependency:
 
@@ -45,41 +46,42 @@ For non-interactive setup, pipe the secret with `sunat-cli keychain set SUNAT_PA
 ### RHE (Recibo por Honorarios)
 
 ```bash
-# Emit single RHE
+# Build and reconcile one RHE draft in SUNAT
 sunat-cli rhe emit --params '{
   "empresa": "Cliente Ejemplo",
   "tipoDoc": "SIN DOCUMENTO",
   "descripcion": "Servicios de desarrollo de software",
   "monto": 6700,
-  "moneda": "USD",
+  "moneda": "PEN",
   "medioPago": "TRANSFERENCIA"
-}'
+}' --preview-only
 
-# Preview without submitting
+# Validate locally without opening SUNAT
 sunat-cli rhe emit --params '...' --dry-run
 
-# Batch from CSV
-sunat-cli rhe emit --batch recibos.csv
+# Reach SUNAT's server preview by direct HTTP and render it for review
+sunat-cli rhe emit --params '...' --preview-only
 
-# List issued RHEs
-sunat-cli rhe list
+# Emit only after visually checking the preview
+sunat-cli rhe emit --params '...' --yes --live-sunat
 
-# Verify registration
-sunat-cli rhe verify --month 2026-03
+# Validate a CSV batch locally
+sunat-cli rhe emit --batch recibos.csv --dry-run
 ```
 
 **RHE fields**: `sunat-cli skills get schemas` for the full field specs.
 
 Key rules:
-- `tipoDoc`: Use `SIN DOCUMENTO` for foreign companies (no RUC/DNI)
-- `moneda`: USD requires explicit `tipoCambio` in beta
+- `tipoDoc`: Only `SIN DOCUMENTO` is verified. RUC/DNI have an additional validation transition that still needs an authorized capture.
+- `moneda`: The captured HAR used PEN. Always reconcile USD with `--preview-only` before live use.
 - `fechaEmision`: the portal refuses anything older than 2 days. Measured, not
   documented by SUNAT: no published resolution sets that limit, but the form
   enforces it with an alert that closes on its own (invisible to snapshots; the
   visible symptom is that the form simply does not advance).
-- `fechaEmision` **is accepted but never written to the form** by `rhe emit`, and
-  still comes back in the result as if it had been. Check before trusting a batch.
-- Auth: SOL viejo portal through headed browser automation. Captcha/session behavior can change, so keep it supervised.
+- `fechaEmision` is sent as `fecemi` in DD/MM/YYYY and reconciled against the rendered server preview.
+- The observed flow is `CONTADO`, non-gratuito, inciso A, no withholding and fully paid at emission.
+- Auth: headed SOL bootstrap; deduction, identity and details go by direct HTTP; final confirmation remains supervised in the browser.
+- Live batches are disabled. Validate CSV with `--dry-run`, then preview and emit each RHE individually.
 
 ### F616 (Monthly Tax Declaration)
 
@@ -206,8 +208,8 @@ form between periods**. Eight periods spanning nine months were filed this way o
 
 **Emit an RHE**:
 1. `sunat-cli login`
-2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Marzo 2026","monto":6700,"moneda":"USD","medioPago":"TRANSFERENCIA","tipoCambio":3.75}' --dry-run`
-3. `sunat-cli rhe verify --month 2026-03`
+2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Agosto 2026","monto":6700,"moneda":"PEN","medioPago":"TRANSFERENCIA"}' --preview-only`
+3. Check the headed browser, then rerun with `--yes --live-sunat`
 
 ## Error Handling
 
