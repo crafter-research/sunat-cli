@@ -9,7 +9,7 @@ const nodeProxy =
 
 function invocation(args: string[]): { command: string; args: string[] } {
 	if (process.platform === "win32" && process.versions.bun) {
-		return { command: "node", args: ["-e", nodeProxy, crossSpawnPath, ...args] };
+		return { command: "node", args: ["-e", nodeProxy, "--", crossSpawnPath, ...args] };
 	}
 	return { command: "agent-browser", args };
 }
@@ -63,11 +63,12 @@ export function requireAgentBrowser(status: BinaryStatus = probeAgentBrowser()):
 }
 
 /** Cheap presence probe for `doctor`. Never throws. */
-export function probeAgentBrowser(): BinaryStatus {
+export function probeAgentBrowser(env: NodeJS.ProcessEnv = process.env): BinaryStatus {
 	try {
 		const target = invocation(["--version"]);
 		const result = crossSpawn.sync(target.command, target.args, {
 			encoding: "utf-8",
+			env,
 			timeout: 10000,
 			stdio: ["ignore", "pipe", "ignore"],
 		});
