@@ -68,7 +68,7 @@ type SchemaName = (typeof AVAILABLE_SCHEMAS)[number];
 // only when the described contract changes, so an agent diffing it does not
 // see churn from unrelated releases. Bump on any field, flag or shape change.
 const SCHEMA_VERSIONS: Record<SchemaName, string> = {
-	rhe: "2.0.0",
+	rhe: "3.0.0",
 	f616: "1.0.0",
 	renta: "1.0.0",
 	buzon: "1.0.0",

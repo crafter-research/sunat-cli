@@ -110,6 +110,8 @@ All form transitions POST to
 | Details | `CapturaDatosReciboHonorarios` | `motivo`, `fecemi`, `cantidad`, `moneda`, `mediopago`, renta/payment indicators |
 | Submit | `GrabaReciboHonorarios` | reached only from the rendered `Emitir Recibo` preview |
 | Confirmation | rendered document | exposes download, print and `Registrar Pagos` controls |
+| XML | `descargarreciboxml1` | confirmation form POST with no additional fields |
+| PDF | `descargarrecibopdf1` | confirmation form POST with no additional fields |
 
 The captured recipient path was `SIN DOCUMENTO`. RUC and DNI add a separate
 `Validar RUC o DNI` transition that was not present, so the CLI must not claim
@@ -126,6 +128,11 @@ browser open for supervision, sends deduction, identity and details directly by
 HTTP, renders the returned draft back into the iframe, then reconciles client,
 description, date, currency and totals. `GrabaReciboHonorarios` remains a DOM
 confirmation and runs only when both `--yes` and `--live-sunat` are present.
+After confirmation, both artifact actions can run by direct HTTP in the same
+session. The HAR contains their forms but not the resulting requests, so live
+response MIME and content-disposition remain unverified. The implementation
+accepts only structurally valid XML and `%PDF-` bytes and treats download errors
+as post-submit artifact failures rather than failed issuance.
 
 ### Gotchas
 

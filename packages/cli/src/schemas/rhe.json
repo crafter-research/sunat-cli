@@ -58,6 +58,7 @@
 	"flags": {
 		"--dry-run": "Validate and print the payload without opening SUNAT",
 		"--preview-only": "Fill SUNAT, reconcile the rendered preview, and stop before Emitir Recibo",
+		"--artifacts-dir <dir>": "Private destination for XML and PDF after issuance; defaults to ~/Downloads/sunat-rhe",
 		"--yes --live-sunat": "Required together to invoke the production submission",
 		"--output json": "Machine-readable JSON output",
 		"--batch <file>": "Validate multiple RHEs from CSV with --dry-run; live batches are disabled"

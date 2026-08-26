@@ -1,5 +1,8 @@
+import { resolve } from "node:path";
+import { XMLValidator } from "fast-xml-parser";
 import { type CdpSession, connect } from "../browser/cdp.ts";
 import * as browser from "../browser/client.ts";
+import { writePrivateOutputFile } from "../data/private-storage.ts";
 import type { MedioPago, TipoDocumento } from "../validation/input.ts";
 
 export interface RHEInput {
@@ -27,6 +30,30 @@ export interface RHEResult extends Omit<RHEPreview, "status"> {
 	status: "issued" | "submitted-unverified";
 	serie?: string;
 	numero?: string;
+	artifacts?: RHEArtifactsResult;
+}
+
+export type RHEArtifactKind = "xml" | "pdf";
+
+export interface RHEArtifactFile {
+	path: string;
+	bytes: number;
+	contentType: string;
+}
+
+export interface RHEArtifactsResult {
+	status: "downloaded" | "partial" | "unavailable";
+	directory: string;
+	xml?: RHEArtifactFile;
+	pdf?: RHEArtifactFile;
+	errors?: Partial<Record<RHEArtifactKind, string>>;
+}
+
+interface RHEArtifactResponse {
+	ok: boolean;
+	status: number;
+	contentType: string;
+	base64: string;
 }
 
 const DOCUMENTO_SUNAT: Record<TipoDocumento, string> = {
@@ -141,9 +168,37 @@ export function extractRHEConfirmation(text: string): { serie?: string; numero?:
 	return { serie: match[1].toUpperCase(), numero: match[2] };
 }
 
+export function buildRHEArtifactParams(kind: RHEArtifactKind): URLSearchParams {
+	return new URLSearchParams({ accion: kind === "xml" ? "descargarreciboxml1" : "descargarrecibopdf1" });
+}
+
+export function decodeRHEArtifact(kind: RHEArtifactKind, response: RHEArtifactResponse): Buffer {
+	if (!response.ok || response.status !== 200) {
+		throw new Error(`SUNAT ${kind.toUpperCase()} download returned HTTP ${response.status || "network-error"}`);
+	}
+	const data = Buffer.from(response.base64, "base64");
+	if (data.length === 0) throw new Error(`SUNAT ${kind.toUpperCase()} download returned an empty file`);
+	const prefix = data
+		.subarray(0, 512)
+		.toString("utf8")
+		.replace(/^\uFEFF/, "")
+		.trimStart();
+	if (response.contentType.toLowerCase().includes("text/html") || /^<!doctype html|^<html\b/i.test(prefix)) {
+		throw new Error(`SUNAT returned an HTML page instead of the ${kind.toUpperCase()} artifact`);
+	}
+	if (kind === "pdf" && !data.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+		throw new Error("SUNAT PDF download did not contain a PDF signature");
+	}
+	if (kind === "xml") {
+		const validation = XMLValidator.validate(data.toString("utf8").replace(/^\uFEFF/, ""));
+		if (validation !== true) throw new Error("SUNAT XML download did not contain valid XML");
+	}
+	return data;
+}
+
 export async function emitRHE(
 	input: RHEInput,
-	opts: { previewOnly?: boolean; beforeSubmit?: () => void | Promise<void> } = {},
+	opts: { previewOnly?: boolean; artifactsDir?: string; beforeSubmit?: () => void | Promise<void> } = {},
 ): Promise<RHEPreview | RHEResult> {
 	if (input.tipoDoc !== "SIN DOCUMENTO") {
 		throw new Error(
@@ -235,11 +290,80 @@ export async function emitRHE(
 		return JSON.parse(String(raw)) as { serie?: string; numero?: string };
 	});
 
+	let artifacts: RHEArtifactsResult | undefined;
+	if (opts.artifactsDir) {
+		try {
+			artifacts = await downloadRHEArtifacts(opts.artifactsDir, confirmation, input.fechaEmision);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "RHE artifact download failed";
+			artifacts = {
+				status: "unavailable",
+				directory: resolve(opts.artifactsDir),
+				errors: { xml: message, pdf: message },
+			};
+		}
+	}
+
 	return {
 		...preview,
 		status: confirmation.serie && confirmation.numero ? "issued" : "submitted-unverified",
 		...confirmation,
+		...(artifacts ? { artifacts } : {}),
 	};
+}
+
+async function downloadRHEArtifacts(
+	directory: string,
+	confirmation: { serie?: string; numero?: string },
+	fechaEmision: string,
+): Promise<RHEArtifactsResult> {
+	const xmlAction = buildRHEArtifactParams("xml").get("accion");
+	const pdfAction = buildRHEArtifactParams("pdf").get("accion");
+	const responses = await onRHEPage(
+		`!!document.forms.lista4&&!!document.forms.lista5&&/descargarreciboxml1/i.test(document.forms.lista4.innerHTML)&&/descargarrecibopdf1/i.test(document.forms.lista5.innerHTML)`,
+		async (session) => {
+			const raw = await evaluate(
+				session,
+				`(async function(){var endpoint='/ol-ti-itreciboelectronico/cpelec001Alias';var download=async function(action){try{var response=await fetch(endpoint,{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({accion:action})});var blob=await response.blob();var base64=await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){var value=String(reader.result||'');resolve(value.slice(value.indexOf(',')+1))};reader.onerror=function(){reject(new Error('read-failed'))};reader.readAsDataURL(blob)});return {ok:response.ok,status:response.status,contentType:response.headers.get('content-type')||'',base64:base64}}catch(error){return {ok:false,status:0,contentType:'',base64:''}}};var xml=await download(${JSON.stringify(xmlAction)});var pdf=await download(${JSON.stringify(pdfAction)});return JSON.stringify({xml:xml,pdf:pdf})})()`,
+			);
+			return JSON.parse(String(raw)) as Record<RHEArtifactKind, RHEArtifactResponse>;
+		},
+	);
+
+	const targetDirectory = resolve(directory);
+	const stem =
+		confirmation.serie && confirmation.numero
+			? `RHE-${confirmation.serie}-${confirmation.numero}`
+			: `RHE-${fechaEmision}-${Date.now()}`;
+	const result: RHEArtifactsResult = { status: "unavailable", directory: targetDirectory };
+	const errors: Partial<Record<RHEArtifactKind, string>> = {};
+	for (const kind of ["xml", "pdf"] as const) {
+		try {
+			const data = decodeRHEArtifact(kind, responses[kind]);
+			const path = resolve(targetDirectory, `${stem}.${kind}`);
+			writePrivateOutputFile(path, data);
+			result[kind] = {
+				path,
+				bytes: data.length,
+				contentType: normalizeRHEArtifactContentType(kind, responses[kind].contentType),
+			};
+		} catch (error) {
+			errors[kind] = error instanceof Error ? error.message : `RHE ${kind.toUpperCase()} download failed`;
+		}
+	}
+	const count = Number(Boolean(result.xml)) + Number(Boolean(result.pdf));
+	result.status = count === 2 ? "downloaded" : count === 1 ? "partial" : "unavailable";
+	if (Object.keys(errors).length > 0) result.errors = errors;
+	return result;
+}
+
+function normalizeRHEArtifactContentType(kind: RHEArtifactKind, value: string): string {
+	const contentType = value.split(";", 1)[0].trim().toLowerCase();
+	return /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(contentType)
+		? contentType
+		: kind === "xml"
+			? "application/xml"
+			: "application/pdf";
 }
 
 async function onRHEPage<T>(probe: string, run: (session: CdpSession) => Promise<T>): Promise<T> {

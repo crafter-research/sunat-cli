@@ -62,8 +62,11 @@ sunat-cli rhe emit --params '...' --dry-run
 # Reach SUNAT's server preview by direct HTTP and render it for review
 sunat-cli rhe emit --params '...' --preview-only
 
-# Emit only after visually checking the preview
+# Emit only after visually checking the preview; XML and PDF go to Downloads/sunat-rhe
 sunat-cli rhe emit --params '...' --yes --live-sunat
+
+# Choose another private artifact directory
+sunat-cli rhe emit --params '...' --yes --live-sunat --artifacts-dir /absolute/path/rhe
 
 # Validate a CSV batch locally
 sunat-cli rhe emit --batch recibos.csv --dry-run
@@ -81,6 +84,7 @@ Key rules:
 - `fechaEmision` is sent as `fecemi` in DD/MM/YYYY and reconciled against the rendered server preview.
 - The observed flow is `CONTADO`, non-gratuito, inciso A, no withholding and fully paid at emission.
 - Auth: headed SOL bootstrap; deduction, identity and details go by direct HTTP; final confirmation remains supervised in the browser.
+- After confirmation, the CLI posts `descargarreciboxml1` and `descargarrecibopdf1` through the same form session, validates both files and returns their private local paths. Artifact failure is reported separately from issuance status.
 - Live batches are disabled. Validate CSV with `--dry-run`, then preview and emit each RHE individually.
 
 ### F616 (Monthly Tax Declaration)
@@ -209,7 +213,7 @@ form between periods**. Eight periods spanning nine months were filed this way o
 **Emit an RHE**:
 1. `sunat-cli login`
 2. `sunat-cli rhe emit --params '{"empresa":"Cliente Ejemplo","tipoDoc":"SIN DOCUMENTO","descripcion":"Servicios de desarrollo de software - Agosto 2026","monto":6700,"moneda":"PEN","medioPago":"TRANSFERENCIA"}' --preview-only`
-3. Check the headed browser, then rerun with `--yes --live-sunat`
+3. Check the headed browser, then rerun with `--yes --live-sunat`; the result includes the XML and PDF paths
 
 ## Error Handling
 

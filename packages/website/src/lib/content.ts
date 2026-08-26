@@ -1,6 +1,6 @@
 import type { Locale } from "./i18n";
 
-export const VERSION = "0.14.0";
+export const VERSION = "0.15.0";
 
 /**
  * Copy lives per locale rather than as a key/value dictionary with one canonical
@@ -131,7 +131,7 @@ const es: Content = {
 			{
 				title: "Rentas de cuarta",
 				scope: "RHE y F616",
-				desc: "En RHE, el navegador obtiene la entrada SOL, HTTP llega hasta el borrador y la confirmación legal queda visible y bloqueada. F616 conserva su lectura headless por API.",
+				desc: "En RHE, el navegador obtiene la entrada SOL, HTTP llega al borrador, la confirmación legal queda supervisada y la descarga XML/PDF está conectada para validarla en la próxima emisión real. F616 conserva su lectura headless por API.",
 				code: '$ sunat-cli rhe emit \\\n    --params \'{"empresa":"Cliente","descripcion":"Servicio","monto":100}\' --preview-only',
 			},
 			{
@@ -164,7 +164,7 @@ const es: Content = {
 		heading: "Endpoints primero, navegador en el borde",
 		prose: [
 			"La página del F616 parece un formulario. Es una aplicación de una sola página hablando con una API JSON, y los campos del formulario son la forma menos confiable de llegar ahí.",
-			"RHE es distinto: Menu SOL genera una entrada efímera y el backend responde HTML. La CLI usa HTTP para deducción, identidad y detalles, vuelve a renderizar el borrador y reserva el DOM para la confirmación legal final.",
+			"RHE es distinto: Menu SOL genera una entrada efímera y el backend responde HTML. La CLI usa HTTP para deducción, identidad y detalles, vuelve a renderizar el borrador, reserva el DOM para la confirmación legal y conecta XML/PDF por endpoint después de emitir.",
 		],
 		steps: [
 			{
@@ -180,7 +180,7 @@ const es: Content = {
 			{
 				n: "03",
 				title: "Confirmar",
-				desc: "Para RHE, renderiza el borrador y mantiene la acción legal final bajo control humano.",
+				desc: "Para RHE, mantiene la acción legal bajo control humano y después valida y guarda los archivos si SUNAT responde con XML/PDF reales.",
 			},
 		],
 	},
@@ -210,7 +210,7 @@ const es: Content = {
 			},
 			{
 				domain: "RHE y F616",
-				detail: "RHE hasta borrador; F616 lectura API",
+				detail: "RHE supervisado; XML/PDF conectado, falta live",
 				pct: 85,
 				state: "partial",
 			},
@@ -404,7 +404,7 @@ const en: Content = {
 			{
 				title: "Independent worker filings",
 				scope: "RHE and F616",
-				desc: "For RHE, the browser obtains the SOL entry, HTTP reaches the draft, and the legal confirmation stays visible and gated. F616 keeps its headless API read path.",
+				desc: "For RHE, the browser obtains the SOL entry, HTTP reaches the draft, the legal confirmation stays supervised, and XML/PDF download is wired for validation on the next real issuance. F616 keeps its headless API read path.",
 				code: '$ sunat-cli rhe emit \\\n    --params \'{"empresa":"Client","descripcion":"Service","monto":100}\' --preview-only',
 			},
 			{
@@ -437,7 +437,7 @@ const en: Content = {
 		heading: "Endpoints first, browser at the boundary",
 		prose: [
 			"The F616 declaration page looks like a form. It is a single-page app talking to a JSON API, and the form fields are the least reliable way to reach it.",
-			"RHE is different: Menu SOL mints an ephemeral entry and the backend returns HTML. The CLI uses HTTP for deduction, identity, and details, renders the draft again, and reserves DOM automation for the final legal confirmation.",
+			"RHE is different: Menu SOL mints an ephemeral entry and the backend returns HTML. The CLI uses HTTP for deduction, identity, and details, renders the draft again, reserves DOM automation for the legal confirmation, and wires XML/PDF through endpoints after issuance.",
 		],
 		steps: [
 			{
@@ -453,7 +453,7 @@ const en: Content = {
 			{
 				n: "03",
 				title: "Confirm",
-				desc: "For RHE, render the draft and keep the final legal action under human control.",
+				desc: "For RHE, keep the legal action under human control, then validate and save artifacts only when SUNAT returns real XML/PDF bytes.",
 			},
 		],
 	},
@@ -478,7 +478,7 @@ const en: Content = {
 			},
 			{
 				domain: "RHE and F616",
-				detail: "RHE through draft; F616 API reads",
+				detail: "Supervised RHE; XML/PDF wired, live pending",
 				pct: 85,
 				state: "partial",
 			},

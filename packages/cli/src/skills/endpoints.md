@@ -99,11 +99,17 @@ stage posts to `/ol-ti-itreciboelectronico/cpelec001Alias`:
 | Identity | `CapturaDatosReciboHonorariosIdentidad` |
 | Details and server preview | `CapturaDatosReciboHonorarios` |
 | Production submission | `GrabaReciboHonorarios` |
+| Issued XML | `descargarreciboxml1` |
+| Issued PDF | `descargarrecibopdf1` |
 
 The entry URL carries six required query fields: `accion`, `p`, `tenc`, `prg`,
 `fecenv` and `usub`. Treat the whole URL as a secret. Direct HTTP is verified
 through preview for `CONTADO` + `SIN DOCUMENTO`; the final submission remains a
-browser confirmation. The raw HAR is private and excluded from the repository.
+browser confirmation. The confirmation HTML contains two same-endpoint POST
+forms with only the XML and PDF actions above. The original HAR did not capture
+their responses, so the CLI validates the returned XML structure and PDF
+signature before saving them. The raw HAR is private and excluded from the
+repository.
 
 ### Reporte Tributario para Terceros
 

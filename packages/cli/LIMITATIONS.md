@@ -186,7 +186,7 @@ These surfaces still need browser bootstrap, but RHE no longer fills identity an
 
 - ⚠️ **Browser boundary** — RHE uses direct HTTP through preview, but Menu SOL bootstrap and the final legal confirmation still depend on the headed portal.
 - ⚠️ **reCAPTCHA via mouse coordinates** — F616 (Nueva Plataforma) requires solving reCAPTCHA. Solved via coordinate injection. Documented as fragile in `CLAUDE.md`.
-- ⚠️ **RHE emission**: direct deduction, identity and details POSTs were replayed with varied inputs and rendered back into the live draft preview for `CONTADO` + `SIN DOCUMENTO`. `GrabaReciboHonorarios` was not called during implementation, so a new production emission is still unverified.
+- ⚠️ **RHE emission**: direct deduction, identity and details POSTs were replayed with varied inputs and rendered back into the live draft preview for `CONTADO` + `SIN DOCUMENTO`. `GrabaReciboHonorarios` was not called during implementation, so a new production emission is still unverified. The confirmation HTML exposes `descargarreciboxml1` and `descargarrecibopdf1`; their POST bodies are implemented, but their real response headers and bytes remain unverified until the next intended issuance.
 - ✅ **F616 declaration**: verified working against the SUNAT portal.
 
 ---

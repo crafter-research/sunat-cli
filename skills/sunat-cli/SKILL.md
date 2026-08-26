@@ -50,3 +50,7 @@ locally, T2 files with SUNAT and needs `--yes`, T3 is irreversible and needs a
 single-use intent token. Preview before you file; `--dry-run` calls the real path.
 
 Production is beta throughout. Never run it blind.
+
+For live RHE emission, the CLI keeps the legal confirmation supervised and then
+downloads the issued XML and PDF through the same SUNAT session. Read the bundled
+core and endpoint manuals for the artifact result contract and verification status.

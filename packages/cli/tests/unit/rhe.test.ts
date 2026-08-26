@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+	buildRHEArtifactParams,
 	buildRHEDetailsParams,
 	buildRHEIdentityParams,
+	decodeRHEArtifact,
 	extractRHEConfirmation,
 	parsePortalAmount,
 	type RHEInput,
@@ -57,5 +59,54 @@ describe("RHE portal contract", () => {
 			numero: "123456",
 		});
 		expect(extractRHEConfirmation("Emitido sin identificador visible")).toEqual({});
+	});
+
+	test("builds the XML and PDF download transitions observed in the confirmation HTML", () => {
+		expect(buildRHEArtifactParams("xml").toString()).toBe("accion=descargarreciboxml1");
+		expect(buildRHEArtifactParams("pdf").toString()).toBe("accion=descargarrecibopdf1");
+	});
+
+	test("accepts valid RHE artifact bytes", () => {
+		const xml = Buffer.from('<?xml version="1.0"?><rhe><serie>E001</serie></rhe>');
+		const pdf = Buffer.from("%PDF-1.7\nfixture");
+		expect(
+			decodeRHEArtifact("xml", {
+				ok: true,
+				status: 200,
+				contentType: "application/xml",
+				base64: xml.toString("base64"),
+			}),
+		).toEqual(xml);
+		expect(
+			decodeRHEArtifact("pdf", {
+				ok: true,
+				status: 200,
+				contentType: "application/pdf",
+				base64: pdf.toString("base64"),
+			}),
+		).toEqual(pdf);
+	});
+
+	test("rejects portal error pages and malformed artifacts", () => {
+		const html = Buffer.from("<!doctype html><html><body>Error</body></html>").toString("base64");
+		expect(() => decodeRHEArtifact("xml", { ok: true, status: 200, contentType: "text/html", base64: html })).toThrow(
+			"HTML page",
+		);
+		expect(() =>
+			decodeRHEArtifact("pdf", {
+				ok: true,
+				status: 200,
+				contentType: "application/octet-stream",
+				base64: Buffer.from("not-pdf").toString("base64"),
+			}),
+		).toThrow("PDF signature");
+		expect(() =>
+			decodeRHEArtifact("xml", {
+				ok: true,
+				status: 200,
+				contentType: "application/octet-stream",
+				base64: Buffer.from("not-xml").toString("base64"),
+			}),
+		).toThrow("valid XML");
 	});
 });

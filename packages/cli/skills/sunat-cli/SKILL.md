@@ -59,8 +59,11 @@ sunat-cli rhe emit --params '...' --dry-run
 # Reach SUNAT's server preview by direct HTTP and render it for review
 sunat-cli rhe emit --params '...' --preview-only
 
-# Emit only after visually checking the preview
+# Emit only after visually checking the preview; XML and PDF go to Downloads/sunat-rhe
 sunat-cli rhe emit --params '...' --yes --live-sunat
+
+# Choose another private artifact directory
+sunat-cli rhe emit --params '...' --yes --live-sunat --artifacts-dir /absolute/path/rhe
 
 # Validate a CSV batch locally
 sunat-cli rhe emit --batch recibos.csv --dry-run
@@ -73,6 +76,7 @@ Key rules:
 - `fechaEmision`: Sent as DD/MM/YYYY and reconciled against the rendered preview. The observed portal accepts today or the previous 2 days.
 - The observed path is `CONTADO`, non-gratuito, inciso A, no withholding and fully paid at emission.
 - Auth: headed SOL bootstrap; direct HTTP through preview; browser confirmation for the final legal submission.
+- After confirmation, the same session downloads and validates the XML and PDF. JSON output returns private local paths and reports artifact failures separately from issuance status.
 - Live batches are disabled. Validate CSV with `--dry-run`, then preview and emit each RHE individually.
 
 ### F616 (Monthly Tax Declaration)

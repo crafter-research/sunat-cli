@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import { ensureSOLSession } from "../../browser/auth.ts";
 import { audit } from "../../data/audit.ts";
@@ -27,6 +29,7 @@ export function createRheCommand(): Command {
 		.option("--batch <file>", "CSV file with multiple RHEs")
 		.option("--dry-run", "Validate locally without opening SUNAT")
 		.option("--preview-only", "Fill SUNAT and stop at the reconciled preview")
+		.option("--artifacts-dir <dir>", "Directory for the issued XML and PDF", join(homedir(), "Downloads", "sunat-rhe"))
 		.option("--yes", "Confirm the requested live operation")
 		.option("--live-sunat", "Acknowledge that this writes to production SUNAT")
 		.action(async (opts, cmd) => {
@@ -63,10 +66,12 @@ export function createRheCommand(): Command {
 						audit({ command: "rhe emit", args: input as unknown as Record<string, unknown>, result: "dry-run" });
 						output(format, { json: { dryRun: true, input, status: "would-emit" } });
 					} else {
+						const artifactsDir = sanitizePath(String(opts.artifactsDir));
 						const creds = getCredentials();
 						await ensureSOLSession(creds);
 						const result = await emitRHE(input, {
 							previewOnly,
+							artifactsDir: previewOnly ? undefined : artifactsDir,
 							beforeSubmit: () =>
 								audit({
 									command: "rhe emit",

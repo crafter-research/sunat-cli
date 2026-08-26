@@ -28,12 +28,16 @@ sunat-cli schema rhe                     # Introspect fields
 sunat-cli rhe emit --params '{"empresa":"Cliente","descripcion":"Servicio","monto":100}' --dry-run
 sunat-cli rhe emit --params '{"empresa":"Cliente","descripcion":"Servicio","monto":100}' --preview-only
 sunat-cli rhe emit --params '{"empresa":"Cliente","descripcion":"Servicio","monto":100}' --yes --live-sunat
+sunat-cli rhe emit --params '{"empresa":"Cliente","descripcion":"Servicio","monto":100}' --yes --live-sunat --artifacts-dir /absolute/path/rhe
 sunat-cli f616 declare --dry-run --params '{"periodo":"2025-03"}'
 sunat-cli api token --output json        # Validate OAuth2 credentials without printing the token
 ```
 
 RHE is hybrid: a headed SOL session mints the entry URL, direct HTTP reaches the
-legally invalid preview, and the final browser confirmation remains gated.
+legally invalid preview, and the final browser confirmation remains gated. Once
+issued, the same session downloads and validates the XML and PDF. The JSON result
+contains their private local paths and reports artifact errors separately from
+the legal issuance status.
 
 ### Buzón SOL metadata (read-only)
 

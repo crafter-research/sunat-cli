@@ -16,7 +16,9 @@ Portal: SOL viejo (e-menu.sunat.gob.pe/cl-ti-itmenu/) -- no captcha.
 
 `--dry-run` validates locally. `--preview-only` sends the stateful form endpoint
 through the server draft, renders it in the iframe and stops at the reconciled
-`Emitir Recibo` page. Submission requires `--yes --live-sunat`.
+`Emitir Recibo` page. Submission requires `--yes --live-sunat`. A successful
+submission downloads its XML and PDF to `~/Downloads/sunat-rhe` by default;
+`--artifacts-dir <absolute-path>` changes the destination.
 
 ## F616 Declare Fields
 

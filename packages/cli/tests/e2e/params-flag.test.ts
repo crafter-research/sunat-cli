@@ -134,13 +134,14 @@ describe("RHE live boundary", () => {
 	test("documents the portal preview and live acknowledgements", async () => {
 		const { stdout } = await run(["rhe", "emit", "--help"]);
 		expect(stdout).toContain("--preview-only");
+		expect(stdout).toContain("--artifacts-dir <dir>");
 		expect(stdout).toContain("--yes");
 		expect(stdout).toContain("--live-sunat");
 	});
 
-	test("publishes the gated RHE contract as schema v2", async () => {
+	test("publishes the artifact-aware RHE contract as schema v3", async () => {
 		const { stdout } = await run(["schema", "rhe"]);
-		expect(JSON.parse(stdout).version).toBe("2.0.0");
+		expect(JSON.parse(stdout).version).toBe("3.0.0");
 	});
 
 	test("rejects unsupported document-backed recipients during dry-run", async () => {
