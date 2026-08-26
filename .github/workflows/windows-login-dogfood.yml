@@ -42,14 +42,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force packages/cli/evidence | Out-Null
-          $node = (Get-Command node).Source
+          $bun = (Get-Command bun).Source
           $published = Join-Path (npm root --global) "@crafter/sunat-cli/dist/sunat.js"
           $patched = Resolve-Path "packages/cli/dist/sunat.js"
           $originalPath = $env:PATH
           $env:PATH = "$env:SystemRoot\System32"
           $env:SUNAT_PASSWORD = "not-a-real-password"
-          & $node $published --output json login --ruc 10123456789 --user TESTUSER *> packages/cli/evidence/before.txt
-          & $node $patched --output json login --ruc 10123456789 --user TESTUSER *> packages/cli/evidence/after.txt
+          & $bun $published --output json login --ruc 10123456789 --user TESTUSER *> packages/cli/evidence/before.txt
+          & $bun $patched --output json login --ruc 10123456789 --user TESTUSER *> packages/cli/evidence/after.txt
           $env:PATH = $originalPath
           Remove-Item Env:SUNAT_PASSWORD
           Select-String -Path packages/cli/evidence/before.txt -Pattern "ENOENT|uv_spawn"
