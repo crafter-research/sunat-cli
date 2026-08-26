@@ -52,8 +52,8 @@ jobs:
           & $bun $patched --output json login --ruc 10123456789 --user TESTUSER *> packages/cli/evidence/after.txt
           $env:PATH = $originalPath
           Remove-Item Env:SUNAT_PASSWORD
-          Select-String -Path packages/cli/evidence/before.txt -Pattern "ENOENT|uv_spawn"
-          Select-String -Path packages/cli/evidence/after.txt -Pattern "agent-browser is not installed"
+          if (-not (Select-String -Quiet -Path packages/cli/evidence/before.txt -Pattern "ENOENT|uv_spawn")) { throw "raw ENOENT baseline missing" }
+          if (-not (Select-String -Quiet -Path packages/cli/evidence/after.txt -Pattern "agent-browser is not installed")) { throw "guided dependency error missing" }
       - name: Verify the real npm shim under Node
         shell: pwsh
         run: |
