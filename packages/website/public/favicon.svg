@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-		<rect width="32" height="32" rx="6.4" fill="#1A3567"/>
-		<text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14.4" font-weight="700" fill="#FFFFFF">
-			S<tspan fill="#C41E3A">/</tspan>
-		</text>
+		<rect width="32" height="32" rx="6" fill="#0B0D0C"/>
+		<rect x="0.5" y="0.5" width="31" height="31" rx="5.5" fill="none" stroke="#232A2C"/>
+		<path d="M 7 9 L 14 16 L 7 23" fill="none" stroke="#FFB020" stroke-width="3.25" stroke-linecap="square" stroke-linejoin="miter"/>
+		<path d="M 17 23 H 25" fill="none" stroke="#F4F3F0" stroke-width="3.25" stroke-linecap="square"/>
 	</svg>

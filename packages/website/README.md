@@ -4,6 +4,7 @@ Static Astro site for [sunat-cli.crafter.ing](https://sunat-cli.crafter.ing).
 
 ```sh
 bun install
+bun run assets # regenerate favicon, app icons and social images
 bun dev       # localhost:4321
 bun run build # -> dist/
 ```
@@ -51,6 +52,13 @@ for `next/font/local`, which Astro does not use, so `tokens.css` declares
 
 Geist Pixel only has glyphs for lowercase letters; digits and capitals fall
 back to Geist Mono. That is why it is used for the wordmark and nothing else.
+
+### Brand assets
+
+`scripts/generate-assets.ts` owns the favicon, Apple touch icon, web-app icons,
+Safari mask, manifest and localized Open Graph images. They use the same
+graphite, surface, border and amber values as `tokens.css`; update the generator
+and run `bun run assets` instead of editing generated files by hand.
 
 ## Languages
 

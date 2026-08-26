@@ -3,6 +3,7 @@
 	"type": "module",
 	"version": "0.0.1",
 	"scripts": {
+		"assets": "bun run scripts/generate-assets.ts",
 		"dev": "astro dev",
 		"build": "astro build",
 		"preview": "astro preview"

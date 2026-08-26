@@ -2,7 +2,7 @@
 import "../styles/tokens.css";
 import "../styles/base.css";
 import { useContent } from "../lib/content";
-import { localePath, type Locale } from "../lib/i18n";
+import { type Locale, localePath } from "../lib/i18n";
 
 interface Props {
 	title: string;
@@ -19,7 +19,11 @@ const site = "https://sunat-cli.crafter.ing";
 const canonical = new URL(localePath(locale, path), site).href;
 const esUrl = new URL(localePath("es", path), site).href;
 const enUrl = new URL(localePath("en", path), site).href;
-const ogImage = `${site}/og.png`;
+const ogImage = `${site}/og-${locale}.png`;
+const ogImageAlt =
+	locale === "es"
+		? "sunat-cli, automatización tributaria supervisada para Perú"
+		: "sunat-cli, supervised tax automation for Peru";
 ---
 
 <!doctype html>
@@ -29,6 +33,18 @@ const ogImage = `${site}/og.png`;
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{title}</title>
 		<meta name="description" content={description} />
+		<meta name="application-name" content="sunat-cli" />
+		<meta name="apple-mobile-web-app-title" content="sunat-cli" />
+		<meta
+			name="theme-color"
+			content="#fafaf8"
+			media="(prefers-color-scheme: light)"
+		/>
+		<meta
+			name="theme-color"
+			content="#0b0d0c"
+			media="(prefers-color-scheme: dark)"
+		/>
 
 		<link rel="canonical" href={canonical} />
 		<link rel="alternate" hreflang="es" href={esUrl} />
@@ -36,18 +52,38 @@ const ogImage = `${site}/og.png`;
 		<link rel="alternate" hreflang="x-default" href={esUrl} />
 
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="96x96"
+			href="/favicon-96x96.png"
+		/>
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+		<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#ffb020" />
+		<link rel="manifest" href="/site.webmanifest" />
 
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content={canonical} />
+		<meta property="og:site_name" content="sunat-cli" />
 		<meta property="og:locale" content={locale === "es" ? "es_PE" : "en_US"} />
+		<meta
+			property="og:locale:alternate"
+			content={locale === "es" ? "en_US" : "es_PE"}
+		/>
 		<meta property="og:image" content={ogImage} />
+		<meta property="og:image:secure_url" content={ogImage} />
+		<meta property="og:image:type" content="image/png" />
 		<meta property="og:image:width" content="1200" />
 		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content={ogImageAlt} />
 		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:image" content={`${site}/og-twitter.png`} />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={ogImage} />
+		<meta name="twitter:image:alt" content={ogImageAlt} />
 
 		<link
 			rel="preload"

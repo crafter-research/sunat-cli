@@ -1,0 +1,23 @@
+{
+  "name": "sunat-cli",
+  "short_name": "sunat-cli",
+  "description": "Agent-first tax automation for Peru",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0D0C",
+  "theme_color": "#0B0D0C",
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
