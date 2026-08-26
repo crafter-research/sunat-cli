@@ -14,8 +14,9 @@ test.skipIf(process.platform !== "win32")("resolves the npm agent-browser.cmd sh
 	const fixtureBin = mkdtempSync(join(tmpdir(), "sunat-agent-browser-cmd-"));
 	temporaryDirs.push(fixtureBin);
 	writeFileSync(join(fixtureBin, "agent-browser.cmd"), "@echo off\r\necho agent-browser windows shim 1.0\r\n");
-	const path = `${fixtureBin}${delimiter}${process.env.PATH || ""}`;
-	expect(probeAgentBrowser({ ...process.env, PATH: path })).toEqual({
+	const pathName = Object.keys(process.env).find((name) => name.toLowerCase() === "path") || "PATH";
+	const path = `${fixtureBin}${delimiter}${process.env[pathName] || ""}`;
+	expect(probeAgentBrowser({ ...process.env, [pathName]: path })).toEqual({
 		installed: true,
 		version: "agent-browser windows shim 1.0",
 	});

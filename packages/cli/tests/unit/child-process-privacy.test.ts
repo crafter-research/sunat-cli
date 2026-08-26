@@ -25,4 +25,23 @@ describe("child process environment privacy", () => {
 			NPM_CONFIG_REGISTRY: "https://registry.npmjs.org",
 		});
 	});
+
+	test("preserves Windows runtime paths without forwarding credentials", () => {
+		const child = privateChildEnv({
+			Path: "C:\\Program Files\\nodejs",
+			PATHEXT: ".COM;.EXE;.BAT;.CMD",
+			TEMP: "C:\\Windows\\Temp",
+			USERPROFILE: "C:\\Users\\runner",
+			LOCALAPPDATA: "C:\\Users\\runner\\AppData\\Local",
+			SUNAT_PASSWORD: "private-clave-sol",
+		});
+
+		expect(child).toEqual({
+			Path: "C:\\Program Files\\nodejs",
+			PATHEXT: ".COM;.EXE;.BAT;.CMD",
+			TEMP: "C:\\Windows\\Temp",
+			USERPROFILE: "C:\\Users\\runner",
+			LOCALAPPDATA: "C:\\Users\\runner\\AppData\\Local",
+		});
+	});
 });
