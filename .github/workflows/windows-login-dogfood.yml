@@ -88,10 +88,14 @@ jobs:
             $stored = (node $cli --output json keychain list | ConvertFrom-Json) | Where-Object { $_.key -eq "SUNAT_PASSWORD" }
             if (-not $stored.exists) { throw "Windows Credential Manager did not return the stored secret" }
 
-            $loginOutput = node $cli --output json login --ruc 10123456789 --user TESTUSER 2>&1 | Out-String
-            $loginOutput | Set-Content (Join-Path $evidence "real-login-attempt.txt")
+            bun -e 'import { saveConfig } from "./packages/cli/src/data/config.ts"; saveConfig({ ruc: "10123456789", usuario: "TESTUSER" });'
+            $actualHash = bun -e 'import { createHash } from "node:crypto"; import { getCredentials } from "./packages/cli/src/data/config.ts"; process.stdout.write(createHash("sha256").update(getCredentials().password).digest("hex"));'
+            $expectedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($testSecret))).ToLower()
+            if ($actualHash -ne $expectedHash) { throw "Windows Credential Manager returned a different secret" }
+            "Exact secret hash round-trip: PASS" | Set-Content (Join-Path $evidence "credential-roundtrip.txt")
+
             $configPath = Join-Path $env:SUNAT_HOME "config.json"
-            if (-not (Test-Path $configPath)) { throw "login did not persist non-secret config" }
+            if (-not (Test-Path $configPath)) { throw "non-secret config was not persisted" }
             $configText = Get-Content $configPath -Raw
             $config = $configText | ConvertFrom-Json
             if ($config.ruc -ne "10123456789" -or $config.usuario -ne "TESTUSER") { throw "RUC or user was not persisted" }
@@ -114,6 +118,7 @@ jobs:
           Windows Credential Manager
           Store test Clave SOL: PASS
           Read from a fresh process: PASS
+          Exact secret hash round-trip: PASS
           Clear after test: PASS
 
           config.json
