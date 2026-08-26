@@ -54,6 +54,12 @@ jobs:
           Remove-Item Env:SUNAT_PASSWORD
           Select-String -Path packages/cli/evidence/before.txt -Pattern "ENOENT|uv_spawn"
           Select-String -Path packages/cli/evidence/after.txt -Pattern "agent-browser is not installed"
+      - name: Verify the real npm shim under Node
+        shell: pwsh
+        run: |
+          npm install --global agent-browser@0.35.0 --ignore-scripts --registry https://registry.npmjs.org
+          node packages/cli/dist/sunat.js --output json doctor > packages/cli/evidence/node-shim.json
+          Select-String -Path packages/cli/evidence/node-shim.json -Pattern "agent-browser 0.35.0"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: crafter-agents/cuse
