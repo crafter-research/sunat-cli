@@ -13,6 +13,16 @@ describe("Buzón portal boundary", () => {
 		expect(click).toBeGreaterThan(route);
 	});
 
+	test("closes a failed visor before removing the detail abort route", () => {
+		const portal = PORTAL_SOURCE.indexOf("export async function openBuzonPortal");
+		const failure = PORTAL_SOURCE.indexOf("} catch (error) {", portal);
+		const close = PORTAL_SOURCE.indexOf("await browser.close()", failure);
+		const unroute = PORTAL_SOURCE.indexOf("await browser.unroute(DETAIL_ROUTE)", failure);
+		expect(failure).toBeGreaterThan(portal);
+		expect(close).toBeGreaterThan(failure);
+		expect(unroute).toBeGreaterThan(close);
+	});
+
 	test("the list expression contains only metadata query parameters", () => {
 		const expression = buildBuzonRequestExpression("/ol-ti-itvisornoti/visor/listNotiMenPag", {
 			query: { tipoMsj: "2", page: "1", des_asunto: "" },

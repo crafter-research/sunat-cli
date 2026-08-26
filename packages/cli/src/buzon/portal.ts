@@ -163,6 +163,7 @@ export async function openBuzonPortal(): Promise<BuzonPortal> {
 	try {
 		session = await openBuzonFrame();
 	} catch (error) {
+		await browser.close();
 		await browser.unroute(DETAIL_ROUTE).catch(() => {});
 		if (error instanceof BuzonPortalError) throw error;
 		throw new BuzonPortalError(

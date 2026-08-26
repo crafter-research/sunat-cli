@@ -87,7 +87,7 @@ const es: Content = {
 	},
 	stats: [
 		{ value: "10", label: "Superficies", detail: "un solo binario" },
-		{ value: "494", label: "Tests", detail: "en verde" },
+		{ value: "495", label: "Tests", detail: "en verde" },
 		{ value: "0", label: "CAPTCHAs", detail: "un login y después headless" },
 	],
 	capabilities: {
@@ -122,7 +122,7 @@ const es: Content = {
 				title: "Rentas de cuarta",
 				scope: "RHE y F616",
 				desc: "Login en el navegador sin CAPTCHA. Los recibos se emiten en lote y el F616 mensual se lee headless desde la API que hay detrás del formulario.",
-				code: "$ sunat-cli f616 declare \\\n    --json '{\"periodo\":\"2026-03\"}'",
+				code: '$ sunat-cli f616 declare \\\n    --json \'{"periodo":"2026-03"}\'',
 			},
 			{
 				title: "Consultas",
@@ -350,7 +350,7 @@ const en: Content = {
 	},
 	stats: [
 		{ value: "10", label: "Surfaces", detail: "one binary" },
-		{ value: "494", label: "Tests", detail: "green" },
+		{ value: "495", label: "Tests", detail: "green" },
 		{ value: "0", label: "CAPTCHAs", detail: "one login, then headless" },
 	],
 	capabilities: {
@@ -385,7 +385,7 @@ const en: Content = {
 				title: "Independent worker filings",
 				scope: "RHE and F616",
 				desc: "Browser login without a CAPTCHA. Receipts issue in batch; the monthly F616 reads headless from the declaration API behind the form.",
-				code: "$ sunat-cli f616 declare \\\n    --json '{\"periodo\":\"2026-03\"}'",
+				code: '$ sunat-cli f616 declare \\\n    --json \'{"periodo":"2026-03"}\'',
 			},
 			{
 				title: "Lookups",
@@ -679,9 +679,7 @@ const legalEs: LegalContent = {
 		},
 		{
 			heading: "Licencia de código abierto",
-			paras: [
-				"sunat-cli se publica bajo la licencia MIT. Código fuente: github.com/crafter-research/sunat-cli",
-			],
+			paras: ["sunat-cli se publica bajo la licencia MIT. Código fuente: github.com/crafter-research/sunat-cli"],
 		},
 	],
 	contact: {
@@ -760,9 +758,7 @@ const legalEn: LegalContent = {
 		},
 		{
 			heading: "Open source license",
-			paras: [
-				"sunat-cli is released under the MIT License. Source code: github.com/crafter-research/sunat-cli",
-			],
+			paras: ["sunat-cli is released under the MIT License. Source code: github.com/crafter-research/sunat-cli"],
 		},
 	],
 	contact: {
