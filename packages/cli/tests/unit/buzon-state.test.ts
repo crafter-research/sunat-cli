@@ -89,6 +89,22 @@ describe("private Buzón state", () => {
 		expect(stored).toContain('"readOnlyBoundary": "metadata-only"');
 	});
 
+	test("keeps a valid snapshot when a later caller stage fails and retries safely", () => {
+		applyBuzonChanges(result([item("message:1")]));
+		expect(() => {
+			throw new Error("simulated output failure");
+		}).toThrow("simulated output failure");
+		expect(readBuzonState()?.changes.totalCount).toBe(1);
+		const retry = applyBuzonChanges(result([item("message:1"), item("notification:2")]));
+		expect(retry.changes).toEqual({
+			baselineCreated: false,
+			newCount: 1,
+			knownCount: 1,
+			missingCount: 0,
+			totalCount: 2,
+		});
+	});
+
 	test("repairs permissive state before reading it", () => {
 		applyBuzonChanges(result([item("message:1")]));
 		chmodSync(paths.buzonDir, 0o755);
