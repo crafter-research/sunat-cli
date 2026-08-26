@@ -73,7 +73,7 @@ jobs:
           $evidence = Resolve-Path "packages/cli/evidence"
           $env:SUNAT_HOME = Join-Path $env:RUNNER_TEMP "sunat-cli-dogfood-home"
           $testSecret = "windows-keychain-dogfood-secret"
-          $loginUrl = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm"
+          $loginUrl = "https://api-seguridad.sunat.gob.pe/oauth2/login?originalUrl=https://e-menu.sunat.gob.pe/cl-ti-itmenu2/AutenticaMenuInternetPlataforma.htm"
 
           agent-browser --session sunat-proof open $loginUrl
           agent-browser --session sunat-proof wait --load domcontentloaded
