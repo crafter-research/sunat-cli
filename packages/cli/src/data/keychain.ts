@@ -55,8 +55,8 @@ public static class SunatCredentialManager
 '@
 
 Add-Type -TypeDefinition $source
-$action = $args[0]
-$target = $args[1]
+$action = "__ACTION__"
+$target = "__TARGET__"
 
 if ($action -eq "set") {
     $secret = [Console]::In.ReadToEnd()
@@ -141,19 +141,12 @@ export function keychainBackend(): "macos" | "linux" | "windows" | "unsupported"
 }
 
 function windowsCredential(action: "set" | "get" | "clear", key: string, input?: string): string {
-	return run(
-		"powershell.exe",
-		[
-			"-NoLogo",
-			"-NoProfile",
-			"-NonInteractive",
-			"-Command",
-			WINDOWS_CREDENTIAL_SCRIPT,
-			action,
-			`${KEYCHAIN_SERVICE}/${key}`,
-		],
-		input,
+	const script = WINDOWS_CREDENTIAL_SCRIPT.replace("__ACTION__", action).replace(
+		"__TARGET__",
+		`${KEYCHAIN_SERVICE}/${key}`,
 	);
+	const encoded = Buffer.from(script, "utf16le").toString("base64");
+	return run("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], input);
 }
 
 export function setKeychainSecret(key: string, value: string): void {

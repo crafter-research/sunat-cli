@@ -97,6 +97,7 @@ describe("keychain input privacy", () => {
 
 		expect(result).toEqual({ stderr: "", exitCode: 0 });
 		expect(readFileSync(capture.args, "utf8")).not.toContain("private-clave-sol");
+		expect(readFileSync(capture.args, "utf8")).toContain("-EncodedCommand");
 		expect(readFileSync(capture.stdin, "utf8")).toBe("private-clave-sol");
 		expect(readFileSync(capture.env, "utf8")).toBe("");
 	});
