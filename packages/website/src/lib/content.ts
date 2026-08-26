@@ -87,7 +87,7 @@ const es: Content = {
 	},
 	stats: [
 		{ value: "10", label: "Superficies", detail: "un solo binario" },
-		{ value: "496", label: "Tests", detail: "en verde" },
+		{ value: "499", label: "Tests", detail: "en verde" },
 		{ value: "0", label: "CAPTCHAs", detail: "un login y después headless" },
 	],
 	capabilities: {
@@ -350,7 +350,7 @@ const en: Content = {
 	},
 	stats: [
 		{ value: "10", label: "Surfaces", detail: "one binary" },
-		{ value: "496", label: "Tests", detail: "green" },
+		{ value: "499", label: "Tests", detail: "green" },
 		{ value: "0", label: "CAPTCHAs", detail: "one login, then headless" },
 	],
 	capabilities: {
