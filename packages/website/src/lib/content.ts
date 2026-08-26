@@ -64,7 +64,7 @@ const es: Content = {
 	meta: {
 		title: "sunat-cli — automatiza SUNAT desde la terminal",
 		description:
-			"CLI que envuelve nueve superficies de SUNAT: comprobantes electrónicos, SIRE, guías de remisión, recibos por honorarios y F616, y las APIs REST. Pensada para que un agente la opere sin romper nada.",
+			"CLI que envuelve diez superficies de SUNAT: comprobantes electrónicos, SIRE, guías de remisión, Buzón SOL, recibos por honorarios y F616, y las APIs REST. Pensada para que un agente la opere sin romper nada.",
 	},
 	nav: {
 		capabilities: "Qué cubre",
@@ -82,12 +82,12 @@ const es: Content = {
 	},
 	theme: { light: "Claro", system: "Sistema", dark: "Oscuro" },
 	hero: {
-		lede: "SUNAT expone nueve superficies distintas: SOAP con XML firmado, REST con OAuth, una cola de tickets, una carga reanudable, y un formulario que en realidad es una API JSON. Esto las envuelve todas en un binario que un agente puede manejar.",
+		lede: "SUNAT expone diez superficies distintas: SOAP con XML firmado, REST con OAuth, una cola de tickets, una carga reanudable, un buzón legacy y un formulario que en realidad es una API JSON. Esto las envuelve todas en un binario que un agente puede manejar.",
 		cta: "Ver qué cubre",
 	},
 	stats: [
-		{ value: "9", label: "Superficies", detail: "un solo binario" },
-		{ value: "283", label: "Tests", detail: "en verde contra beta" },
+		{ value: "10", label: "Superficies", detail: "un solo binario" },
+		{ value: "494", label: "Tests", detail: "en verde" },
 		{ value: "0", label: "CAPTCHAs", detail: "un login y después headless" },
 	],
 	capabilities: {
@@ -131,6 +131,12 @@ const es: Content = {
 				code: "$ sunat-cli api consulta \\\n    --tipo 01 --serie F001 --numero 123",
 			},
 			{
+				title: "Buzón SOL",
+				scope: "Mensajes y notificaciones, solo metadata",
+				desc: "Lista sin abrir el detalle, conserva conteos contradictorios como evidencia y detecta novedades con un snapshot privado local.",
+				code: "$ sunat-cli buzon list",
+			},
+			{
 				title: "Secretos en el llavero del sistema",
 				scope: "Contraseña del certificado, clave SOL",
 				desc: "El prompt oculto escribe en el llavero de macOS o Linux, así el valor no queda en el historial del shell, ni en variables de entorno, ni en la tabla de procesos.",
@@ -171,7 +177,7 @@ const es: Content = {
 	coverage: {
 		heading: "Hasta dónde llega cada superficie",
 		shipped: (n, total) => `${n} de ${total} en producción y verificadas`,
-		note: "Los porcentajes son un juicio sobre cuánto de cada superficie está envuelto, validado contra el endpoint beta y disponible para un agente. La última fila es la que más importa y es la más baja: nada de esto se ha ejecutado con credenciales de producción.",
+		note: "Los porcentajes son un juicio sobre cuánto de cada superficie está envuelto y disponible para un agente. El lector de metadata del Buzón SOL fue verificado con una cuenta propia en producción. Los envíos tributarios siguen en beta.",
 		th: { surface: "Superficie", wrapped: "Cubierto", pct: "%", state: "Estado" },
 		caption: "Cobertura por superficie de SUNAT, con avance y estado",
 		states: {
@@ -192,6 +198,12 @@ const es: Content = {
 				detail: "Personas naturales",
 				pct: 95,
 				state: "shipped",
+			},
+			{
+				domain: "Buzón SOL",
+				detail: "Metadata, snapshot y novedades",
+				pct: 45,
+				state: "partial",
 			},
 			{
 				domain: "Comprobantes",
@@ -315,7 +327,7 @@ const en: Content = {
 	meta: {
 		title: "sunat-cli — agent-first tax automation for Peru",
 		description:
-			"A command-line tool that wraps nine SUNAT surfaces: electronic invoices, ledgers, shipping notices, independent worker filings, and REST lookups. Built so an AI agent can operate it safely.",
+			"A command-line tool that wraps ten SUNAT surfaces: electronic invoices, ledgers, shipping notices, Buzón SOL, independent worker filings, and REST lookups. Built so an AI agent can operate it safely.",
 	},
 	nav: {
 		capabilities: "Capabilities",
@@ -333,12 +345,12 @@ const en: Content = {
 	},
 	theme: { light: "Light", system: "System", dark: "Dark" },
 	hero: {
-		lede: "Peru's tax authority exposes nine different surfaces: SOAP with signed XML, REST with OAuth, a ticket queue, a resumable upload, and a form that is really a JSON API. This wraps all of them in one binary an agent can drive.",
+		lede: "Peru's tax authority exposes ten different surfaces: SOAP with signed XML, REST with OAuth, a ticket queue, a resumable upload, a legacy inbox, and a form that is really a JSON API. This wraps all of them in one binary an agent can drive.",
 		cta: "See what it covers",
 	},
 	stats: [
-		{ value: "9", label: "Surfaces", detail: "one binary" },
-		{ value: "283", label: "Tests", detail: "green against beta" },
+		{ value: "10", label: "Surfaces", detail: "one binary" },
+		{ value: "494", label: "Tests", detail: "green" },
 		{ value: "0", label: "CAPTCHAs", detail: "one login, then headless" },
 	],
 	capabilities: {
@@ -382,6 +394,12 @@ const en: Content = {
 				code: "$ sunat-cli api consulta \\\n    --tipo 01 --serie F001 --numero 123",
 			},
 			{
+				title: "Buzón SOL",
+				scope: "Messages and notifications, metadata only",
+				desc: "Lists without opening detail, preserves contradictory counts as evidence, and detects changes with a private local snapshot.",
+				code: "$ sunat-cli buzon list",
+			},
+			{
 				title: "Secrets in the OS keychain",
 				scope: "Certificate passwords, clave SOL",
 				desc: "A hidden prompt writes to the macOS or Linux keychain, which keeps the value out of shell history, environment variables, and the process table.",
@@ -422,7 +440,7 @@ const en: Content = {
 	coverage: {
 		heading: "How far each surface goes",
 		shipped: (n, total) => `${n} of ${total} shipped and verified`,
-		note: "Percentages are a judgement about how much of each surface is wrapped, validated against the beta endpoint, and callable by an agent. The last row is the one that matters most and it is the lowest: nothing here has been run against production credentials.",
+		note: "Percentages are a judgement about how much of each surface is wrapped and callable by an agent. The Buzón SOL metadata reader was verified with an own production account. Tax submissions remain beta.",
 		th: { surface: "Surface", wrapped: "Wrapped", pct: "%", state: "State" },
 		caption: "Coverage by SUNAT surface, with completeness and state",
 		states: {
@@ -443,6 +461,12 @@ const en: Content = {
 				detail: "Personas naturales",
 				pct: 95,
 				state: "shipped",
+			},
+			{
+				domain: "Buzón SOL",
+				detail: "Metadata, snapshot and changes",
+				pct: 45,
+				state: "partial",
 			},
 			{
 				domain: "Invoices",

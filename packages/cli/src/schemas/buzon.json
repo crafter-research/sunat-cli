@@ -1,0 +1,41 @@
+{
+	"command": "buzon",
+	"description": "Metadata-only reader for the taxpayer's own Buzón SOL",
+	"version": "1.0.0",
+	"writesNothing": "The network path calls folders, alerts and listNotiMenPag only. obtenerDetalleNotiMen is blocked before the visor loads. The only write is a private local snapshot under SUNAT_HOME.",
+	"auth": {
+		"portal": "e-menu.sunat.gob.pe and ww1.sunat.gob.pe/ol-ti-itvisornoti",
+		"session": "Existing SOL session from sunat-cli login",
+		"credentials": "Clave SOL remains in the OS keychain and is never written to the snapshot"
+	},
+	"commands": {
+		"list": {
+			"description": "List message and notification metadata and save a private snapshot",
+			"flags": {
+				"--max-pages": "Maximum pages per inbox, integer from 1 to 100, default 25"
+			}
+		},
+		"status": {
+			"description": "Read the last snapshot offline without contacting SUNAT"
+		}
+	},
+	"itemFields": {
+		"id": "Stable local identity composed from kind and SUNAT message code",
+		"kind": "message or notification",
+		"subject": "Observed subject with terminal control characters removed",
+		"sentAtObserved": "Raw timestamp observed from SUNAT, not interpreted as a legal date",
+		"publishedAtObserved": "Raw publication timestamp observed from SUNAT",
+		"validUntilObserved": "Raw upstream value preserved as evidence, never treated as a legal deadline",
+		"stateCodeObserved": "Raw upstream state code with no inferred meaning",
+		"attachmentCountObserved": "Observed attachment count; attachments are not opened or downloaded",
+		"newSincePrevious": "True only when a prior local snapshot exists and did not contain this id"
+	},
+	"boundaries": {
+		"messageBodies": "not implemented",
+		"attachments": "not opened or downloaded",
+		"triage": "not implemented",
+		"legalDeadlines": "not inferred",
+		"polling": "manual invocation only",
+		"multiRuc": "not implemented"
+	}
+}

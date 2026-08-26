@@ -44,13 +44,15 @@ sunat-cli tipo-cambio
 # Log in once, then everything else runs headless
 sunat-cli login
 sunat-cli whoami
+sunat-cli buzon list
+sunat-cli buzon status
 ```
 
 Output is JSON whenever stdout is not a terminal, so an agent gets parseable data without passing a flag. On a terminal you get a human view.
 
 ## Commands
 
-Fifteen namespaces. Run `sunat-cli <name> --help` for any of them.
+Sixteen namespaces. Run `sunat-cli <name> --help` for any of them.
 
 | Namespace | What it does |
 |---|---|
@@ -62,6 +64,7 @@ Fifteen namespaces. Run `sunat-cli <name> --help` for any of them.
 | `cpe` | factura, boleta, nota de crédito and débito, GRE, resumen diario, baja |
 | `sire` | RVIE ventas and RCE compras |
 | `renta` | renta anual F709, read-only |
+| `buzon` | Buzón SOL metadata and local change detection, read-only |
 | `padron` | RUC lookup against a local copy of the padrón |
 | `tipo-cambio` | official SUNAT exchange rate |
 | `api` | OAuth2 token for the REST APIs |
@@ -92,7 +95,7 @@ Production is beta. Never run it blind.
 
 ## Coverage
 
-Nine SUNAT surfaces, at different depths. Reads are solid; the write paths vary, and production is beta throughout. The per-surface breakdown is on [the website](https://sunat-cli.crafter.ing#coverage).
+Ten SUNAT surfaces, at different depths. Reads are solid; the write paths vary, and production is beta throughout. The per-surface breakdown is on [the website](https://sunat-cli.crafter.ing#coverage).
 
 [LIMITATIONS.md](packages/cli/LIMITATIONS.md) is the single source of truth for what does not work yet. Read it before trusting a write path.
 
@@ -119,11 +122,11 @@ sunat-cli skills get endpoints   # the SUNAT endpoint behind each command
 
 The skill installed on a machine is a stub that points here. Serving docs from the binary means an agent reads the docs for the version it is running, rather than whatever got copied into `~/.claude/skills/` months ago.
 
-### Headless after one login
+### Local after one login
 
 SUNAT's monthly declaration form looks server-rendered and behaves like one. Driving the DOM never works, because the fields stay disabled until a background call returns. Underneath sits a JSON API, and reaching it needs a session token the portal mints only during its own browser login. A self-registered API client cannot request that audience.
 
-So: log in once through the browser, then every read runs headless against the API with the cached token.
+So: log in once through the browser. API-backed reads run headless with a cached token. `buzon list` opens a local browser session because the legacy visor keeps its authentication inside a cross-origin frame, blocks the detail endpoint, reads metadata, saves a private snapshot, and closes the page.
 
 ### Declaring without emitting RHE
 

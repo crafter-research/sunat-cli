@@ -109,6 +109,30 @@ taxes; this listing is the closest thing, and it exports to a file.
 
 ## Login
 
+## Buzón SOL metadata
+
+Base: `https://ww1.sunat.gob.pe/ol-ti-itvisornoti/visor`
+
+| Method | Path | Purpose | Status |
+|---|---|---|---|
+| GET | `/ajax/listarCarpetas` | folder metadata | observed 200 |
+| POST | `/consultarAlertas` | alert metadata | observed 200 |
+| GET | `/listNotiMenPag` | paginated messages and notifications | observed 200 |
+| GET | `/obtenerDetalleNotiMen` | body and attachments | blocked, not called by the CLI |
+
+`tipoMsj=1` selects messages and `tipoMsj=2` selects notifications. Pagination
+also sends `codCarpeta=00`, `page`, `tipoOrden=NADA`, and empty filters.
+
+The visor requests detail automatically when it loads. `buzon list` installs a
+browser route before entering the visor, so that request is blocked locally and
+cannot update read state at SUNAT. The CLI then fetches only metadata inside the
+authenticated cross-origin frame.
+
+The response fields `total`, `records` and `rows.length` are not equivalent and
+have contradicted each other live. The CLI preserves them separately.
+
+## Login
+
 ```
 GET e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm
 GET api-seguridad.sunat.gob.pe/v1/clientessol/4f3b88b3-.../oauth2/authen

@@ -112,6 +112,18 @@ All endpoints follow Manual de Servicios Web Api SIRE Ventas v22 (March 2024) at
 
 ---
 
+## Buzón SOL metadata
+
+Read-only metadata namespace over the legacy visor on `ww1.sunat.gob.pe`.
+
+- `buzon list` is verified live against an own production account for folders, alerts, messages and notifications.
+- `buzon status` is offline and reads a private `0600` snapshot under `SUNAT_HOME`.
+- The visor tries to open detail automatically. The CLI blocks `/obtenerDetalleNotiMen` before navigation, so the request cannot reach SUNAT.
+- SUNAT has returned contradictory `total`, `records` and row counts. The CLI exposes all observations and never treats a reported total as authoritative.
+- Message bodies, attachments, triage, autonomous polling and multi-RUC operation are deliberately absent.
+- `fecVigencia` is preserved only as `validUntilObserved`. It is not interpreted as a legal deadline.
+- CI uses redacted fixtures. Live portal behavior still needs post-release dogfood because no credentials are available in GitHub Actions.
+
 ## Renta Anual F709 — e-renta (PR: read path)
 
 Read-only namespace over `e-renta.sunat.gob.pe`. Recon: `recon/sunat-f709-erenta-api.md`.

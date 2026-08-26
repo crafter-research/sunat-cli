@@ -1,6 +1,6 @@
 ---
 name: sunat-cli
-description: "SUNAT tax automation for Peru from the terminal. Use when the user mentions SUNAT, RHE, recibo por honorarios, F616, renta anual, F709, factura or boleta electronica, CPE, SIRE, padron RUC, tipo de cambio SUNAT, or says emitir recibo, emitir factura, declarar F616, anular comprobante, impuestos Peru. Personas naturales with RUC 10 and empresas with RUC 20. Package @crafter/sunat-cli on npm."
+description: "SUNAT tax automation for Peru from the terminal. Use when the user mentions SUNAT, Buzon SOL, RHE, recibo por honorarios, F616, renta anual, F709, factura or boleta electronica, CPE, SIRE, padron RUC, tipo de cambio SUNAT, or says emitir recibo, emitir factura, declarar F616, anular comprobante, impuestos Peru. Personas naturales with RUC 10 and empresas with RUC 20. Package @crafter/sunat-cli on npm."
 ---
 
 # sunat-cli
@@ -16,7 +16,7 @@ the repository root. It is a pointer, not the guide. The real content ships with
 the CLI and always matches the version you have installed:
 
 ```bash
-sunat-cli skills get core        # auth, RHE, F616, CPE, workflows
+sunat-cli skills get core        # auth, Buzón, RHE, F616, CPE, workflows
 sunat-cli skills get schemas     # field specs per command
 sunat-cli skills get endpoints   # the SUNAT endpoint behind each command
 sunat-cli skills list

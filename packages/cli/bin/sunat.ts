@@ -3,14 +3,15 @@ import { Command } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import { createApiCommand } from "../src/commands/api/index.ts";
 import { createAuditCommand } from "../src/commands/audit.ts";
+import { createBuzonCommand } from "../src/commands/buzon/index.ts";
 import { createCpeCommand } from "../src/commands/cpe/index.ts";
+import { createDoctorCommand } from "../src/commands/doctor.ts";
 import { createF616Command } from "../src/commands/f616/index.ts";
 import { createKeychainCommand } from "../src/commands/keychain.ts";
 import { createLoginCommand } from "../src/commands/login.ts";
 import { createPadronCommand } from "../src/commands/padron/index.ts";
 import { createRentaCommand } from "../src/commands/renta/index.ts";
 import { createRheCommand } from "../src/commands/rhe/index.ts";
-import { createDoctorCommand } from "../src/commands/doctor.ts";
 import { createSchemaCommand } from "../src/commands/schema.ts";
 import { createSireCommand } from "../src/commands/sire/index.ts";
 import { createSkillsCommand } from "../src/commands/skills.ts";
@@ -59,6 +60,7 @@ program.addCommand(createRentaCommand());
 program.addCommand(createSireCommand());
 program.addCommand(createTipoCambioCommand());
 program.addCommand(createAuditCommand());
+program.addCommand(createBuzonCommand());
 
 if (wantsBanner(process.argv)) {
 	printBanner({ version: pkg.version, tagline: "Agent-first CLI for SUNAT tax automation" });

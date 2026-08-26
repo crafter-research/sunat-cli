@@ -185,6 +185,16 @@ export async function reload(): Promise<void> {
 	if (r.exitCode !== 0) throw new Error("Browser reload failed");
 }
 
+export async function routeAbort(pattern: string): Promise<void> {
+	const r = await run(["network", "route", pattern, "--abort"]);
+	if (r.exitCode !== 0) throw new Error("Browser route setup failed");
+}
+
+export async function unroute(pattern: string): Promise<void> {
+	const r = await run(["network", "unroute", pattern]);
+	if (r.exitCode !== 0) throw new Error("Browser route cleanup failed");
+}
+
 export async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -131,12 +131,37 @@ Key rules, each one learned by hitting it:
 this. Its `ingresoPEN` and `retenciones` fields are declared in the schema and
 then ignored by the code. Prefer `declarar`.
 
+### Buzón SOL metadata
+
+```bash
+sunat-cli login
+sunat-cli buzon list
+sunat-cli buzon status
+sunat-cli schema buzon
+```
+
+`buzon list` opens the legacy visor in the local SOL session, blocks the detail
+endpoint before navigation, and reads folders, alerts, messages and notification
+metadata. It does not open bodies or download attachments. Requests are
+serialized with a 1.2 second floor and a maximum of 25 pages per inbox by
+default.
+
+The command saves `~/.sunat/buzon/state.json` with owner-only permissions. The
+first run is a baseline. Later runs mark identities absent from the previous
+snapshot as new. `buzon status` reads the last snapshot without contacting
+SUNAT.
+
+SUNAT's `total`, `records` and returned rows can disagree. The JSON contract
+keeps all three observations and sets `countMismatch` instead of choosing one.
+`validUntilObserved` is upstream metadata, not a legal deadline.
+
 ### API & Schema
 
 ```bash
 sunat-cli api token              # Validate OAuth2 credentials without printing the token
 sunat-cli schema rhe             # JSON schema for RHE fields
 sunat-cli schema f616            # JSON schema for F616 fields
+sunat-cli schema buzon           # Metadata-only Buzón SOL contract
 ```
 
 Use `sunat-cli schema <resource>` to get machine-readable field definitions before constructing payloads.

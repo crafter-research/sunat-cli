@@ -19,6 +19,7 @@ const CONFIG_FILE = join(SUNAT_DIR, "config.json");
 const API_DIR = join(SUNAT_DIR, "api");
 const SESSIONS_DIR = join(SUNAT_DIR, "sessions");
 const AUDIT_DIR = join(SUNAT_DIR, "audit");
+const BUZON_DIR = join(SUNAT_DIR, "buzon");
 
 export interface SunatConfig {
 	ruc?: string;
@@ -89,6 +90,8 @@ export const paths = {
 	apiDir: API_DIR,
 	sessionsDir: SESSIONS_DIR,
 	auditDir: AUDIT_DIR,
+	buzonDir: BUZON_DIR,
+	buzonState: join(BUZON_DIR, "state.json"),
 	solSession: join(SESSIONS_DIR, "sol.json"),
 	nuevaPlataformaSession: join(SESSIONS_DIR, "nueva-plataforma.json"),
 } as const;

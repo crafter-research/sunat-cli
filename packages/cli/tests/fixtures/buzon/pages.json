@@ -1,0 +1,60 @@
+{
+	"message": [
+		{
+			"startPage": 1,
+			"endPage": 2,
+			"total": 2,
+			"records": 2,
+			"rows": [
+				{
+					"codMensaje": 1001,
+					"indEstado": 0,
+					"indDesta": 0,
+					"indUrg": 0,
+					"fecVigencia": "31/12/2099",
+					"desAsunto": "Mensaje de control",
+					"fecEnvio": "25/08/2026 09:00",
+					"fecPublica": "25/08/2026 09:00",
+					"indAviso": 0,
+					"cantidadArchAdj": 0,
+					"codEtiqueta": "",
+					"codCarpeta": "00"
+				}
+			]
+		},
+		{
+			"startPage": 2,
+			"endPage": 2,
+			"total": 2,
+			"records": 2,
+			"rows": [
+				{
+					"codMensaje": 1002,
+					"indEstado": 1,
+					"desAsunto": "Segundo mensaje",
+					"fecEnvio": "24/08/2026 08:00",
+					"cantidadArchAdj": 1
+				}
+			]
+		}
+	],
+	"notification": [
+		{
+			"startPage": 1,
+			"endPage": 1,
+			"total": 0,
+			"records": 1,
+			"rows": [
+				{
+					"codMensaje": 2001,
+					"indEstado": 0,
+					"indUrg": 1,
+					"desAsunto": "Notificación\u001b[31m de prueba\ncontrolada",
+					"fecEnvio": "23/08/2026 07:00",
+					"fecPublica": "23/08/2026 07:01",
+					"cantidadArchAdj": 2
+				}
+			]
+		}
+	]
+}

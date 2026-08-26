@@ -1,6 +1,6 @@
 ---
 name: sunat-cli
-description: SUNAT tax automation CLI for Peru. Three namespaces. (A) Personas naturales (RUC 10): emit Recibos por Honorarios (RHE), file F616 monthly declarations. (B) Empresas (RUC 20): emit Comprobantes de Pago Electronicos (CPE) — Factura, Boleta, NC, ND, Guia — under `sunat-cli cpe ...`. Use when: (1) user mentions SUNAT, RHE, recibo por honorarios, F616, impuestos Peru, (2) user wants to emit an invoice (factura/boleta) or recibo, (3) user asks about CPE, UBL 2.1, XAdES, OSE, PSE, Facturador SUNAT, (4) user says "emitir recibo", "emitir factura", "declarar F616", "anular comprobante". (C) Renta Anual (F709) read-only: consult the annual income-tax return, its casillas, filings and constancias under `sunat-cli renta ...` — use when the user mentions renta anual, declaracion jurada anual, F709, or DJ anual. Package: @crafter/sunat-cli (npm).
+description: SUNAT tax automation CLI for Peru. Personas naturales (RUC 10), empresas (RUC 20), Renta Anual F709, SIRE and a read-only Buzón SOL metadata reader. Use when the user mentions SUNAT, Buzón SOL, RHE, F616, renta anual, F709, CPE, SIRE, invoices or Peruvian taxes. Package: @crafter/sunat-cli (npm).
 ---
 
 # sunat-cli
@@ -398,12 +398,38 @@ scan regardless of N RUCs.
 sunat-cli api token              # Validate OAuth2 credentials without printing the token
 sunat-cli schema rhe             # JSON schema for RHE fields
 sunat-cli schema f616            # JSON schema for F616 fields
+sunat-cli schema buzon           # Metadata-only Buzón SOL contract
 sunat-cli schema cpe-factura     # JSON schema for Factura Electronica
 sunat-cli schema cpe-boleta      # JSON schema for Boleta de Venta
 sunat-cli schema cpe-nota-credito
 ```
 
 Use `sunat-cli schema <resource>` to get machine-readable field definitions before constructing payloads.
+
+## Buzón SOL metadata
+
+```bash
+sunat-cli login
+sunat-cli buzon list
+sunat-cli buzon status
+sunat-cli schema buzon
+```
+
+`buzon list` reads messages and notifications from the local SOL browser
+session. The detail endpoint is blocked before the visor loads, so bodies,
+attachments and read-state mutations cannot reach SUNAT. Requests are serialized
+and pagination is bounded.
+
+The first run creates a private baseline at `~/.sunat/buzon/state.json`. Later
+runs set `newSincePrevious` only for identities absent from the prior snapshot.
+`buzon status` reads the snapshot offline.
+
+Treat `reportedTotalsObserved`, `reportedRecordsObserved` and `observedCount` as
+separate evidence. The legacy visor can return contradictory values.
+
+`validUntilObserved` is an upstream value, not a legal deadline. The namespace
+does not classify acts, recommend tax actions, poll in the background or support
+multiple RUCs.
 
 ## Renta Anual — F709 (Persona Natural)
 
