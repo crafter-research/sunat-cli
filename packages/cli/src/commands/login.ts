@@ -1,6 +1,7 @@
 import * as p from "@clack/prompts";
 import { Command } from "commander";
 import { loginNuevaPlataforma, loginSOL } from "../browser/auth.ts";
+import { requireAgentBrowser } from "../browser/dependency.ts";
 import { audit } from "../data/audit.ts";
 import { ensureDirs, loadConfig, saveConfig } from "../data/config.ts";
 import { resolveSecret } from "../data/keychain.ts";
@@ -97,6 +98,7 @@ export function createLoginCommand(): Command {
 			// Whether we may ask the operator a question, not how we print the answer.
 			const canPrompt = process.stdout.isTTY && format !== "json";
 			try {
+				requireAgentBrowser();
 				const creds = await getOrPromptCredentials(opts, canPrompt);
 				if (opts.nuevaPlataforma) {
 					await loginNuevaPlataforma(creds);

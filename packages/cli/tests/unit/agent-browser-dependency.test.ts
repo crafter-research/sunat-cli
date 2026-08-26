@@ -4,6 +4,7 @@ import {
 	isMissingBinary,
 	missingBinaryError,
 	probeAgentBrowser,
+	requireAgentBrowser,
 } from "../../src/browser/dependency.ts";
 
 describe("agent-browser as a declared dependency", () => {
@@ -43,5 +44,11 @@ describe("agent-browser as a declared dependency", () => {
 		const status = probeAgentBrowser();
 		expect(typeof status.installed).toBe("boolean");
 		if (!status.installed) expect(status.hint).toBeTruthy();
+	});
+
+	test("the login preflight fails before collecting credentials when the binary is absent", () => {
+		expect(() => requireAgentBrowser({ installed: false, hint: AGENT_BROWSER_INSTALL })).toThrow(
+			"agent-browser is not installed",
+		);
 	});
 });

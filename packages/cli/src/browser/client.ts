@@ -1,8 +1,8 @@
-import { execSync, spawn } from "node:child_process";
+import { execSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { privateChildEnv } from "../data/child-process.ts";
 import { secureExistingFile } from "../data/private-storage.ts";
-import { isMissingBinary, missingBinaryError } from "./dependency.ts";
+import { isMissingBinary, missingBinaryError, spawnAgentBrowser } from "./dependency.ts";
 
 export interface BrowserResult {
 	stdout: string;
@@ -15,7 +15,7 @@ const childEnv = () => privateChildEnv(process.env, [], ["AGENT_BROWSER_", "SUNA
 
 async function run(args: string[], timeoutMs = 30000): Promise<BrowserResult> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("agent-browser", ["--session", SESSION, ...args], {
+		const proc = spawnAgentBrowser(["--session", SESSION, ...args], {
 			timeout: timeoutMs,
 			env: childEnv(),
 		});
@@ -30,7 +30,7 @@ async function run(args: string[], timeoutMs = 30000): Promise<BrowserResult> {
 
 async function runRaw(args: string[], timeoutMs = 30000): Promise<BrowserResult> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("agent-browser", args, {
+		const proc = spawnAgentBrowser(args, {
 			timeout: timeoutMs,
 			env: childEnv(),
 		});
@@ -45,7 +45,7 @@ async function runRaw(args: string[], timeoutMs = 30000): Promise<BrowserResult>
 
 async function runBatchFromStdin(command: string[], timeoutMs = 30000): Promise<BrowserResult> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("agent-browser", ["--session", SESSION, "batch", "--bail", "--json"], {
+		const proc = spawnAgentBrowser(["--session", SESSION, "batch", "--bail", "--json"], {
 			timeout: timeoutMs,
 			env: childEnv(),
 		});
@@ -117,7 +117,7 @@ export async function select(ref: string, value: string): Promise<void> {
 
 export async function evalJS(code: string): Promise<string> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("agent-browser", ["--session", SESSION, "eval", "--stdin"], {
+		const proc = spawnAgentBrowser(["--session", SESSION, "eval", "--stdin"], {
 			timeout: 15000,
 			env: childEnv(),
 		});

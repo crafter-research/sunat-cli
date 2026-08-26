@@ -1,0 +1,37 @@
+{
+	"version": 1,
+	"name": "sunat-cli Windows login before and after",
+	"platforms": ["windows"],
+	"vars": {},
+	"defaultTimeoutMs": 30000,
+	"steps": [
+		{
+			"type": "exec",
+			"argv": [
+				"powershell",
+				"-NoProfile",
+				"-Command",
+				"Start-Process powershell -ArgumentList '-NoProfile','-File','tests/fixtures/windows-output-viewer.ps1','-Title','SUNAT_BEFORE','-Path','evidence/before.txt'"
+			]
+		},
+		{ "type": "cuse", "action": "wait", "options": { "window": "SUNAT_BEFORE" } },
+		{ "type": "cuse", "action": "focus", "args": ["SUNAT_BEFORE"] },
+		{ "type": "cuse", "action": "settle" },
+		{ "type": "cuse", "action": "capture", "args": ["evidence/before.png"] },
+		{ "type": "cuse", "action": "key", "args": ["alt+F4"] },
+		{
+			"type": "exec",
+			"argv": [
+				"powershell",
+				"-NoProfile",
+				"-Command",
+				"Start-Process powershell -ArgumentList '-NoProfile','-File','tests/fixtures/windows-output-viewer.ps1','-Title','SUNAT_AFTER','-Path','evidence/after.txt'"
+			]
+		},
+		{ "type": "cuse", "action": "wait", "options": { "window": "SUNAT_AFTER" } },
+		{ "type": "cuse", "action": "focus", "args": ["SUNAT_AFTER"] },
+		{ "type": "cuse", "action": "settle" },
+		{ "type": "cuse", "action": "capture", "args": ["evidence/after.png"] },
+		{ "type": "cuse", "action": "key", "args": ["alt+F4"] }
+	]
+}

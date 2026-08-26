@@ -1,4 +1,5 @@
-import { execFileSync } from "node:child_process";
+import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from "node:child_process";
+import crossSpawn from "cross-spawn";
 
 export const AGENT_BROWSER_INSTALL = [
 	"npm install -g agent-browser      # all platforms",
@@ -37,15 +38,27 @@ export type BinaryStatus = {
 	hint?: string;
 };
 
+export function spawnAgentBrowser(args: string[], options: SpawnOptionsWithoutStdio): ChildProcessWithoutNullStreams {
+	return crossSpawn("agent-browser", args, options) as ChildProcessWithoutNullStreams;
+}
+
+export function requireAgentBrowser(status: BinaryStatus = probeAgentBrowser()): void {
+	if (status.installed) return;
+	if (status.hint === AGENT_BROWSER_INSTALL) throw missingBinaryError();
+	throw new Error(status.hint || "agent-browser is unavailable");
+}
+
 /** Cheap presence probe for `doctor`. Never throws. */
 export function probeAgentBrowser(): BinaryStatus {
 	try {
-		const out = execFileSync("agent-browser", ["--version"], {
+		const result = crossSpawn.sync("agent-browser", ["--version"], {
 			encoding: "utf-8",
 			timeout: 10000,
 			stdio: ["ignore", "pipe", "ignore"],
 		});
-		return { installed: true, version: out.trim() };
+		if (result.error) throw result.error;
+		if (result.status !== 0) throw new Error(`agent-browser --version exited with status ${result.status}`);
+		return { installed: true, version: result.stdout.trim() };
 	} catch (err) {
 		if (isMissingBinary(err)) {
 			return { installed: false, hint: AGENT_BROWSER_INSTALL };
