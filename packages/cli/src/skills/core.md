@@ -135,7 +135,7 @@ then ignored by the code. Prefer `declarar`.
 
 ```bash
 sunat-cli login
-sunat-cli buzon list
+sunat-cli buzon list --max-pages 25
 sunat-cli buzon status
 sunat-cli schema buzon
 ```

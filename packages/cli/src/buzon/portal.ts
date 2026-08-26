@@ -12,6 +12,7 @@ const LIST_PATH = "/ol-ti-itvisornoti/visor/listNotiMenPag";
 const FOLDERS_PATH = "/ol-ti-itvisornoti/visor/ajax/listarCarpetas";
 const ALERTS_PATH = "/ol-ti-itvisornoti/visor/consultarAlertas";
 const MIN_REQUEST_GAP_MS = 1200;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 export class BuzonPortalError extends Error {
 	constructor(
@@ -43,7 +44,7 @@ function parseEvalValue<T>(value: unknown): T {
 
 export function buildBuzonRequestExpression(path: string, options: BuzonRequestOptions = {}): string {
 	const method = options.method ?? "GET";
-	return `(async()=>{const u=new URL(${JSON.stringify(path)},location.origin);for(const [k,v] of Object.entries(${JSON.stringify(options.query ?? {})}))u.searchParams.set(k,v);try{const r=await fetch(u,{method:${JSON.stringify(method)},credentials:'include',headers:{accept:'application/json'}});let d=null;try{d=await r.json()}catch{}return JSON.stringify({ok:r.ok,status:r.status,data:d})}catch{return JSON.stringify({ok:false,status:0,data:null})}})()`;
+	return `(async()=>{const u=new URL(${JSON.stringify(path)},location.origin);for(const [k,v] of Object.entries(${JSON.stringify(options.query ?? {})}))u.searchParams.set(k,v);try{const r=await fetch(u,{method:${JSON.stringify(method)},credentials:'include',headers:{accept:'application/json'},signal:AbortSignal.timeout(${REQUEST_TIMEOUT_MS})});let d=null;try{d=await r.json()}catch{}return JSON.stringify({ok:r.ok,status:r.status,data:d})}catch{return JSON.stringify({ok:false,status:0,data:null})}})()`;
 }
 
 export function createBuzonRequester<TSession extends Pick<CdpSession, "evalIn">>(

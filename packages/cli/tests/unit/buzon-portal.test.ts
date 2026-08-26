@@ -31,6 +31,7 @@ describe("Buzón portal boundary", () => {
 		expect(expression).not.toContain("obtenerDetalleNotiMen");
 		expect(expression).not.toContain("cookie");
 		expect(expression).not.toContain("location.search");
+		expect(expression).toContain("AbortSignal.timeout(15000)");
 	});
 
 	test("retries throttled metadata responses with bounded backoff", async () => {

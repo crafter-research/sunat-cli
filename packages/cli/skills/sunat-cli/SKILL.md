@@ -410,7 +410,7 @@ Use `sunat-cli schema <resource>` to get machine-readable field definitions befo
 
 ```bash
 sunat-cli login
-sunat-cli buzon list
+sunat-cli buzon list --max-pages 25
 sunat-cli buzon status
 sunat-cli schema buzon
 ```

@@ -35,7 +35,7 @@ sunat-cli api token --output json        # Validate OAuth2 credentials without p
 
 ```bash
 sunat-cli login
-sunat-cli buzon list
+sunat-cli buzon list --max-pages 25
 sunat-cli buzon status
 sunat-cli schema buzon
 ```
