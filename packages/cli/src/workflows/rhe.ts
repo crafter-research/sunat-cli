@@ -1,3 +1,4 @@
+import { SOL_MENU_URL } from "../browser/auth.ts";
 import * as browser from "../browser/client.ts";
 import { today } from "../utils/dates.ts";
 import type { MedioPago, TipoDocumento } from "../validation/input.ts";
@@ -117,7 +118,7 @@ export async function emitRHE(input: RHEInput): Promise<RHEResult> {
 
 	// Clean up and return to dashboard
 	await browser.clearBeforeUnload();
-	await browser.open("https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*", {
+	await browser.open(SOL_MENU_URL, {
 		headed: true,
 	});
 	await browser.sleep(2000);

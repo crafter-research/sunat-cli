@@ -1,3 +1,4 @@
+import { SOL_MENU_URL } from "../browser/auth.ts";
 import { setInputValueInIframe } from "../browser/cdp.ts";
 import * as browser from "../browser/client.ts";
 import { getCredentials } from "../data/config.ts";
@@ -134,7 +135,7 @@ export async function ensureNuevaPlataformaAndF616(): Promise<void> {
 
 	if (!url.includes("itmenu2") || !url.includes("pestana")) {
 		const creds = getCredentials();
-		await browser.open("https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm", { headed: true });
+		await browser.open(SOL_MENU_URL, { headed: true });
 		await browser.sleep(3000);
 
 		const snap = await browser.snapshot({ interactive: true });

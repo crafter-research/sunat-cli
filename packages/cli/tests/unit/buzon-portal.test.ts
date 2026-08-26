@@ -4,14 +4,19 @@ import { BuzonPortalError, buildBuzonRequestExpression, createBuzonRequester } f
 
 const PORTAL_SOURCE = readFileSync(new URL("../../src/buzon/portal.ts", import.meta.url), "utf8");
 const AUTH_SOURCE = readFileSync(new URL("../../src/browser/auth.ts", import.meta.url), "utf8");
+const F616_SOURCE = readFileSync(new URL("../../src/workflows/f616.ts", import.meta.url), "utf8");
+const RHE_SOURCE = readFileSync(new URL("../../src/workflows/rhe.ts", import.meta.url), "utf8");
 
 describe("Buzón portal boundary", () => {
 	test("installs the detail abort route before opening the visor", () => {
 		const route = PORTAL_SOURCE.indexOf("await browser.routeAbort(DETAIL_ROUTE)");
 		const click = PORTAL_SOURCE.indexOf("await browser.click(ref)");
 		expect(PORTAL_SOURCE).toContain(`const DETAIL_ROUTE = \`**\${DETAIL_PATH}*\`;`);
-		expect(PORTAL_SOURCE).toContain("MenuInternet.htm?pestana=*&agrupacion=*");
 		expect(AUTH_SOURCE).toContain("MenuInternet.htm?pestana=*&agrupacion=*");
+		expect(PORTAL_SOURCE).toContain("SOL_MENU_URL");
+		expect(F616_SOURCE).toContain("SOL_MENU_URL");
+		expect(RHE_SOURCE).toContain("SOL_MENU_URL");
+		expect(F616_SOURCE).not.toContain('browser.open("https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm"');
 		expect(route).toBeGreaterThan(-1);
 		expect(click).toBeGreaterThan(route);
 	});

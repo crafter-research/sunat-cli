@@ -316,8 +316,8 @@ are owner-only and contain authentication state, so treat them as secrets.
 
 | URL | Purpose |
 |-----|---------|
-| `e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm` | SOL viejo login |
-| `e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*` | SOL viejo dashboard |
+| `e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm` | Legacy base entry, observed returning 503 on 2026-08-26 |
+| `e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*` | Canonical SOL login and dashboard entry |
 | `e-menu.sunat.gob.pe/cl-ti-itmenu2/MenuInternetPlataforma.htm?exe=55.1.1.1.1` | Nueva Plataforma (via SOL, no CAPTCHA) |
 | `api-seguridad.sunat.gob.pe/v1/clientessol/{id}/oauth2/token/` | OAuth2 token endpoint |
 | `api-cpe.sunat.gob.pe` | CPE API base URL |

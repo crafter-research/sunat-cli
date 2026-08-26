@@ -1,11 +1,10 @@
-import { ensureSOLSession } from "../browser/auth.ts";
+import { ensureSOLSession, SOL_MENU_URL } from "../browser/auth.ts";
 import { type CdpSession, connect } from "../browser/cdp.ts";
 import * as browser from "../browser/client.ts";
 import { getCredentials } from "../data/config.ts";
 import { normalizeBuzonPages, pageEnd, pageRows } from "./normalize.ts";
 import type { BuzonKind, BuzonOverview, RawBuzonPage } from "./types.ts";
 
-const MENU_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*";
 const DETAIL_PATH = "/ol-ti-itvisornoti/visor/obtenerDetalleNotiMen";
 const DETAIL_ROUTE = `**${DETAIL_PATH}*`;
 const LIST_PATH = "/ol-ti-itvisornoti/visor/listNotiMenPag";
@@ -122,7 +121,7 @@ function findBuzonRef(snapshot: string): string | null {
 }
 
 async function resetToMenu(): Promise<string> {
-	await browser.evalJS(`location.assign(${JSON.stringify(MENU_URL)})`);
+	await browser.evalJS(`location.assign(${JSON.stringify(SOL_MENU_URL)})`);
 	await browser.sleep(1800);
 	return browser.snapshot({ interactive: true });
 }

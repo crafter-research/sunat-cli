@@ -3,7 +3,7 @@ import { paths } from "../data/config.ts";
 import { solveReCaptcha } from "./captcha.ts";
 import * as browser from "./client.ts";
 
-const SOL_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*";
+export const SOL_MENU_URL = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm?pestana=*&agrupacion=*";
 const NUEVA_PLATAFORMA_URL =
 	"https://api-seguridad.sunat.gob.pe/oauth2/login?originalUrl=https://e-menu.sunat.gob.pe/cl-ti-itmenu2/AutenticaMenuInternetPlataforma.htm";
 
@@ -33,7 +33,7 @@ export async function ensureSOLSession(creds: Credentials): Promise<void> {
 }
 
 export async function loginSOL(creds: Credentials): Promise<void> {
-	await browser.open(SOL_URL, { headed: true });
+	await browser.open(SOL_MENU_URL, { headed: true });
 	await browser.sleep(3000);
 
 	let snap = await browser.snapshot({ interactive: true });
