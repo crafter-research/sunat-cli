@@ -37,7 +37,7 @@ jobs:
         run: bun test tests/unit/agent-browser-windows-shim.test.ts tests/unit/agent-browser-dependency.test.ts
         working-directory: packages/cli
       - name: Install published baseline
-        run: npm install --global @crafter/sunat-cli@0.11.2 --ignore-scripts --registry https://registry.npmjs.org
+        run: npm install --global @crafter/sunat-cli@0.10.1 --ignore-scripts --registry https://registry.npmjs.org
       - name: Prepare before and after output
         shell: pwsh
         run: |
