@@ -1,0 +1,11 @@
+#!/bin/sh
+for arg in "$@"; do
+	printf '%s\n' "$arg"
+done > "$SUNAT_TEST_KEYCHAIN_ARGS"
+input=$(command cat)
+printf '%s' "$input" > "$SUNAT_TEST_KEYCHAIN_STDIN"
+printf '%s' "${SUNAT_PASSWORD:-}" > "$SUNAT_TEST_KEYCHAIN_ENV"
+if [ "${SUNAT_TEST_KEYCHAIN_FAIL:-0}" = "1" ]; then
+	printf '%s' "${SUNAT_TEST_KEYCHAIN_ERROR:-keychain failed}" >&2
+	exit "${SUNAT_TEST_KEYCHAIN_EXIT_CODE:-2}"
+fi

@@ -16,6 +16,98 @@ export interface KeychainEntry {
 	exists: boolean;
 }
 
+const WINDOWS_CREDENTIAL_SCRIPT = `
+$source = @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class SunatCredentialManager
+{
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct Credential
+    {
+        public uint Flags;
+        public uint Type;
+        public string TargetName;
+        public string Comment;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+        public uint CredentialBlobSize;
+        public IntPtr CredentialBlob;
+        public uint Persist;
+        public uint AttributeCount;
+        public IntPtr Attributes;
+        public string TargetAlias;
+        public string UserName;
+    }
+
+    [DllImport("Advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredWrite(ref Credential credential, uint flags);
+
+    [DllImport("Advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredRead(string target, uint type, uint flags, out IntPtr credential);
+
+    [DllImport("Advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool CredDelete(string target, uint type, uint flags);
+
+    [DllImport("Advapi32.dll", EntryPoint = "CredFree", SetLastError = false)]
+    public static extern void CredFree(IntPtr credential);
+}
+'@
+
+Add-Type -TypeDefinition $source
+$action = $args[0]
+$target = $args[1]
+
+if ($action -eq "set") {
+    $secret = [Console]::In.ReadToEnd()
+    $bytes = [Text.Encoding]::Unicode.GetBytes($secret)
+    $blob = [Runtime.InteropServices.Marshal]::AllocCoTaskMem($bytes.Length)
+    try {
+        [Runtime.InteropServices.Marshal]::Copy($bytes, 0, $blob, $bytes.Length)
+        $credential = [SunatCredentialManager+Credential]::new()
+        $credential.Type = 1
+        $credential.TargetName = $target
+        $credential.CredentialBlobSize = $bytes.Length
+        $credential.CredentialBlob = $blob
+        $credential.Persist = 2
+        $credential.UserName = $target
+        if (-not [SunatCredentialManager]::CredWrite([ref]$credential, 0)) { exit 2 }
+    } finally {
+        if ($bytes.Length -gt 0) {
+            $zeros = [byte[]]::new($bytes.Length)
+            [Runtime.InteropServices.Marshal]::Copy($zeros, 0, $blob, $zeros.Length)
+        }
+        [Runtime.InteropServices.Marshal]::FreeCoTaskMem($blob)
+    }
+    exit 0
+}
+
+if ($action -eq "get") {
+    $pointer = [IntPtr]::Zero
+    if (-not [SunatCredentialManager]::CredRead($target, 1, 0, [ref]$pointer)) {
+        if ([Runtime.InteropServices.Marshal]::GetLastWin32Error() -eq 1168) { exit 1 }
+        exit 2
+    }
+    try {
+        $credential = [Runtime.InteropServices.Marshal]::PtrToStructure($pointer, [type][SunatCredentialManager+Credential])
+        [Console]::Out.Write([Runtime.InteropServices.Marshal]::PtrToStringUni($credential.CredentialBlob, $credential.CredentialBlobSize / 2))
+    } finally {
+        [SunatCredentialManager]::CredFree($pointer)
+    }
+    exit 0
+}
+
+if ($action -eq "clear") {
+    if (-not [SunatCredentialManager]::CredDelete($target, 1, 0)) {
+        if ([Runtime.InteropServices.Marshal]::GetLastWin32Error() -eq 1168) { exit 1 }
+        exit 2
+    }
+    exit 0
+}
+
+exit 2
+`;
+
 function assertSecretKey(key: string): void {
 	if (!/^[A-Z][A-Z0-9_]*$/.test(key)) throw new Error(`Invalid secret key "${key}". Use an env-var-style name.`);
 }
@@ -41,16 +133,34 @@ function platformName(): string {
 	return process.platform;
 }
 
-export function keychainBackend(): "macos" | "linux" | "unsupported" {
+export function keychainBackend(): "macos" | "linux" | "windows" | "unsupported" {
 	if (process.platform === "darwin") return "macos";
 	if (process.platform === "linux") return "linux";
+	if (process.platform === "win32") return "windows";
 	return "unsupported";
+}
+
+function windowsCredential(action: "set" | "get" | "clear", key: string, input?: string): string {
+	return run(
+		"powershell.exe",
+		[
+			"-NoLogo",
+			"-NoProfile",
+			"-NonInteractive",
+			"-Command",
+			WINDOWS_CREDENTIAL_SCRIPT,
+			action,
+			`${KEYCHAIN_SERVICE}/${key}`,
+		],
+		input,
+	);
 }
 
 export function setKeychainSecret(key: string, value: string): void {
 	assertSecretKey(key);
 	if (!value) throw new Error("Secret value cannot be empty.");
 	if (/[\r\n]/.test(value)) throw new Error("Secret value cannot contain line breaks.");
+	if (value.includes("\0")) throw new Error("Secret value cannot contain null bytes.");
 	const backend = keychainBackend();
 	try {
 		if (backend === "macos") {
@@ -63,6 +173,10 @@ export function setKeychainSecret(key: string, value: string): void {
 				["store", "--label", `${KEYCHAIN_SERVICE} ${key}`, "service", KEYCHAIN_SERVICE, "account", key],
 				value,
 			);
+			return;
+		}
+		if (backend === "windows") {
+			windowsCredential("set", key, value);
 			return;
 		}
 		throw new Error(`${platformName()} is not supported yet.`);
@@ -79,6 +193,7 @@ export function getKeychainSecret(key: string): string | undefined {
 			return run("security", ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", key, "-w"]) || undefined;
 		if (backend === "linux")
 			return run("secret-tool", ["lookup", "service", KEYCHAIN_SERVICE, "account", key]) || undefined;
+		if (backend === "windows") return windowsCredential("get", key) || undefined;
 		return undefined;
 	} catch (err) {
 		if (commandUnavailable(err)) return undefined;
@@ -96,6 +211,10 @@ export function clearKeychainSecret(key: string): boolean {
 		}
 		if (backend === "linux") {
 			run("secret-tool", ["clear", "service", KEYCHAIN_SERVICE, "account", key]);
+			return true;
+		}
+		if (backend === "windows") {
+			windowsCredential("clear", key);
 			return true;
 		}
 		throw new Error(`${platformName()} is not supported yet.`);

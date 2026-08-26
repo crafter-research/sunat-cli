@@ -5,6 +5,12 @@ import { output, outputError } from "../utils/output.ts";
 
 type Format = "json" | "table" | "auto";
 
+async function readSecretFromStdin(): Promise<string> {
+	let value = "";
+	for await (const chunk of process.stdin) value += chunk.toString();
+	return value.replace(/\r?\n$/, "");
+}
+
 function getFormat(cmd: Command): Format {
 	let parent: Command | null = cmd;
 	while (parent) {
@@ -22,19 +28,25 @@ export function createKeychainCommand(): Command {
 		.command("set")
 		.description("Store a secret in the OS keychain.")
 		.argument("<key>", "Secret env var name, e.g. CPE_CERT_PASSWORD")
-		.action(async (key, _opts, cmd) => {
+		.option("--stdin", "Read the secret from stdin without exposing it in process arguments.")
+		.action(async (key, opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
-				if (!process.stdin.isTTY) {
+				if (!opts.stdin && !process.stdin.isTTY) {
 					outputError(`Run this command on a terminal to be prompted for ${key} without echo.`, format);
 					return;
 				}
-				const entered = await p.password({ message: `Value for ${key}` });
-				if (p.isCancel(entered)) {
-					p.cancel("Cancelled");
-					process.exit(0);
+				let value: string;
+				if (opts.stdin) {
+					value = await readSecretFromStdin();
+				} else {
+					const entered = await p.password({ message: `Value for ${key}` });
+					if (p.isCancel(entered)) {
+						p.cancel("Cancelled");
+						process.exit(0);
+					}
+					value = entered as string;
 				}
-				const value = entered as string;
 				setKeychainSecret(key, value);
 				output(format, {
 					json: { success: true, key },

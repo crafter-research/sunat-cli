@@ -22,12 +22,13 @@ async function runProbe(
 	options: {
 		fail?: boolean;
 		secret?: string;
-		platform?: "darwin" | "linux";
+		platform?: "darwin" | "linux" | "win32";
 		action?: "set" | "get" | "clear";
 	} = {},
 ): Promise<{ stderr: string; exitCode: number }> {
 	chmodSync(join(fixtureBin, "security"), 0o755);
 	chmodSync(join(fixtureBin, "secret-tool"), 0o755);
+	chmodSync(join(fixtureBin, "powershell.exe"), 0o755);
 	const proc = Bun.spawn(["bun", "run", probe], {
 		env: {
 			...process.env,
@@ -83,6 +84,16 @@ describe("keychain input privacy", () => {
 	test("passes Linux Secret Service values through stdin instead of process arguments", async () => {
 		const capture = capturePaths();
 		const result = await runProbe(capture, { platform: "linux" });
+
+		expect(result).toEqual({ stderr: "", exitCode: 0 });
+		expect(readFileSync(capture.args, "utf8")).not.toContain("private-clave-sol");
+		expect(readFileSync(capture.stdin, "utf8")).toBe("private-clave-sol");
+		expect(readFileSync(capture.env, "utf8")).toBe("");
+	});
+
+	test("passes Windows Credential Manager values through stdin instead of process arguments", async () => {
+		const capture = capturePaths();
+		const result = await runProbe(capture, { platform: "win32" });
 
 		expect(result).toEqual({ stderr: "", exitCode: 0 });
 		expect(readFileSync(capture.args, "utf8")).not.toContain("private-clave-sol");

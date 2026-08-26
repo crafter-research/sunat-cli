@@ -40,6 +40,7 @@ sunat-cli whoami
 ```
 
 RUC and usuario are saved to `~/.sunat/config.json` after first login. Password is never stored in config or another plaintext file; optional persistence uses the OS keychain.
+For non-interactive setup, pipe the secret with `sunat-cli keychain set SUNAT_PASSWORD --stdin`; it is still stored only in the OS keychain.
 
 ### RHE (Recibo por Honorarios)
 
