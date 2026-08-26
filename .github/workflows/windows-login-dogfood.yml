@@ -54,6 +54,7 @@ jobs:
           Remove-Item Env:SUNAT_PASSWORD
           if (-not (Select-String -Quiet -Path packages/cli/evidence/before.txt -Pattern "ENOENT|uv_spawn")) { throw "raw ENOENT baseline missing" }
           if (-not (Select-String -Quiet -Path packages/cli/evidence/after.txt -Pattern "agent-browser is not installed")) { throw "guided dependency error missing" }
+          exit 0
       - name: Verify the real npm shim under Node
         shell: pwsh
         run: |
