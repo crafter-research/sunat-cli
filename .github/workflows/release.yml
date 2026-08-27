@@ -141,6 +141,7 @@ jobs:
         run: npm publish "$GITHUB_WORKSPACE/.release/crafter-sunat-cli-$VERSION.tgz" --access public --ignore-scripts --provenance --registry https://registry.npmjs.org
 
       - name: Verify published artifact
+        if: steps.version.outputs.publish == 'true'
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
