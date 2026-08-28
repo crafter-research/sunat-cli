@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+# Smoke test: download the RVIE and RCE proposals for a period, end to end, with
+# the build that ships (node dist/sunat.js, not bun bin/sunat.ts).
+#
+# One command per book does the three steps SUNAT requires: ask for the export
+# (Manual API Registro de Ventas v30 §5.18 / Manual SIRE Compras v28 §5.34),
+# poll the ticket by period (§5.16), download the file it produced (§5.17). The
+# result must be a ZIP.
+#
+# Needs real SIRE credentials in the environment, the same five the CLI reads:
+#   SUNAT_API_CLIENT_ID, SUNAT_API_CLIENT_SECRET, SUNAT_RUC, SUNAT_USER, SUNAT_PASSWORD
+# It skips, without failing, when they are absent. It prints ticket numbers and
+# byte counts only: no RUC, no names, no amounts. The downloaded files are
+# deleted on exit.
+#
+# Run from packages/cli directory:
+#   bash scripts/smoke-sire-propuesta.sh [YYYYMM]     # default: previous month
+# Or via npm script:
+#   bun smoke:sire-propuesta
 
 set -euo pipefail
 

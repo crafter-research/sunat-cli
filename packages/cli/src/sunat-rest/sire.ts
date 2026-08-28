@@ -103,6 +103,15 @@ export interface TicketResponse {
 	numTicket: string;
 }
 
+/**
+ * Each book exports its proposal from its own propuesta module, with the period
+ * in the path: Manual API Registro de Ventas v30 §5.18 and Manual SIRE Compras
+ * v28 §5.34. The shared `rvierce/gestionprocesosmasivos/.../exportapropuesta`
+ * route of the v22 manual is gone; the gateway answers it, like any unknown
+ * route, with a bare nginx 500 that reads as an outage. The format parameter is
+ * `codTipoArchivo`, and RCE rejects the call with 422 without `codOrigenEnvio`.
+ * Verified against production 2026-08-25.
+ */
 export async function descargarPropuesta(opts: DescargarOpts, creds: OAuthCredentials): Promise<string> {
 	const libro = opts.codLibro === COD_LIBRO.rvie ? "rvie" : "rce";
 	const action = opts.codLibro === COD_LIBRO.rvie ? "exportapropuesta" : "exportacioncomprobantepropuesta";
@@ -140,6 +149,7 @@ export async function descargarRvie(perTributario: string, creds: OAuthCredentia
 
 export interface TicketArchivo {
 	nomArchivoReporte: string;
+	/** As SUNAT returns it, with its misspelling. The download endpoint accepts either spelling. */
 	codTipoAchivoReporte?: string;
 	codTipoArchivoReporte?: string;
 	nomArchivoContenido?: string;
@@ -149,6 +159,7 @@ export interface TicketStatus {
 	numTicket: string;
 	codEstadoProceso: string; // "01" iniciado, "03" en proceso, "06" terminado, "07" error, "10" terminado con error
 	desEstadoProceso: string;
+	/** The process that produced the ticket (Anexo I). The download endpoint needs it back. */
 	codProceso?: string;
 	desProceso?: string;
 	perTributario?: string;
@@ -157,6 +168,12 @@ export interface TicketStatus {
 	archivoReporte?: TicketArchivo[];
 }
 
+/**
+ * `consultaestadotickets` is a listing per period: `perIni`/`perFin` are
+ * mandatory (Manual API Registro de Ventas v30 §5.16) and a request carrying
+ * only `numTicket` is answered 422. The ticket number does not encode the
+ * period, so callers must know which period the ticket belongs to.
+ */
 export async function consultarTicket(
 	numTicket: string,
 	creds: OAuthCredentials,
@@ -187,10 +204,18 @@ export interface DescargarArchivoOpts {
 	codTipoArchivoReporte: string;
 	codLibro: CodLibro;
 	perTributario: string;
+	/** The `codProceso` of the ticket that produced the file, e.g. "10" for an exported proposal. Mandatory. */
 	codProceso: string;
+	/** The ticket itself. Mandatory. */
 	numTicket: string;
 }
 
+/**
+ * Manual API Registro de Ventas v30 §5.17 lists `perTributario`, `codProceso`
+ * and `numTicket` as mandatory alongside the file name; the URL template in
+ * the same section omits them, and so did this function. Without either of
+ * the two the server answers 500. Verified against production 2026-08-26.
+ */
 export async function descargarArchivo(opts: DescargarArchivoOpts, creds: OAuthCredentials): Promise<Buffer> {
 	const token = await getAccessToken(creds);
 	const url = new URL(
@@ -211,6 +236,11 @@ export async function descargarArchivo(opts: DescargarArchivoOpts, creds: OAuthC
 	return Buffer.from(ab);
 }
 
+/**
+ * The download options for the n-th file a finished ticket produced, or null
+ * when the ticket lists no such file. The ticket carries everything the
+ * download needs; this keeps callers from re-assembling six parameters.
+ */
 export function archivoDeTicket(
 	ticket: { numTicket: string; codProceso?: string; archivoReporte?: TicketArchivo[] },
 	codLibro: CodLibro,
@@ -269,6 +299,7 @@ export interface PollTicketResult {
 export interface PollTicketOpts {
 	creds: OAuthCredentials;
 	numTicket: string;
+	/** The period the ticket belongs to; the status endpoint cannot be queried without it. */
 	perTributario: string;
 	timeoutMs?: number;
 	initialDelayMs?: number;

@@ -81,6 +81,9 @@ describe("selectRateForDate — pure selector", () => {
 });
 
 describe("getTipoCambio — request shape", () => {
+	// SUNAT's WAF rejects the request when Accept-Encoding is absent. Bun's fetch
+	// adds the header on its own, Node's does not, so the published Node build
+	// failed on every call while the Bun-run suite stayed green.
 	test("sends Accept-Encoding, which the WAF requires", async () => {
 		const original = global.fetch;
 		let seen: Record<string, string> = {};

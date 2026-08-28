@@ -52,6 +52,8 @@ const BROWSER_HEADERS: Record<string, string> = {
 		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
 	Accept: "application/json, text/javascript, */*; q=0.01",
 	"Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+	// SUNAT's WAF rejects requests without Accept-Encoding. Bun's fetch adds it
+	// by default; Node's (undici) does not, so the Node build was rejected.
 	"Accept-Encoding": "gzip, deflate, br",
 	"Content-Type": "application/json; charset=utf-8",
 	"X-Requested-With": "XMLHttpRequest",
