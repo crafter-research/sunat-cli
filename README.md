@@ -134,6 +134,18 @@ So: log in once through the browser. API-backed reads run headless with a cached
 
 ## Contributing
 
+Start from an issue and keep one issue per branch and pull request. Contributors
+with write access can push a branch directly to this repository; `main` remains
+protected.
+
+Open a draft pull request as soon as the initial structure is ready so scope and
+direction can be reviewed before the implementation is complete. Every pull
+request should link its issue, include the verification commands that were run,
+and add screenshots when it changes the website.
+
+Never use real SUNAT credentials, certificates, tokens, taxpayer records, or
+production submissions as test evidence.
+
 ```bash
 bun install
 bun test
