@@ -59,6 +59,7 @@ const AVAILABLE_SCHEMAS = [
 	"cpe-factura",
 	"cpe-boleta",
 	"cpe-nota-credito",
+	"cpe-gre",
 	"cpe-catalogos",
 ] as const;
 
@@ -76,6 +77,7 @@ const SCHEMA_VERSIONS: Record<SchemaName, string> = {
 	"cpe-factura": "1.0.0",
 	"cpe-boleta": "1.0.0",
 	"cpe-nota-credito": "1.0.0",
+	"cpe-gre": "1.0.0",
 	"cpe-catalogos": "1.0.0",
 };
 

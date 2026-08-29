@@ -39,6 +39,37 @@ gives S/124.
 
 Portal: Nueva Plataforma (e-menu.sunat.gob.pe/cl-ti-itmenu2/), menu code 55.1.3.1.5.
 
+## GRE Emit Fields (Guía de Remisión Electrónica)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| destinatario | object | yes | - | Goods recipient: tipoDoc (Catalog 06), numDoc, rznSocial |
+| envio | object | yes | - | Shipment: codTraslado (Catalog 20), modTraslado (Catalog 18), fecTraslado, pesoTotal, undPesoTotal, partida, llegada |
+| envio.chofer | object | cond. | - | Required when modTraslado=02: tipoDoc, nroDoc, nombres, apellidos, licencia |
+| envio.vehiculo | object | cond. | - | Required when modTraslado=02: placa (e.g. ABC-123) |
+| envio.partida | object | yes | - | Origin: ubigeo (INEI 6-digit), direccion, codLocal (default 0000) |
+| envio.llegada | object | yes | - | Destination: same shape as partida |
+| items | array | yes | - | Despatch lines: codigo, descripcion, cantidad, unidad (Catalog 03) |
+| serie | string | no | T001 | GRE serie, e.g. T001 |
+| numero | integer | yes | - | Correlative number |
+| fechaEmision | date | no | today | YYYY-MM-DD |
+| horaEmision | string | no | 12:00:00 | HH:mm:ss |
+| observacion | string | no | - | Free-form note |
+
+Auth: OAuth credentials (SUNAT_GRE_CLIENT_ID + SUNAT_GRE_CLIENT_SECRET or SUNAT_API_*)
+plus SOL (CPE_SOL_USUARIO + CPE_SOL_PASSWORD). Get from SOL → Credenciales API SUNAT,
+URI = 'GRE Emisión de Comprobantes'.
+
+`--dry-run` builds, signs and validates locally. Submission requires `--yes`.
+Submission is asynchronous — SUNAT returns a `numTicket`. Use `--wait` to poll
+until completed/rejected, or run `sunat-cli cpe gre status --ticket <id>` later.
+
+Only modTraslado 02 (transporte privado) is implemented. modTraslado 01 (público)
+requires CarrierParty + MTC registration — out of scope.
+
+API: REST OAuth (NOT SOAP). Different auth from Factura/Boleta.
+
+
 ## Example RHE payload
 
 ```json
