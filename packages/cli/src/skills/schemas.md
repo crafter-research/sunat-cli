@@ -52,7 +52,7 @@ Portal: Nueva Plataforma (e-menu.sunat.gob.pe/cl-ti-itmenu2/), menu code 55.1.3.
 | items | array | yes | - | Despatch lines: codigo, descripcion, cantidad, unidad (Catalog 03) |
 | serie | string | no | T001 | GRE serie, e.g. T001 |
 | numero | integer | yes | - | Correlative number |
-| fechaEmision | date | no | today | YYYY-MM-DD |
+| fechaEmision | date | yes | - | YYYY-MM-DD |
 | horaEmision | string | no | 12:00:00 | HH:mm:ss |
 | observacion | string | no | - | Free-form note |
 
@@ -61,11 +61,11 @@ plus SOL (CPE_SOL_USUARIO + CPE_SOL_PASSWORD). Get from SOL → Credenciales API
 URI = 'GRE Emisión de Comprobantes'.
 
 `--dry-run` builds, signs and validates locally. Submission requires `--yes`.
-Submission is asynchronous — SUNAT returns a `numTicket`. Use `--wait` to poll
+Submission is asynchronous. SUNAT returns a `numTicket`. Use `--wait` to poll
 until completed/rejected, or run `sunat-cli cpe gre status --ticket <id>` later.
 
 Only modTraslado 02 (transporte privado) is implemented. modTraslado 01 (público)
-requires CarrierParty + MTC registration — out of scope.
+requires CarrierParty + MTC registration and is out of scope.
 
 API: REST OAuth (NOT SOAP). Different auth from Factura/Boleta.
 

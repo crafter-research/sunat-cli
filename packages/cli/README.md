@@ -89,6 +89,8 @@ For local use, prefer `sunat-cli keychain set <KEY>`. Secrets are accepted throu
 export SUNAT_GRE_CLIENT_ID=...   # SOL → Credenciales API SUNAT, URI = "GRE Emisión de Comprobantes"
 export SUNAT_GRE_CLIENT_SECRET=...
 
+sunat-cli schema cpe-gre
+
 sunat-cli cpe gre emit --params '{
   "serie": "T001", "numero": 1, "fechaEmision": "2026-04-29",
   "destinatario": {"tipoDoc":"6","numDoc":"20100070970","rznSocial":"CLIENTE SAC"},

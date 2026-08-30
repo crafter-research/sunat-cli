@@ -31,6 +31,11 @@ describe("schema cpe-gre", () => {
 		expect(doc.fields.destinatario).toBeDefined();
 		expect(doc.fields.envio).toBeDefined();
 		expect(doc.fields.items).toBeDefined();
+		expect(doc.fields.fechaEmision.required).toBe(true);
+		expect(doc.fields.fechaEmision.default).toBeUndefined();
+		expect(doc.fields.destinatario.properties.tipoDoc.required).toBe(true);
+		expect(doc.fields.envio.properties.partida.properties.ubigeo.required).toBe(true);
+		expect(doc.fields.items.items.descripcion.required).toBe(true);
 	});
 
 	test("-o json produces identical output to pipe-default", async () => {
@@ -40,7 +45,7 @@ describe("schema cpe-gre", () => {
 	});
 
 	test("human-readable output includes field names and header", async () => {
-		// Force human (table) output — piped stdout would resolve auto → json
+		// Force human (table) output because piped stdout resolves auto to json.
 		const { stdout, exitCode } = await run(["-o", "table", "schema", "cpe-gre"]);
 		expect(exitCode).toBe(0);
 		expect(stdout).toContain("cpe gre emit");

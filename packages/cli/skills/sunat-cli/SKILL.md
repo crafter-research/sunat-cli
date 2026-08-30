@@ -119,6 +119,7 @@ sunat-cli cpe --driver mock doctor
 sunat-cli schema cpe-factura
 sunat-cli schema cpe-boleta
 sunat-cli schema cpe-nota-credito
+sunat-cli schema cpe-gre
 
 # Preview a Factura (T0, no submit)
 sunat-cli cpe factura preview --params '{
@@ -407,6 +408,7 @@ sunat-cli schema buzon           # Metadata-only Buzón SOL contract
 sunat-cli schema cpe-factura     # JSON schema for Factura Electronica
 sunat-cli schema cpe-boleta      # JSON schema for Boleta de Venta
 sunat-cli schema cpe-nota-credito
+sunat-cli schema cpe-gre         # JSON schema for Guía de Remisión Electrónica
 ```
 
 Use `sunat-cli schema <resource>` to get machine-readable field definitions before constructing payloads.
