@@ -1,0 +1,19 @@
+# sunat-cli
+
+> SUNAT tax automation from the terminal, in Peru. Built for AI agents to operate and humans to supervise. One supervised CLI over ten SUNAT surfaces — RHE, F616, CPE, SIRE, Renta, Padrón, Buzón and tipo de cambio — with JSON output, runtime schema introspection and graded safety tiers.
+
+Install with `npm install -g @crafter/sunat-cli`, then `sunat-cli --help`. The help output is the contract: every command it prints exists in the version you have. Runs on Node.
+
+## Docs
+- [Full documentation](https://sunat-cli.crafter.ing/llms-full.txt): the complete manual in one file — auth, every command surface, the SUNAT endpoint behind each command, and field schemas.
+- [README](https://github.com/crafter-research/sunat-cli/blob/main/README.md): install, quick start, the command table and safety tiers.
+- [LIMITATIONS](https://github.com/crafter-research/sunat-cli/blob/main/packages/cli/LIMITATIONS.md): the single source of truth for what does not work yet.
+
+## Source
+- [GitHub repository](https://github.com/crafter-research/sunat-cli)
+- [npm package](https://www.npmjs.com/package/@crafter/sunat-cli)
+
+## Notes
+- Output is JSON whenever stdout is not a terminal, so an agent gets parseable data without passing a flag.
+- `sunat-cli schema <command>` returns field specs at runtime, so an agent never parses `--help`.
+- Every mutation is graded: T0 read-only, T1 writes locally, T2 files with SUNAT and requires `--yes`, T3 is irreversible.
