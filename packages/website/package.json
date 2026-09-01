@@ -4,7 +4,9 @@
 	"version": "0.0.1",
 	"scripts": {
 		"assets": "bun run scripts/generate-assets.ts",
+		"llms": "bun run scripts/generate-llms.ts",
 		"dev": "astro dev",
+		"prebuild": "bun run scripts/generate-llms.ts",
 		"build": "astro build",
 		"preview": "astro preview"
 	},
