@@ -9,7 +9,7 @@
 		"preview": "astro preview"
 	},
 	"dependencies": {
-		"astro": "7.2.4",
+		"astro": "7.2.9",
 		"shiki": "^4.0.2"
 	},
 	"devDependencies": {
