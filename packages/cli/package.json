@@ -59,7 +59,7 @@
 		"@xmldom/xmldom": "^0.9.10",
 		"commander": "15.0.0",
 		"cross-spawn": "^7.0.6",
-		"fast-xml-parser": "5.11.0",
+		"fast-xml-parser": "5.11.1",
 		"node-forge": "^1.4.0",
 		"xml-crypto": "^6.1.2",
 		"yauzl": "^3.3.0",
