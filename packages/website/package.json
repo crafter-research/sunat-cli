@@ -13,7 +13,7 @@
 		"shiki": "^4.0.2"
 	},
 	"devDependencies": {
-		"sharp": "0.35.3",
+		"sharp": "0.35.4",
 		"vite": "8.2.2"
 	}
 }
