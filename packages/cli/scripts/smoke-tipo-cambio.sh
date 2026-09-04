@@ -39,10 +39,14 @@ if (r.success === false) {
 console.log("  fecha:", r.fecha);
 console.log("  compra:", r.compra);
 console.log("  venta:", r.venta);
-if (typeof r.venta === "number" && r.venta > 0) {
+const reasonable =
+  typeof r.compra === "number" && r.compra > 1 && r.compra < 10 &&
+  typeof r.venta === "number" && r.venta > 1 && r.venta < 10 &&
+  Math.abs(r.compra - r.venta) < 0.5;
+if (reasonable) {
   console.log("\n✅ TIPO-CAMBIO SMOKE PASSED");
   process.exit(0);
 }
-console.log("\n❌ TIPO-CAMBIO SMOKE FAILED: no venta rate in response");
+console.log("\n❌ TIPO-CAMBIO SMOKE FAILED: unreasonable USD/PEN response");
 process.exit(1);
 '
