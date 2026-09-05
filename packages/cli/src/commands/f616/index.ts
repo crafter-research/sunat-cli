@@ -5,6 +5,7 @@ import { obtenerListaOficios, obtenerPeriodo } from "../../plataforma/f616-api.t
 import { expandPeriodoRange } from "../../utils/dates.ts";
 import { resolveParams } from "../../utils/deprecation.ts";
 import { output, outputError } from "../../utils/output.ts";
+import { parseJsonParams } from "../../utils/params.ts";
 import { validatePeriodo } from "../../validation/input.ts";
 import { declareF616, ensureNuevaPlataformaAndF616, type F616Input, navigateToF616 } from "../../workflows/f616.ts";
 import { createDeclararCommand } from "./declarar.ts";
@@ -50,7 +51,7 @@ export function createF616Command(): Command {
 						await new Promise((r) => setTimeout(r, 2000));
 					}
 				} else if (params) {
-					const raw = JSON.parse(params);
+					const raw = parseJsonParams<Record<string, unknown>>(params, { schema: "f616" });
 					const periodo = validatePeriodo(String(raw.periodo));
 					const input: F616Input = {
 						periodo,
@@ -76,7 +77,7 @@ export function createF616Command(): Command {
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				audit({ command: "f616 declare", args: {}, result: "error", details: { error: msg } });
-				outputError(msg, format);
+				outputError(err instanceof Error ? err : msg, format);
 			}
 		});
 

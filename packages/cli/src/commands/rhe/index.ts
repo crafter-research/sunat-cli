@@ -7,6 +7,7 @@ import { audit } from "../../data/audit.ts";
 import { getCredentials } from "../../data/config.ts";
 import { resolveParams } from "../../utils/deprecation.ts";
 import { output, outputError } from "../../utils/output.ts";
+import { parseJsonParams } from "../../utils/params.ts";
 import {
 	rejectControlChars,
 	sanitizePath,
@@ -59,7 +60,7 @@ export function createRheCommand(): Command {
 						output(format, { json: { dryRun: true, input, status: "would-emit" } });
 					}
 				} else if (params) {
-					const raw = JSON.parse(params);
+					const raw = parseJsonParams<Record<string, unknown>>(params, { schema: "rhe" });
 					const input = validateRHEInput(raw);
 
 					if (dryRun) {
@@ -96,7 +97,7 @@ export function createRheCommand(): Command {
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				audit({ command: "rhe emit", args: {}, result: "error", details: { error: msg } });
-				outputError(msg, format);
+				outputError(err instanceof Error ? err : msg, format);
 			}
 		});
 

@@ -1,13 +1,14 @@
+import { parseJsonParams } from "../utils/params.ts";
 import type { FacturaInput, NotaCreditoInput } from "./drivers/types.ts";
 
 function todayIso(): string {
 	return new Date().toISOString().split("T")[0];
 }
 
-export function parseFacturaInput(payload: string): FacturaInput {
-	const raw = JSON.parse(payload) as Record<string, unknown>;
+export function parseFacturaInput(payload: string, schema = "cpe-factura"): FacturaInput {
+	const raw = parseJsonParams<Record<string, unknown>>(payload, { schema });
 	if (!raw.receptor || !raw.items || !raw.totales) {
-		throw new Error("Missing required fields. Run: sunat-cli schema cpe-factura");
+		throw new Error(`Missing required fields. Run: sunat-cli schema ${schema}`);
 	}
 	return {
 		receptor: raw.receptor as FacturaInput["receptor"],
@@ -22,8 +23,8 @@ export function parseFacturaInput(payload: string): FacturaInput {
 }
 
 export function parseNotaInput(payload: string): NotaCreditoInput {
-	const base = parseFacturaInput(payload);
-	const raw = JSON.parse(payload) as Record<string, unknown>;
+	const base = parseFacturaInput(payload, "cpe-nota-credito");
+	const raw = parseJsonParams<Record<string, unknown>>(payload, { schema: "cpe-nota-credito" });
 	if (!raw.refSerie || !raw.refNumero || !raw.tipoNota) {
 		throw new Error("Nota requires refSerie, refNumero, tipoNota. Run: sunat-cli schema cpe-nota-credito");
 	}

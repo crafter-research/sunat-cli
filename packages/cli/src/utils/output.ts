@@ -94,13 +94,22 @@ export function outputSuccess(message: string, format: OutputFormat): void {
  * beside it, the message plain, and the hint on its own line, because the hint
  * is the way out rather than the problem.
  */
-export function outputError(error: string, format: OutputFormat, opts?: { code?: string; hint?: string }): void {
+export function outputError(
+	error: string | Error,
+	format: OutputFormat,
+	opts?: { code?: string; hint?: string },
+): void {
+	const message = typeof error === "string" ? error : error.message;
+	const errObj = typeof error === "object" && error !== null ? (error as { code?: string; hint?: string }) : undefined;
+	const code = opts?.code ?? errObj?.code;
+	const hint = opts?.hint ?? errObj?.hint;
+
 	if (format === "json") {
-		console.error(JSON.stringify({ success: false, error, ...(opts?.code ? { code: opts.code } : {}) }, null, 2));
+		console.error(JSON.stringify({ success: false, error: message, ...(code ? { code } : {}) }, null, 2));
 	} else {
-		const code = opts?.code ? ` ${muted(opts.code)}` : "";
-		console.error(`${danger("Error")}${code}  ${error}`);
-		if (opts?.hint) console.error(dim(`  ${opts.hint}`));
+		const codeStr = code ? ` ${muted(code)}` : "";
+		console.error(`${danger("Error")}${codeStr}  ${message}`);
+		if (hint) console.error(dim(`  ${hint}`));
 	}
 	process.exit(1);
 }
