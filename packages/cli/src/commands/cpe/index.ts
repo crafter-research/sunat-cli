@@ -11,6 +11,7 @@ import { loadConfig } from "../../data/config.ts";
 import { resolveSecret } from "../../data/keychain.ts";
 import { emitNextSteps, type NextStep } from "../../utils/next-steps.ts";
 import { isHumanFormat, output, outputError, outputTable } from "../../utils/output.ts";
+import { parseJsonParams } from "../../utils/params.ts";
 import { bold, danger, dim, info, muted, ok as okColor, padVisible, visibleWidth } from "../../utils/style.ts";
 
 type Format = "json" | "table" | "auto";
@@ -222,7 +223,7 @@ export function createCpeCommand(): Command {
 				});
 				output(format, { json: { dryRun: true, ...result } });
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -273,7 +274,7 @@ export function createCpeCommand(): Command {
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
-				outputError(msg, format);
+				outputError(err instanceof Error ? err : msg, format);
 			}
 		});
 
@@ -309,12 +310,12 @@ export function createCpeCommand(): Command {
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
-				const input = parseFacturaInput(opts.params);
+				const input = parseFacturaInput(opts.params, "cpe-boleta");
 				const driver = getDriver(getDriverName(cmd));
 				const result = await driver.previewBoleta(input);
 				output(format, { json: { dryRun: true, ...result } });
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -329,7 +330,7 @@ export function createCpeCommand(): Command {
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
-				const input = parseFacturaInput(opts.params);
+				const input = parseFacturaInput(opts.params, "cpe-boleta");
 				const driver = getDriver(getDriverName(cmd));
 
 				if (opts.dryRun) {
@@ -353,7 +354,7 @@ export function createCpeCommand(): Command {
 				}
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -364,7 +365,7 @@ export function createCpeCommand(): Command {
 		.action((opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
-				const input = parseFacturaInput(opts.params);
+				const input = parseFacturaInput(opts.params, "cpe-boleta");
 				if (boletaRequiresIndividualSubmission(input.totales.total)) {
 					outputError(
 						`Boleta total S/${input.totales.total.toFixed(2)} >= S/700: must be sent individually via 'cpe boleta emit', not queued.`,
@@ -391,7 +392,7 @@ export function createCpeCommand(): Command {
 					},
 				});
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -453,7 +454,7 @@ export function createCpeCommand(): Command {
 				});
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -492,7 +493,7 @@ export function createCpeCommand(): Command {
 				});
 				output(format, { json: { success: true, ...result } });
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -512,18 +513,27 @@ export function createCpeCommand(): Command {
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
-				const { resolveCpeContext } = await import("../../cpe/config.ts");
-				const { signFacturaXml } = await import("../../cpe/sign/xades.ts");
-				const { buildGreUbl, greFilename } = await import("../../cpe/ubl/gre.ts");
-				const { greCredentials, enviarGre, pollGreTicket } = await import("../../sunat-rest/gre.ts");
-				const ctx = resolveCpeContext();
-				const input = JSON.parse(opts.params);
+				const input = parseJsonParams<Record<string, unknown>>(opts.params, { schema: "cpe-gre" }) as {
+					envio?: unknown;
+					destinatario?: unknown;
+					items?: unknown[];
+					tipoDoc?: string;
+					serie?: string;
+					numero?: number;
+					[key: string]: unknown;
+				};
 				if (!input.envio || !input.destinatario || !input.items?.length) {
 					outputError("GRE requires destinatario, envio, items. Run: sunat-cli schema cpe-gre", format);
 					return;
 				}
 				input.tipoDoc = input.tipoDoc || "09";
 				input.serie = input.serie || "T001";
+
+				const { resolveCpeContext } = await import("../../cpe/config.ts");
+				const { signFacturaXml } = await import("../../cpe/sign/xades.ts");
+				const { buildGreUbl, greFilename } = await import("../../cpe/ubl/gre.ts");
+				const { greCredentials, enviarGre, pollGreTicket } = await import("../../sunat-rest/gre.ts");
+				const ctx = resolveCpeContext();
 
 				const unsignedXml = buildGreUbl(input, { emisor: ctx.emisor });
 				const { xml: signedXml } = signFacturaXml(unsignedXml, {
@@ -611,7 +621,7 @@ export function createCpeCommand(): Command {
 					},
 				});
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
@@ -830,6 +840,17 @@ export function createCpeCommand(): Command {
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
 			try {
+				const raw = parseJsonParams<{
+					fechaEmisionDocs: string;
+					fechaComunicacion?: string;
+					correlativo?: number;
+					entries: Array<{ tipoDoc: "01" | "03" | "07" | "08"; serie: string; numero: number; motivo: string }>;
+				}>(opts.params);
+				if (!raw.fechaEmisionDocs || !raw.entries?.length) {
+					outputError("baja requires fechaEmisionDocs and at least one entry", format);
+					return;
+				}
+
 				if (!opts.yes) {
 					outputError("T2 emission requires --yes flag.", format);
 					return;
@@ -837,17 +858,6 @@ export function createCpeCommand(): Command {
 				const driver = getDriver(getDriverName(cmd));
 				if (!driver.submitBaja) {
 					outputError(`Driver "${driver.info().name}" does not support baja submission.`, format);
-					return;
-				}
-
-				const raw = JSON.parse(opts.params) as {
-					fechaEmisionDocs: string;
-					fechaComunicacion?: string;
-					correlativo?: number;
-					entries: Array<{ tipoDoc: "01" | "03" | "07" | "08"; serie: string; numero: number; motivo: string }>;
-				};
-				if (!raw.fechaEmisionDocs || !raw.entries?.length) {
-					outputError("baja requires fechaEmisionDocs and at least one entry", format);
 					return;
 				}
 
@@ -908,7 +918,7 @@ export function createCpeCommand(): Command {
 					},
 				});
 			} catch (err) {
-				outputError(err instanceof Error ? err.message : String(err), format);
+				outputError(err instanceof Error ? err : String(err), format);
 			}
 		});
 
