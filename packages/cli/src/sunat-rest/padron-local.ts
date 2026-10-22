@@ -10,24 +10,24 @@
  *
  * Strategy:
  *  - Download to ~/.sunat/cache/padron_reducido_ruc.zip if missing or > 24h old
- *  - Parse the TXT inside the ZIP into a per-RUC index file (NDJSON)
- *  - Lookup is O(log N) via streaming scan keyed on the 11-char RUC prefix
- *
- * For PR #3 we ship the downloader + a streaming lookup. A faster sqlite
- * index is shaped for a follow-up PR.
+ *  - Extract the TXT and optionally build a SQLite index with padron index
+ *  - Lookup uses the current index, otherwise an O(N) streaming scan
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
 	createReadStream,
 	createWriteStream,
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	renameSync,
+	rmSync,
 	statSync,
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import yauzl from "yauzl";
 import { paths } from "../data/config.ts";
 
@@ -35,6 +35,7 @@ const PADRON_URL = "http://www2.sunat.gob.pe/padron_reducido_ruc.zip";
 const CACHE_DIR = join(paths.sunatDir, "cache");
 const ZIP_PATH = join(CACHE_DIR, "padron_reducido_ruc.zip");
 const TXT_PATH = join(CACHE_DIR, "padron_reducido_ruc.txt");
+const INDEX_PATH = join(CACHE_DIR, "padron.sqlite");
 const META_PATH = join(CACHE_DIR, "padron_meta.json");
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -119,6 +120,8 @@ export async function syncPadron(opts: SyncOptions = {}): Promise<PadronMeta> {
 	}
 	await new Promise<void>((resolve) => out.end(resolve));
 
+	// Invalidate before extraction: a failed extraction must never serve an old index.
+	rmSync(INDEX_PATH, { force: true });
 	// Extract TXT (single entry inside)
 	const entries = await unzipToTxt(ZIP_PATH, TXT_PATH);
 
@@ -200,15 +203,16 @@ export function parsePadronLine(line: string): PadronEntry | null {
 /**
  * Streaming lookup: scan the TXT for a single RUC.
  *
- * Slow path (~5-15s on 600MB file). Good enough for ad-hoc queries. For
- * batch use, consider building a sqlite index (see padron-sqlite.ts shaping
- * for a follow-up PR).
+ * Used when no compatible SQLite index is available.
  */
 export async function lookupRuc(ruc: string): Promise<PadronEntry | null> {
 	if (!/^\d{11}$/.test(ruc)) return null;
 	if (!existsSync(TXT_PATH)) {
 		throw new Error("Padrón not synced. Run: sunat-cli padron sync");
 	}
+
+	const indexed = await readIndex([ruc]);
+	if (indexed) return indexed.get(ruc) ?? null;
 
 	return new Promise((resolve, reject) => {
 		const stream = createReadStream(TXT_PATH, { encoding: "latin1" });
@@ -220,8 +224,10 @@ export async function lookupRuc(ruc: string): Promise<PadronEntry | null> {
 			buffer = lines.pop() || "";
 			for (const line of lines) {
 				if (line.startsWith(prefix)) {
+					const entry = parsePadronLine(line);
+					if (!entry) continue;
 					stream.destroy();
-					resolve(parsePadronLine(line));
+					resolve(entry);
 					return;
 				}
 			}
@@ -251,6 +257,8 @@ export async function lookupRucBatch(rucs: string[]): Promise<Map<string, Padron
 	}
 	if (wanted.size === 0) return result;
 	if (!existsSync(TXT_PATH)) throw new Error("Padrón not synced. Run: sunat-cli padron sync");
+	const indexed = await readIndex([...wanted]);
+	if (indexed) return indexed;
 
 	return new Promise((resolve, reject) => {
 		const stream = createReadStream(TXT_PATH, { encoding: "latin1" });
@@ -262,7 +270,9 @@ export async function lookupRucBatch(rucs: string[]): Promise<Map<string, Padron
 			for (const line of lines) {
 				const ruc = line.slice(0, 11);
 				if (wanted.has(ruc)) {
-					result.set(ruc, parsePadronLine(line));
+					const entry = parsePadronLine(line);
+					if (!entry) continue;
+					result.set(ruc, entry);
 					wanted.delete(ruc);
 					if (wanted.size === 0) {
 						stream.destroy();
@@ -281,4 +291,132 @@ export async function lookupRucBatch(rucs: string[]): Promise<Map<string, Padron
 		});
 		stream.on("error", reject);
 	});
+}
+
+// Both runtimes ship SQLite; keep the Bun module dynamic so the published Node
+// bundle can load without resolving bun:sqlite.
+async function openDatabase(path: string, readonly = false) {
+	if (typeof Bun !== "undefined") {
+		const module = "bun:sqlite";
+		const { Database } = await import(module);
+		return new Database(path, readonly ? { readonly: true } : { create: true });
+	}
+	const { DatabaseSync } = await import("node:sqlite");
+	return new DatabaseSync(path, { readOnly: readonly });
+}
+
+const INDEX_VERSION = "1";
+const fields = [
+	"ruc",
+	"razonSocial",
+	"estado",
+	"condicion",
+	"ubigeo",
+	"tipoVia",
+	"nombreVia",
+	"codigoZona",
+	"tipoZona",
+	"numero",
+	"interior",
+	"lote",
+	"manzana",
+	"kilometro",
+] as const;
+const columns = [
+	"ruc",
+	"razon_social",
+	"estado",
+	"condicion",
+	"ubigeo",
+	"tipo_via",
+	"nombre_via",
+	"codigo_zona",
+	"tipo_zona",
+	"numero",
+	"interior",
+	"lote",
+	"manzana",
+	"kilometro",
+];
+
+function sourceIdentity(): string {
+	const stat = statSync(TXT_PATH, { bigint: true });
+	return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join(":");
+}
+
+export function padronIndexStatus(): { present: boolean; size: number } {
+	try {
+		return { present: true, size: statSync(INDEX_PATH).size };
+	} catch {
+		return { present: false, size: 0 };
+	}
+}
+
+/** Build beside the live index and publish only after a complete transaction. */
+export async function indexPadron(): Promise<{ entries: number; size: number }> {
+	if (!existsSync(TXT_PATH)) throw new Error("Padrón not synced. Run: sunat-cli padron sync");
+	const identity = sourceIdentity();
+	const temporary = `${INDEX_PATH}.${randomUUID()}.tmp`;
+	let db: Awaited<ReturnType<typeof openDatabase>> | undefined;
+	try {
+		db = await openDatabase(temporary);
+		db.exec(
+			"PRAGMA journal_mode=DELETE; CREATE TABLE metadata (version TEXT, source TEXT); CREATE TABLE padron (ruc TEXT PRIMARY KEY, razon_social TEXT, estado TEXT, condicion TEXT, ubigeo TEXT, tipo_via TEXT, nombre_via TEXT, codigo_zona TEXT, tipo_zona TEXT, numero TEXT, interior TEXT, lote TEXT, manzana TEXT, kilometro TEXT) WITHOUT ROWID; BEGIN",
+		);
+		const insert = db.prepare(`INSERT OR IGNORE INTO padron VALUES (${fields.map(() => "?").join(",")})`);
+		const input = createReadStream(TXT_PATH, { encoding: "latin1" });
+		const lines = createInterface({ input, crlfDelay: Infinity });
+		try {
+			for await (const line of lines) {
+				const entry = parsePadronLine(line);
+				if (entry) insert.run(...fields.map((key) => entry[key] ?? null));
+			}
+		} finally {
+			lines.close();
+			input.destroy();
+		}
+		if (sourceIdentity() !== identity) throw new Error("Padrón changed during indexing. Run: sunat-cli padron index");
+		db.prepare("INSERT INTO metadata VALUES (?, ?)").run(INDEX_VERSION, identity);
+		const entries = (db.prepare("SELECT count(*) AS count FROM padron").get() as { count: number }).count;
+		db.exec("COMMIT");
+		db.close();
+		db = undefined;
+		renameSync(temporary, INDEX_PATH);
+		return { entries, size: statSync(INDEX_PATH).size };
+	} finally {
+		db?.close();
+		rmSync(temporary, { force: true });
+		rmSync(`${temporary}-journal`, { force: true });
+	}
+}
+
+async function readIndex(rucs: string[]): Promise<Map<string, PadronEntry | null> | null> {
+	if (!existsSync(INDEX_PATH)) return null;
+	let db: Awaited<ReturnType<typeof openDatabase>> | undefined;
+	try {
+		db = await openDatabase(INDEX_PATH, true);
+		const meta = db.prepare("SELECT version, source FROM metadata").get() as
+			| { version: string; source: string }
+			| undefined;
+		if (meta?.version !== INDEX_VERSION || meta.source !== sourceIdentity()) return null;
+		const query = db.prepare(
+			`SELECT ${columns.map((column, i) => `${column} AS "${fields[i]}"`).join(",")} FROM padron WHERE ruc = ?`,
+		);
+		const result = new Map<string, PadronEntry | null>();
+		for (const ruc of rucs) {
+			const row = query.get(ruc) as Record<string, string | null> | undefined;
+			const entry = row
+				? (Object.fromEntries(
+						Object.entries(row).map(([key, value]) => [key, value ?? undefined]),
+					) as unknown as PadronEntry)
+				: null;
+			result.set(ruc, entry);
+		}
+		return result;
+	} catch {
+		// Corrupt, stale, or incompatible optional indexes never disable TXT lookup.
+		return null;
+	} finally {
+		db?.close();
+	}
 }

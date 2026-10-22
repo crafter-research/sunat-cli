@@ -64,6 +64,26 @@ If you hit something that's not documented here, open an issue.
 
 ### Padrón RUC
 
+- **Optional SQLite index** — run `sunat-cli padron index` after `padron sync`.
+  `ruc` and `batch` use the index automatically; absent, stale, corrupt or
+  incompatible indexes fall back to the existing TXT scan. `padron status`
+  reports index presence and bytes (presence alone does not imply freshness).
+- The index keeps the TXT and needs additional disk space. Builds stream latin1
+  input into a single transaction and atomically replace the previous database
+  only on success. Sync invalidates the index before replacing the TXT; rebuild
+  explicitly after syncing. Interrupted builds can leave uniquely named `.tmp`
+  files in the cache; these are never used for lookup and may be removed.
+- Schema version and TXT identity (device, inode, size, nanosecond modification
+  and change times) must match. External edits invalidate the index. Schema
+  changes require rebuilding; no automatic migrations or background rebuilds.
+- Offline synthetic fixtures verify parity, leading-zero RUCs, accents, malformed
+  rows, missing results, duplicate RUCs and invalidation. The offline benchmark
+  (`bun packages/cli/scripts/bench-padron-index.ts`) accepts `PADRON_BENCH_ROWS`
+  and `PADRON_BENCH_NAME_PADDING` to vary fixture size with bounded generation
+  memory. Synthetic measurements use a warm OS cache; full SUNAT dataset build
+  time, disk requirements and the 1000-RUC <50ms goal still need representative
+  measurement.
+
 - ✅ **Local padrón download + lookup** — verified end-to-end (PR #3 smoke test).
 - ⚠️ **`padron ruc-online` via SUNAT portal** (PR #8) — agent-browser drives `e-consultaruc.sunat.gob.pe` (bypasses the `numRnd` + reCAPTCHA gate that broke direct fetch). Pure parser unit-tested with 7 fixture cases. Live scraping untested in CI (no Chrome) — verify post-merge by running `sunat padron ruc-online 20131312955`. **For batch use always prefer local padrón** (`padron ruc/batch`) — `ruc-online` is ~5-10s per RUC.
 

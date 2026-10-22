@@ -1,7 +1,15 @@
 import { Command } from "commander";
 import { audit } from "../../data/audit.ts";
 import type { PadronEntry } from "../../sunat-rest/padron-local.ts";
-import { isStale, loadMeta, lookupRuc, lookupRucBatch, syncPadron } from "../../sunat-rest/padron-local.ts";
+import {
+	indexPadron,
+	isStale,
+	loadMeta,
+	lookupRuc,
+	lookupRucBatch,
+	padronIndexStatus,
+	syncPadron,
+} from "../../sunat-rest/padron-local.ts";
 import { emitNextSteps } from "../../utils/next-steps.ts";
 import { isHumanFormat, output, outputError } from "../../utils/output.ts";
 import { bold, dim, muted, ok, warn } from "../../utils/style.ts";
@@ -115,13 +123,15 @@ export function createPadronCommand(): Command {
 		.action((_, cmd) => {
 			const format = getFormat(cmd);
 			const meta = loadMeta();
+			const index = padronIndexStatus();
 			if (!meta) {
 				if (isHuman(format)) {
 					console.log(`${warn("○")} Padrón not synced`);
+					console.log(dim(index.present ? `  SQLite index: ${fmtBytes(index.size)}` : "  SQLite index: absent"));
 					console.log(dim("  Run: sunat-cli padron sync"));
 					return;
 				}
-				output(format, { json: { synced: false, hint: "Run: sunat-cli padron sync" } });
+				output(format, { json: { synced: false, index, hint: "Run: sunat-cli padron sync" } });
 				emitNextSteps(
 					[{ command: "sunat-cli padron sync", description: "download the padrón for the first time" }],
 					format,
@@ -140,12 +150,20 @@ export function createPadronCommand(): Command {
 				// `entries` is estimated from byte size / avg row upstream, so it reads as approximate.
 				const count = meta.entries === undefined ? "?" : `~${meta.entries.toLocaleString("en-US")}`;
 				console.log(dim(`  ${count} RUCs · ${fmtBytes(meta.zipSize)} · SUNAT republishes daily`));
+				console.log(
+					dim(
+						index.present
+							? `  SQLite index: ${fmtBytes(index.size)}`
+							: "  SQLite index: absent. Build: sunat-cli padron index",
+					),
+				);
 				if (stale) console.log(dim("  Refresh: sunat-cli padron sync"));
 				return;
 			}
 
 			output(format, {
 				json: {
+					index,
 					synced: true,
 					stale,
 					lastFetchedAt: meta.lastFetchedAt,
@@ -159,6 +177,20 @@ export function createPadronCommand(): Command {
 				stale ? [{ command: "sunat-cli padron sync", description: "the local copy is out of date" }] : [],
 				format,
 			);
+		});
+
+	padron
+		.command("index")
+		.description("Build a local SQLite index after padron sync. T1.")
+		.action(async (_, cmd) => {
+			const format = getFormat(cmd);
+			try {
+				const start = Date.now();
+				const result = await indexPadron();
+				output(format, { json: { indexed: true, ...result, durationMs: Date.now() - start } });
+			} catch (err) {
+				outputError(err instanceof Error ? err.message : String(err), format);
+			}
 		});
 
 	padron
@@ -205,9 +237,7 @@ export function createPadronCommand(): Command {
 
 	padron
 		.command("ruc")
-		.description(
-			"Lookup a single RUC in the local padrón. Streaming scan — slow first call (~5-15s on 600MB), instant after. T0.",
-		)
+		.description("Lookup a single RUC using SQLite when available, otherwise a streaming TXT scan. T0.")
 		.argument("<ruc>", "11-digit RUC to lookup")
 		.action(async (ruc, _opts, cmd) => {
 			const format = getFormat(cmd);
@@ -260,7 +290,9 @@ export function createPadronCommand(): Command {
 
 	padron
 		.command("batch")
-		.description("Lookup many RUCs in one scan. Reads RUCs from stdin (one per line) or --file CSV. T0.")
+		.description(
+			"Lookup many RUCs using SQLite or one TXT scan. Reads RUCs from stdin (one per line) or --file CSV. T0.",
+		)
 		.option("--file <path>", "Path to file with one RUC per line (or CSV with RUC in first column)")
 		.action(async (opts, cmd) => {
 			const format = getFormat(cmd);
