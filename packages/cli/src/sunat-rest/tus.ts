@@ -187,14 +187,14 @@ export interface TusUploadOpts {
 	metadata: TusMetadata;
 	bearerToken: string;
 	chunkSize?: number; // default 8 MB
-	maxAttempts?: number; // default 3 per chunk, including its initial PATCH and recovery HEAD failures
-	uploadTimeoutMs?: number; // default 10 minutes, including requests and retry delays
-	retryDelayMs?: number; // default 1000, exponential backoff capped at 30 seconds
+	maxAttempts?: number;
+	uploadTimeoutMs?: number;
+	retryDelayMs?: number;
 	onProgress?: (uploaded: number, total: number, hint?: string) => void;
 }
 
 /**
- * High-level: create + chunked PATCH until done, recovering transient failures with HEAD.
+ * High-level: create + chunked PATCH until done.
  * Returns the uploadUrl (useful for retry / debugging) and total bytes sent.
  */
 export async function tusUpload(opts: TusUploadOpts): Promise<{ uploadUrl: string; bytesSent: number }> {
@@ -215,7 +215,6 @@ export async function tusUpload(opts: TusUploadOpts): Promise<{ uploadUrl: strin
 	const signal = AbortSignal.timeout(uploadTimeoutMs);
 
 	try {
-		// Never retry POST: a lost creation response may already have created a SUNAT upload.
 		const { uploadUrl } = await tusCreate({
 			endpoint: opts.endpoint,
 			uploadLength: total,
@@ -225,29 +224,24 @@ export async function tusUpload(opts: TusUploadOpts): Promise<{ uploadUrl: strin
 		});
 
 		let offset = 0;
+		let end = Math.min(chunkSize, total);
+		let failures = 0;
 		while (offset < total) {
-			const end = Math.min(offset + chunkSize, total);
-			let failures = 0;
-			let needsHead = false;
-			while (offset < end) {
-				signal.throwIfAborted();
-				try {
-					if (needsHead) {
-						// A failed PATCH may have committed bytes before its response was lost.
-						// Keep the original chunk boundary so partial progress cannot reset the retry budget.
-						const head = await tusHead(uploadUrl, opts.bearerToken, signal);
-						if (
-							head.uploadOffset < offset ||
-							head.uploadOffset > end ||
-							(head.uploadLength !== undefined && head.uploadLength !== total)
-						) {
-							throw new Error("TUS recovery returned inconsistent upload offset or length");
-						}
-						offset = head.uploadOffset;
-						needsHead = false;
-						opts.onProgress?.(offset, total, `resumed from ${offset} bytes`);
-						if (offset === end) break;
+			signal.throwIfAborted();
+			try {
+				if (failures > 0) {
+					const head = await tusHead(uploadUrl, opts.bearerToken, signal);
+					if (
+						head.uploadOffset < offset ||
+						head.uploadOffset > end ||
+						(head.uploadLength !== undefined && head.uploadLength !== total)
+					) {
+						throw new Error("TUS recovery returned inconsistent upload offset or length");
 					}
+					offset = head.uploadOffset;
+					opts.onProgress?.(offset, total, `resumed from ${offset} bytes`);
+				}
+				if (offset < end) {
 					const { newOffset } = await tusPatch({
 						uploadUrl,
 						chunk: opts.data.subarray(offset, end),
@@ -257,15 +251,17 @@ export async function tusUpload(opts: TusUploadOpts): Promise<{ uploadUrl: strin
 					});
 					offset = newOffset;
 					opts.onProgress?.(offset, total);
-				} catch (error) {
-					signal.throwIfAborted();
-					if (!isTransient(error)) throw error;
-					if (++failures >= maxAttempts)
-						throw new Error(`TUS attempts exhausted (${maxAttempts}) at offset ${offset}`, { cause: error });
-					needsHead = true;
-					await delay(Math.min(retryDelayMs * 2 ** (failures - 1), 30_000), undefined, { signal });
 				}
+			} catch (error) {
+				signal.throwIfAborted();
+				if (!isTransient(error)) throw error;
+				if (++failures >= maxAttempts)
+					throw new Error(`TUS attempts exhausted (${maxAttempts}) at offset ${offset}`, { cause: error });
+				await delay(Math.min(retryDelayMs * 2 ** (failures - 1), 30_000), undefined, { signal });
+				continue;
 			}
+			failures = 0;
+			end = Math.min(offset + chunkSize, total);
 		}
 
 		return { uploadUrl, bytesSent: offset };

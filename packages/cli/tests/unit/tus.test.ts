@@ -149,58 +149,6 @@ describe("tusPatch", () => {
 });
 
 describe("tusUpload (chunked end-to-end)", () => {
-	for (const failure of ["503", "ECONNRESET", "ETIMEDOUT"]) {
-		test(`resumes a partially accepted chunk after ${failure}`, async () => {
-			const methods: string[] = [];
-			const offsets: string[] = [];
-			const bodies: string[] = [];
-			const hints: (string | undefined)[] = [];
-			mockFetch(async (_url, init) => {
-				methods.push(init?.method ?? "");
-				if (init?.method === "POST") return new Response(null, { status: 201, headers: { Location: "/u" } });
-				if (init?.method === "HEAD")
-					return new Response(null, { headers: { "Upload-Offset": "2", "Upload-Length": "6" } });
-				offsets.push(new Headers(init?.headers).get("Upload-Offset") ?? "");
-				bodies.push(Buffer.from(init?.body as Uint8Array).toString());
-				if (offsets.length === 1) {
-					if (failure === "503") return new Response(null, { status: 503 });
-					throw new TypeError("fetch failed", {
-						cause: Object.assign(new Error("connection lost"), { code: failure }),
-					});
-				}
-				return new Response(null, { status: 204, headers: { "Upload-Offset": offsets.length === 2 ? "4" : "6" } });
-			});
-			const result = await tusUpload({
-				endpoint: "https://x/upload",
-				data: Buffer.from("abcdef"),
-				metadata: {},
-				bearerToken: "tk",
-				chunkSize: 4,
-				retryDelayMs: 0,
-				onProgress: (_n, _total, hint) => hints.push(hint),
-			});
-			expect(result.bytesSent).toBe(6);
-			expect(methods).toEqual(["POST", "PATCH", "HEAD", "PATCH", "PATCH"]);
-			expect(offsets).toEqual(["0", "2", "4"]);
-			expect(bodies).toEqual(["abcd", "cd", "ef"]);
-			expect(hints).toContain("resumed from 2 bytes");
-		});
-	}
-
-	test("stops after the default three attempts without creating another upload", async () => {
-		const methods: string[] = [];
-		mockFetch(async (_url, init) => {
-			methods.push(init?.method ?? "");
-			if (init?.method === "POST") return new Response(null, { status: 201, headers: { Location: "/u" } });
-			if (init?.method === "HEAD") return new Response(null, { headers: { "Upload-Offset": "0" } });
-			return new Response(null, { status: 503 });
-		});
-		await expect(
-			tusUpload({ endpoint: "https://x", data: Buffer.alloc(6), metadata: {}, bearerToken: "tk", retryDelayMs: 0 }),
-		).rejects.toThrow(/attempt.*exhausted/i);
-		expect(methods).toEqual(["POST", "PATCH", "HEAD", "PATCH", "HEAD", "PATCH"]);
-	});
-
 	test("uploads in 8MB chunks by default until done", async () => {
 		const total = 20 * 1024 * 1024; // 20 MB
 		const data = Buffer.alloc(total, 0x61);

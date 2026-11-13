@@ -95,13 +95,6 @@ sunat-cli sire compras propuesta --periodo 202404 --wait --out compras-202404.zi
 
 For local use, prefer `sunat-cli keychain set <KEY>`. Secrets are accepted through hidden prompts or environment variables, never CLI value flags.
 
-SIRE uploads automatically resume transient network failures and HTTP 5xx from the
-server's confirmed byte offset while the command is running. Use
-`--upload-attempts <n>` (default 3 per chunk, including the first attempt) and
-`--upload-timeout <ms>` (default 600000 for the entire upload) to adjust recovery.
-Failed recovery HEAD requests also consume the attempt budget. `--timeout`
-controls ticket polling separately. Restarting the process starts a new upload.
-
 ### Guía de Remisión Electrónica (GRE — REST OAuth)
 
 ```bash
