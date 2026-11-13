@@ -158,6 +158,12 @@ const es: Content = {
 				desc: "El agente le pregunta al binario qué acepta un comando en vez de adivinar los nombres de los campos. La versión viene en la respuesta, así que se puede fijar.",
 				code: "$ sunat-cli schema cpe-factura",
 			},
+			{
+				title: "Servidor MCP",
+				scope: "Claude Desktop, Claude Code, Cursor",
+				desc: "El mismo binario se sirve por stdio para clientes que llaman herramientas en vez de un shell. Consulta, valida y previsualiza; no puede emitir ni declarar, y nunca recibe la clave SOL.",
+				code: "$ claude mcp add sunat -- \\\n    npx -y @crafter/sunat-cli mcp",
+			},
 		],
 	},
 	architecture: {
@@ -332,6 +338,10 @@ const es: Content = {
 				rule: "Un archivo de skill según agentskills.io",
 				why: "El descubrimiento funciona igual para cualquier agente que lea el estándar.",
 			},
+			{
+				rule: "Por MCP no se escribe en SUNAT",
+				why: "Cada herramienta ejecuta el mismo comando con sus mismas barreras, y las que anteceden a una mutación quedan fijas en validar o previsualizar. Los flags de confirmación los escribe una persona.",
+			},
 		],
 	},
 	footer: {
@@ -430,6 +440,12 @@ const en: Content = {
 				scope: "25+ versioned schemas",
 				desc: "An agent asks the binary what a command accepts instead of guessing field names. The version is part of the response, so a caller can pin it.",
 				code: "$ sunat-cli schema cpe-factura",
+			},
+			{
+				title: "MCP server",
+				scope: "Claude Desktop, Claude Code, Cursor",
+				desc: "The same binary serves itself over stdio for clients that call tools instead of a shell. It looks up, validates and previews; it cannot issue or file, and it never takes the clave SOL.",
+				code: "$ claude mcp add sunat -- \\\n    npx -y @crafter/sunat-cli mcp",
 			},
 		],
 	},
@@ -595,6 +611,10 @@ const en: Content = {
 				rule: "One skill file per the agentskills.io spec",
 				why: "Discovery works the same way for every agent that reads the standard.",
 			},
+			{
+				rule: "No SUNAT writes over MCP",
+				why: "Each tool runs the same command behind the same gates, and the ones in front of a mutation are pinned to validate or preview. The acknowledgement flags are typed by a person.",
+			},
 		],
 	},
 	footer: {
@@ -633,7 +653,7 @@ export type LegalContent = {
 
 const legalEs: LegalContent = {
 	title: "Marco legal",
-	updated: "Última actualización: 26 de agosto de 2026",
+	updated: "Última actualización: 13 de noviembre de 2026",
 	sections: [
 		{
 			heading: "Sobre esta herramienta",
@@ -673,6 +693,7 @@ const legalEs: LegalContent = {
 				"Los registros de auditoría se guardan localmente, minimizados y con permisos solo para el dueño",
 				"Ciertos tokens de sesión de corta vida se cachean localmente con permisos solo para el dueño",
 				"No hay analítica ni telemetría; las operaciones tributarias solo se transmiten a endpoints oficiales de SUNAT",
+				"Si conecta un cliente MCP (sunat-cli mcp), los resultados de las herramientas que ese cliente invoque, que pueden incluir sus datos tributarios, se entregan a ese cliente y al proveedor del modelo que usa. Ese tratamiento se rige por los términos de dicho proveedor",
 			],
 			refs: [
 				"Ley 29733, Ley de Protección de Datos Personales: todo el tratamiento de datos personales ocurre localmente y bajo control del usuario.",
@@ -714,7 +735,7 @@ const legalEs: LegalContent = {
 
 const legalEn: LegalContent = {
 	title: "Legal framework",
-	updated: "Last updated: August 26, 2026",
+	updated: "Last updated: November 13, 2026",
 	sections: [
 		{
 			heading: "About this tool",
@@ -754,6 +775,7 @@ const legalEn: LegalContent = {
 				"Minimized audit logs stored locally with owner-only permissions",
 				"Selected short-lived API session tokens cached locally with owner-only permissions",
 				"No analytics or telemetry; tax operations transmit only to official SUNAT endpoints",
+				"If you connect an MCP client (sunat-cli mcp), the results of the tools that client calls, which can include your tax data, are handed to that client and the model provider it uses. That processing is governed by the provider's terms",
 			],
 			refs: [
 				"Ley 29733, Ley de Proteccion de Datos Personales: All personal data processing occurs locally under the user's control.",

@@ -50,7 +50,7 @@ function renderSchema(doc: Record<string, unknown>): void {
 
 const SCHEMAS_DIR = packageDataDir("schemas");
 
-const AVAILABLE_SCHEMAS = [
+export const AVAILABLE_SCHEMAS = [
 	"rhe",
 	"f616",
 	"renta",

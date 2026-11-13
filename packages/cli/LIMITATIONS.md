@@ -225,6 +225,16 @@ These surfaces still need browser bootstrap, but RHE no longer fills identity an
 - **No remote telemetry** — by design. Everything stays on disk.
 - **`cpe doctor` stale-pending check** — alerts when audit has `pending` entries >1h old. Cleanup is manual (user decides whether to retry, void, or just delete).
 
+### MCP server (`sunat-cli mcp`)
+
+- **Read and preview only, by design.** No tool can issue an RHE, file an F616, emit a CPE, or run any SIRE, GRE, resumen or baja write. Tools in front of a mutating command pin it to `--dry-run`, `--preview-only` or `preview`. Live writes stay on the CLI.
+- **Curated, not complete.** 18 tools cover lookups, session status, schemas, the manual, declaraciones, Buzón, F616 and renta reads, and the three validators. SIRE, GRE, `declaraciones constancia`, `padron sync` and the CPE profile commands have no tool yet.
+- **stdio only.** No HTTP transport, so no remote or hosted use. The server is meant to run on the taxpayer's own machine, next to their keychain and browser.
+- **No credential entry.** `sunat_login` fails with the CLI's missing-credentials error until the clave SOL is in the keychain or the environment. First-time setup needs a terminal.
+- **Tool results leave the machine through the client.** The MCP client forwards results to its model provider. That is outside this CLI's "SUNAT endpoints only" guarantee, which still holds for what the CLI itself sends.
+- **One call at a time.** Calls are serialized because browser-driven commands share one agent-browser session. A slow browser tool blocks the ones queued behind it, with a five-minute cap per browser call.
+- **Verified offline only.** The e2e test drives the server with a real MCP client against tools that never reach SUNAT. The browser-backed tools run the same commands the CLI tests cover but have not been exercised through MCP against a live session.
+
 ### Security
 
 - **Cert PFX password:** read from `CPE_CERT_PASSWORD` or the OS keychain. Never written to config, audit, or another plaintext file. Never logged.

@@ -249,6 +249,10 @@ form between periods**. Eight periods spanning nine months were filed this way o
 - reCAPTCHA required: keep browser flow supervised
 - Network timeout: retry, SUNAT portals are slow
 
+## MCP
+
+`sunat-cli mcp` exposes a read-only and preview subset of these commands as MCP tools over stdio, for clients without a shell. If you can run commands, keep using them: the MCP server has no live-write tools and no SIRE or GRE coverage.
+
 ## More
 
 ```bash
