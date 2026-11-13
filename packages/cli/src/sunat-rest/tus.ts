@@ -22,7 +22,46 @@
  *  - Checksum extension
  */
 
+import { setTimeout as delay } from "node:timers/promises";
+
 export const TUS_VERSION = "1.0.0";
+
+class TusHttpError extends Error {
+	constructor(
+		message: string,
+		readonly status: number,
+	) {
+		super(message);
+	}
+}
+
+function isTransient(error: unknown): boolean {
+	if (error instanceof TusHttpError) return error.status >= 500 && error.status <= 599;
+	if (!(error instanceof Error)) return false;
+	const code = (error as Error & { code?: string }).code;
+	return (
+		[
+			"ECONNRESET",
+			"ETIMEDOUT",
+			"ECONNREFUSED",
+			"EPIPE",
+			"EAI_AGAIN",
+			"UND_ERR_SOCKET",
+			"UND_ERR_CONNECT_TIMEOUT",
+			"UND_ERR_HEADERS_TIMEOUT",
+			"UND_ERR_BODY_TIMEOUT",
+		].includes(code ?? "") ||
+		(error instanceof TypeError && error.message === "fetch failed") ||
+		(error.cause !== undefined && isTransient(error.cause))
+	);
+}
+
+function readOffset(value: string | null, header: string): number {
+	if (value === null) throw new Error(`TUS response missing ${header}`);
+	const number = Number(value);
+	if (!/^\d+$/.test(value) || !Number.isSafeInteger(number)) throw new Error(`TUS response invalid ${header}`);
+	return number;
+}
 
 export interface TusMetadata {
 	[key: string]: string;
@@ -47,6 +86,7 @@ export interface TusCreateOpts {
 	uploadLength: number;
 	metadata: TusMetadata;
 	bearerToken: string;
+	signal?: AbortSignal;
 }
 
 export interface TusCreateResult {
@@ -56,6 +96,7 @@ export interface TusCreateResult {
 export async function tusCreate(opts: TusCreateOpts): Promise<TusCreateResult> {
 	const resp = await fetch(opts.endpoint, {
 		method: "POST",
+		signal: opts.signal,
 		headers: {
 			"Tus-Resumable": TUS_VERSION,
 			"Upload-Length": String(opts.uploadLength),
@@ -84,23 +125,23 @@ export interface TusHeadResult {
 	uploadLength?: number;
 }
 
-export async function tusHead(uploadUrl: string, bearerToken: string): Promise<TusHeadResult> {
+export async function tusHead(uploadUrl: string, bearerToken: string, signal?: AbortSignal): Promise<TusHeadResult> {
 	const resp = await fetch(uploadUrl, {
 		method: "HEAD",
+		signal,
 		headers: {
 			"Tus-Resumable": TUS_VERSION,
 			Authorization: `Bearer ${bearerToken}`,
 		},
 	});
 	if (!resp.ok && resp.status !== 200) {
-		throw new Error(`TUS head failed: HTTP ${resp.status}`);
+		throw new TusHttpError(`TUS head failed: HTTP ${resp.status}`, resp.status);
 	}
 	const offsetHeader = resp.headers.get("Upload-Offset");
 	const lengthHeader = resp.headers.get("Upload-Length");
-	if (!offsetHeader) throw new Error("TUS head response missing Upload-Offset");
 	return {
-		uploadOffset: Number.parseInt(offsetHeader, 10),
-		uploadLength: lengthHeader ? Number.parseInt(lengthHeader, 10) : undefined,
+		uploadOffset: readOffset(offsetHeader, "Upload-Offset"),
+		uploadLength: lengthHeader === null ? undefined : readOffset(lengthHeader, "Upload-Length"),
 	};
 }
 
@@ -109,6 +150,7 @@ export interface TusPatchOpts {
 	chunk: Buffer;
 	offset: number;
 	bearerToken: string;
+	signal?: AbortSignal;
 }
 
 export interface TusPatchResult {
@@ -120,6 +162,7 @@ export async function tusPatch(opts: TusPatchOpts): Promise<TusPatchResult> {
 	const body = new Uint8Array(opts.chunk.buffer, opts.chunk.byteOffset, opts.chunk.byteLength);
 	const resp = await fetch(opts.uploadUrl, {
 		method: "PATCH",
+		signal: opts.signal,
 		headers: {
 			"Tus-Resumable": TUS_VERSION,
 			"Upload-Offset": String(opts.offset),
@@ -130,11 +173,12 @@ export async function tusPatch(opts: TusPatchOpts): Promise<TusPatchResult> {
 		body,
 	});
 	if (resp.status !== 204) {
-		throw new Error(`TUS patch failed at offset ${opts.offset}: HTTP ${resp.status}`);
+		throw new TusHttpError(`TUS patch failed at offset ${opts.offset}: HTTP ${resp.status}`, resp.status);
 	}
 	const newOffsetHeader = resp.headers.get("Upload-Offset");
-	if (!newOffsetHeader) throw new Error("TUS patch response missing Upload-Offset");
-	return { newOffset: Number.parseInt(newOffsetHeader, 10) };
+	const newOffset = readOffset(newOffsetHeader, "Upload-Offset");
+	if (newOffset !== opts.offset + opts.chunk.byteLength) throw new Error("TUS patch returned unexpected Upload-Offset");
+	return { newOffset };
 }
 
 export interface TusUploadOpts {
@@ -143,37 +187,90 @@ export interface TusUploadOpts {
 	metadata: TusMetadata;
 	bearerToken: string;
 	chunkSize?: number; // default 8 MB
-	onProgress?: (uploaded: number, total: number) => void;
+	maxAttempts?: number; // default 3 per chunk, including its initial PATCH and recovery HEAD failures
+	uploadTimeoutMs?: number; // default 10 minutes, including requests and retry delays
+	retryDelayMs?: number; // default 1000, exponential backoff capped at 30 seconds
+	onProgress?: (uploaded: number, total: number, hint?: string) => void;
 }
 
 /**
- * High-level: create + chunked PATCH until done.
+ * High-level: create + chunked PATCH until done, recovering transient failures with HEAD.
  * Returns the uploadUrl (useful for retry / debugging) and total bytes sent.
  */
 export async function tusUpload(opts: TusUploadOpts): Promise<{ uploadUrl: string; bytesSent: number }> {
 	const total = opts.data.byteLength;
 	const chunkSize = opts.chunkSize ?? 8 * 1024 * 1024;
-
-	const { uploadUrl } = await tusCreate({
-		endpoint: opts.endpoint,
-		uploadLength: total,
-		metadata: opts.metadata,
-		bearerToken: opts.bearerToken,
-	});
-
-	let offset = 0;
-	while (offset < total) {
-		const end = Math.min(offset + chunkSize, total);
-		const chunk = opts.data.subarray(offset, end);
-		const { newOffset } = await tusPatch({
-			uploadUrl,
-			chunk,
-			offset,
-			bearerToken: opts.bearerToken,
-		});
-		offset = newOffset;
-		opts.onProgress?.(offset, total);
+	const maxAttempts = opts.maxAttempts ?? 3;
+	const uploadTimeoutMs = opts.uploadTimeoutMs ?? 600_000;
+	const retryDelayMs = opts.retryDelayMs ?? 1000;
+	for (const [name, value] of Object.entries({ chunkSize, maxAttempts, uploadTimeoutMs, retryDelayMs })) {
+		if (
+			!Number.isSafeInteger(value) ||
+			value < (name === "retryDelayMs" ? 0 : 1) ||
+			(name === "uploadTimeoutMs" && value > 2_147_483_647)
+		) {
+			throw new Error(`TUS invalid ${name}`);
+		}
 	}
+	const signal = AbortSignal.timeout(uploadTimeoutMs);
 
-	return { uploadUrl, bytesSent: offset };
+	try {
+		// Never retry POST: a lost creation response may already have created a SUNAT upload.
+		const { uploadUrl } = await tusCreate({
+			endpoint: opts.endpoint,
+			uploadLength: total,
+			metadata: opts.metadata,
+			bearerToken: opts.bearerToken,
+			signal,
+		});
+
+		let offset = 0;
+		while (offset < total) {
+			const end = Math.min(offset + chunkSize, total);
+			let failures = 0;
+			let needsHead = false;
+			while (offset < end) {
+				signal.throwIfAborted();
+				try {
+					if (needsHead) {
+						// A failed PATCH may have committed bytes before its response was lost.
+						// Keep the original chunk boundary so partial progress cannot reset the retry budget.
+						const head = await tusHead(uploadUrl, opts.bearerToken, signal);
+						if (
+							head.uploadOffset < offset ||
+							head.uploadOffset > end ||
+							(head.uploadLength !== undefined && head.uploadLength !== total)
+						) {
+							throw new Error("TUS recovery returned inconsistent upload offset or length");
+						}
+						offset = head.uploadOffset;
+						needsHead = false;
+						opts.onProgress?.(offset, total, `resumed from ${offset} bytes`);
+						if (offset === end) break;
+					}
+					const { newOffset } = await tusPatch({
+						uploadUrl,
+						chunk: opts.data.subarray(offset, end),
+						offset,
+						bearerToken: opts.bearerToken,
+						signal,
+					});
+					offset = newOffset;
+					opts.onProgress?.(offset, total);
+				} catch (error) {
+					signal.throwIfAborted();
+					if (!isTransient(error)) throw error;
+					if (++failures >= maxAttempts)
+						throw new Error(`TUS attempts exhausted (${maxAttempts}) at offset ${offset}`, { cause: error });
+					needsHead = true;
+					await delay(Math.min(retryDelayMs * 2 ** (failures - 1), 30_000), undefined, { signal });
+				}
+			}
+		}
+
+		return { uploadUrl, bytesSent: offset };
+	} catch (error) {
+		if (signal.aborted) throw new Error(`TUS upload timed out after ${uploadTimeoutMs} ms`);
+		throw error;
+	}
 }

@@ -107,7 +107,7 @@ All endpoints follow Manual de Servicios Web Api SIRE Ventas v22 (March 2024) at
   - `4` = Importar CP preliminar
   - `6` = Cargar Ajustes posteriores
   - `7` = Cargar Ajustes posteriores anteriores a la vigencia
-- **Resumability**: TUS supports HEAD-then-resume on partial uploads, but PR #6 does not implement automatic retry-from-last-offset on network errors. If a large upload fails mid-flight, re-run the whole command. Future PR can add resumption.
+- **Resumability (#17)**: During a running upload, transient network errors and HTTP 5xx trigger HEAD-then-resume from the server's confirmed offset, including partially accepted chunks. The default budget is 3 attempts per chunk (the first PATCH counts; failed recovery HEAD requests also consume the budget), with exponential backoff starting at 1 second and capped at 30 seconds. `--upload-attempts <n>` and `--upload-timeout <ms>` configure the budget and total upload deadline (default 600000 ms, including requests and retry delays); `--timeout` still controls ticket polling separately. Authentication errors, other HTTP 4xx and inconsistent offsets stop immediately. Offline tests cover recovery; live SUNAT recovery is unverified. Upload creation is not retried automatically, and resumption after process exit is not implemented.
 - **Why we ignored SUNAT's "JAVA required" note**: SUNAT only ships Java samples. The TUS protocol itself is HTTP-only, language-agnostic. Verified by spec review.
 
 ---

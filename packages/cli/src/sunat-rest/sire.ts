@@ -20,7 +20,7 @@
  */
 
 import { callRestApi, getAccessToken, type OAuthCredentials } from "./oauth.ts";
-import { tusUpload } from "./tus.ts";
+import { type TusUploadOpts, tusUpload } from "./tus.ts";
 
 /** Catálogo SUNAT de libros */
 export const COD_LIBRO = {
@@ -397,7 +397,10 @@ export interface SireUploadOpts {
 	filename: string; // e.g. "LE201013129550014040002OIM2.txt" — see SUNAT Resolución 112-2021 tabla 6
 	data: Buffer; // ZIP bytes (the .txt is wrapped in a .zip per SUNAT spec)
 	chunkSize?: number;
-	onProgress?: (uploaded: number, total: number) => void;
+	maxAttempts?: number;
+	uploadTimeoutMs?: number;
+	retryDelayMs?: number;
+	onProgress?: TusUploadOpts["onProgress"];
 }
 
 export interface SireUploadResult {
@@ -417,6 +420,9 @@ export async function sireUpload(opts: SireUploadOpts, creds: OAuthCredentials):
 		data: opts.data,
 		bearerToken: token,
 		chunkSize: opts.chunkSize,
+		maxAttempts: opts.maxAttempts,
+		uploadTimeoutMs: opts.uploadTimeoutMs,
+		retryDelayMs: opts.retryDelayMs,
 		onProgress: opts.onProgress,
 		metadata: {
 			filename: opts.filename,
