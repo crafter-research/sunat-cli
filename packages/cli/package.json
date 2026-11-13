@@ -22,7 +22,8 @@
 		"f616",
 		"gov-tech",
 		"agent-browser",
-		"cdp"
+		"cdp",
+		"mcp"
 	],
 	"bin": {
 		"sunat-cli": "dist/sunat.js"
@@ -56,6 +57,7 @@
 	},
 	"dependencies": {
 		"@clack/prompts": "^1.1.0",
+		"@modelcontextprotocol/sdk": "^1.32.2",
 		"@xmldom/xmldom": "^0.9.10",
 		"commander": "15.0.0",
 		"cross-spawn": "^7.0.6",
@@ -63,7 +65,8 @@
 		"node-forge": "^1.4.0",
 		"xml-crypto": "^6.1.2",
 		"yauzl": "^3.3.0",
-		"yazl": "^3.3.1"
+		"yazl": "^3.3.1",
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.10",

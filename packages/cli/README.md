@@ -206,6 +206,18 @@ Audit persistence is minimized: command arguments are not retained, taxpayer and
 Full shaping rationale + recon dossier + SUNAT debugging notes:
 `src/commands/cpe/RESEARCH.md`.
 
+## MCP server
+
+```bash
+claude mcp add sunat -- npx -y @crafter/sunat-cli mcp
+```
+
+`sunat-cli mcp` serves read-only and preview tools over stdio for MCP clients
+such as Claude Desktop, Claude Code and Cursor. It cannot perform a live SUNAT
+write and takes no password argument. Setup for each client, the tool list and
+the reasoning are in the
+[repository README](https://github.com/crafter-research/sunat-cli#mcp-server).
+
 ## Design
 
 - `--json` payloads over bespoke flags

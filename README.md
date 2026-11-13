@@ -52,7 +52,7 @@ Output is JSON whenever stdout is not a terminal, so an agent gets parseable dat
 
 ## Commands
 
-Sixteen namespaces. Run `sunat-cli <name> --help` for any of them.
+Eighteen namespaces. Run `sunat-cli <name> --help` for any of them.
 
 | Namespace | What it does |
 |---|---|
@@ -65,10 +65,12 @@ Sixteen namespaces. Run `sunat-cli <name> --help` for any of them.
 | `sire` | RVIE ventas and RCE compras |
 | `renta` | renta anual F709, read-only |
 | `buzon` | Buzón SOL metadata and local change detection, read-only |
+| `declaraciones` | filed declarations and their constancias, read-only |
 | `padron` | RUC lookup against a local copy of the padrón |
 | `tipo-cambio` | official SUNAT exchange rate |
 | `api` | OAuth2 token for the REST APIs |
 | `audit` | the local write log |
+| `mcp` | MCP server on stdio, read and preview tools only |
 
 ## Safety
 
@@ -98,6 +100,45 @@ Production is beta. Never run it blind.
 Ten SUNAT surfaces, at different depths. Reads are solid; the write paths vary, and production is beta throughout. The per-surface breakdown is on [the website](https://sunat-cli.crafter.ing#coverage).
 
 [LIMITATIONS.md](packages/cli/LIMITATIONS.md) is the single source of truth for what does not work yet. Read it before trusting a write path.
+
+## MCP server
+
+For clients that call tools instead of running a shell (Claude Desktop, Cursor, and others), the same binary serves itself over the [Model Context Protocol](https://modelcontextprotocol.io):
+
+```bash
+# Claude Code
+claude mcp add sunat -- npx -y @crafter/sunat-cli mcp
+```
+
+```json
+{
+  "mcpServers": {
+    "sunat": { "command": "npx", "args": ["-y", "@crafter/sunat-cli", "mcp"] }
+  }
+}
+```
+
+The second form goes in `claude_desktop_config.json`, `.mcp.json`, or `.cursor/mcp.json`.
+
+| Tool | What it does |
+|---|---|
+| `sunat_doctor`, `sunat_whoami`, `sunat_login` | setup, session status, sign in with stored credentials |
+| `sunat_guide`, `sunat_schema` | the manual and the payload contracts, from the installed version |
+| `tipo_cambio`, `padron_ruc`, `cpe_consulta` | exchange rate, RUC lookup, comprobante validation |
+| `declaraciones_list`, `buzon_list`, `buzon_status` | filed declarations and Buzón SOL metadata |
+| `f616_periodo`, `renta_declaracion`, `renta_presentaciones` | F616 period and annual return, read-only |
+| `rhe_emit_preview`, `f616_declare_dry_run`, `cpe_preview` | validate and preview, never submit |
+| `audit_list` | what this machine actually did |
+
+Three things are deliberate:
+
+- **No live writes.** The server cannot issue an RHE, file an F616 or emit a comprobante. It validates and previews, then names the command for you to run in a terminal. The acknowledgement flags (`--yes`, `--live-sunat`) are typed by a person.
+- **No password argument.** `sunat_login` reads the clave SOL from the OS keychain or the environment. Store it once with `sunat-cli keychain set SUNAT_PASSWORD`; never paste it into a chat.
+- **Each tool call runs the CLI itself in a child process**, so it passes the same validation and lands in the same audit log as a shell invocation.
+
+Tool results are returned to your MCP client, which sends them to the model provider behind it. That can include your tax data. sunat-cli itself still talks only to SUNAT.
+
+An agent that has a terminal does not need this: the commands plus `sunat-cli skills get core` are the better interface.
 
 ## Design
 
