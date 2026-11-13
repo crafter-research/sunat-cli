@@ -119,6 +119,44 @@ export function hasNoResultsNotice(html: string): boolean {
 	return /No se encontraron declaraciones/i.test(html);
 }
 
+export interface ListaPagination {
+	pagina: number;
+	tamanioPagina: number;
+}
+
+function attribute(tag: string, name: string): string | undefined {
+	const match = tag.match(new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));
+	return match ? decodeEntities(match[1] ?? match[2] ?? match[3]) : undefined;
+}
+
+export function parseListaPagination(html: string): ListaPagination | null {
+	const form = [...html.matchAll(/<form\b([^>]*)>([\s\S]*?)<\/form>/gi)].find(
+		(match) => attribute(match[1], "name") === "formPaginacion" || attribute(match[1], "id") === "formPaginacion",
+	);
+	if (!form) return null;
+	const fields = new Map<string, string>();
+	for (const input of form[2].matchAll(/<input\b([^>]*)>/gi)) {
+		const name = attribute(input[1], "name");
+		if (name) fields.set(name, attribute(input[1], "value") ?? "");
+	}
+	for (const select of form[2].matchAll(/<select\b([^>]*)>([\s\S]*?)<\/select>/gi)) {
+		const name = attribute(select[1], "name");
+		const options = [...select[2].matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option>/gi)];
+		const selected = options.find((option) => /(?:^|\s)selected(?:\s|=|$)/i.test(option[1])) ?? options[0];
+		if (name && selected) fields.set(name, attribute(selected[1], "value") ?? cellText(selected[2]));
+	}
+	const pagina = fields.get("pagina") ?? "";
+	const tamanioPagina = fields.get("tamanioPagina") ?? "";
+	if (
+		![pagina, tamanioPagina].every(
+			(value) => /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) > 0,
+		)
+	) {
+		throw new Error("SUNAT returned invalid pagination fields.");
+	}
+	return { pagina: Number(pagina), tamanioPagina: Number(tamanioPagina) };
+}
+
 const CONSTANCIA_RE = /constanciaNP\(\s*(\d+)\s*,\s*'(\d{3,4})'\s*\)/;
 const COMPROBANTE_RE = /comprobante\(\s*'(\d{3,4})'\s*,\s*(\d+)\s*,\s*'[^']*'\s*,\s*(\d+)\s*\)/;
 

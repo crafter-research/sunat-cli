@@ -2,7 +2,7 @@
 	"command": "declaraciones",
 	"description": "Read-only listing of filed declarations and payments, with constancia PDF download",
 	"version": "1.0.0",
-	"writesNothing": "The network path is the visor's own accion=lista, accion=validar_constanciaNP and accion=obtener_constanciaNP requests. Nothing files, pays or amends. The only write is the PDF the operator asked for.",
+  "writesNothing": "The network path uses the visor's own accion=lista, ConsultaDeclaracion.jsp pagination, accion=validar_constanciaNP and accion=obtener_constanciaNP requests. Nothing files, pays or amends. The only write is the PDF the operator asked for.",
 	"auth": {
 		"portal": "e-menu.sunat.gob.pe menu 12.1.1.1.4 and ww1.sunat.gob.pe/cl-ti-itdeclpagcon-mepeco",
 		"session": "Existing SOL session from sunat-cli login; the ww1 cookie is minted by the menu hop, so the servlet is never opened cold",
@@ -41,7 +41,7 @@
 		"payments": "not implemented, by design",
 		"paymentDetail": "boleta 1663 detail (accion=ComprobanteCons) not implemented",
 		"annualReturns": "0709/0710 are listed but their constancia uses a different servlet and is not downloaded",
-		"pagination": "only the first page of results is read",
+		"pagination": "reads result pages up to a 100-page bound; repeated results, inconsistent pagination or later-page failures are errors, not partial success; live multi-page behavior is unverified",
 		"multiRuc": "not implemented"
 	}
 }
