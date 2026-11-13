@@ -286,6 +286,12 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 		.option("--wait", "After upload, poll the resulting ticket until completed/error")
 		.option("--timeout <ms>", "Polling timeout (default 300000 = 5min)", "300000")
 		.option("--chunk-size <bytes>", "TUS chunk size (default 8388608 = 8MB)", "8388608")
+		.option("--upload-attempts <n>", "Maximum attempts per TUS chunk (including the first attempt)", "3")
+		.option(
+			"--upload-timeout <ms>",
+			"Total TUS upload timeout, including retries (separate from ticket polling)",
+			"600000",
+		)
 		.action(async (opts, cmd) => uploadAction(cmd, opts, "reemplazoPropuesta"));
 
 	sub
@@ -302,6 +308,12 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 		.option("--wait")
 		.option("--timeout <ms>", "Polling timeout", "300000")
 		.option("--chunk-size <bytes>", "TUS chunk size", "8388608")
+		.option("--upload-attempts <n>", "Maximum attempts per TUS chunk (including the first attempt)", "3")
+		.option(
+			"--upload-timeout <ms>",
+			"Total TUS upload timeout, including retries (separate from ticket polling)",
+			"600000",
+		)
 		.action(async (opts, cmd) => {
 			const tipoMap: Record<string, SireUploadKind> = {
 				propuesta: "importarPropuestaCp",
@@ -327,6 +339,8 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 			wait?: boolean;
 			timeout: string;
 			chunkSize: string;
+			uploadAttempts: string;
+			uploadTimeout: string;
 		},
 		kind: SireUploadKind,
 	): Promise<void> {
@@ -363,8 +377,11 @@ function bookCommand(libroAlias: "ventas" | "compras", codLibro: CodLibro): Comm
 					perTributario: opts.periodo,
 					filename,
 					data,
-					chunkSize: Number.parseInt(opts.chunkSize, 10),
-					onProgress: (uploaded, total) => {
+					chunkSize: Number(opts.chunkSize),
+					maxAttempts: Number(opts.uploadAttempts),
+					uploadTimeoutMs: Number(opts.uploadTimeout),
+					onProgress: (uploaded, total, hint) => {
+						if (format !== "json" && hint) process.stderr.write(`\n  ${hint}\n`);
 						const now = Date.now();
 						if (format !== "json" && now - lastLog > 1000) {
 							const pct = Math.round((uploaded / total) * 100);
