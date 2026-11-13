@@ -17,7 +17,7 @@
  *                     → application/pdf (~45 KB)
  *
  * Every request here is one the visor itself makes when an operator clicks
- * "Buscar" or "Comprobante". Nothing in this module files, pays or amends.
+ * "Buscar", a page link or "Comprobante". Nothing in this module files, pays or amends.
  * The form's own `cod_for`/`num_ord` filters are sent empty and filtering is
  * done client-side: their server-side behavior was not exercised.
  */
@@ -26,7 +26,13 @@ import { ensureSOLSession, SOL_MENU_URL } from "../browser/auth.ts";
 import { type CdpSession, connect } from "../browser/cdp.ts";
 import * as browser from "../browser/client.ts";
 import { getCredentials } from "../data/config.ts";
-import { hasNoResultsNotice, looksLikeLostSession, parseListaHtml } from "./parse.ts";
+import {
+	hasNoResultsNotice,
+	type ListaPagination,
+	looksLikeLostSession,
+	parseListaHtml,
+	parseListaPagination,
+} from "./parse.ts";
 import type { DeclaracionRow } from "./types.ts";
 
 export const SERVLET_PATH = "/cl-ti-itdeclpagcon-mepeco/cdpS01Alias";
@@ -70,9 +76,17 @@ export function buildListaBody(desde: string, hasta: string): string {
  * JSON text: `{ok, status, html}`. Cookies are never read, only sent by the
  * browser through `credentials: 'include'`.
  */
-export function buildListaExpression(desde: string, hasta: string): string {
-	const body = JSON.stringify(buildListaBody(desde, hasta));
-	return `(async()=>{try{const r=await fetch(${JSON.stringify(SERVLET_PATH)},{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:${body},signal:AbortSignal.timeout(${REQUEST_TIMEOUT_MS})});const html=await r.text();return JSON.stringify({ok:r.ok,status:r.status,html})}catch(e){return JSON.stringify({ok:false,status:0,html:''})}})()`;
+export function buildListaExpression(desde: string, hasta: string, pagination?: ListaPagination): string {
+	const params = new URLSearchParams(buildListaBody(desde, hasta));
+	if (pagination) {
+		params.delete("accion");
+		params.delete("B1");
+		params.set("pagina", String(pagination.pagina));
+		params.set("tamanioPagina", String(pagination.tamanioPagina));
+	}
+	const path = pagination ? "/cl-ti-itdeclpagcon-mepeco/ConsultaDeclaracion.jsp" : SERVLET_PATH;
+	const body = JSON.stringify(params.toString());
+	return `(async()=>{try{const r=await fetch(${JSON.stringify(path)},{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:${body},signal:AbortSignal.timeout(${REQUEST_TIMEOUT_MS})});const html=await r.text();return JSON.stringify({ok:r.ok,status:r.status,html})}catch(e){return JSON.stringify({ok:false,status:0,html:''})}})()`;
 }
 
 /**
@@ -178,6 +192,83 @@ type ConstanciaResponse = {
 	base64?: string;
 };
 
+export async function collectDeclaraciones(
+	desde: string,
+	hasta: string,
+	request: (expression: string) => Promise<ListaResponse>,
+): Promise<DeclaracionRow[]> {
+	const items: DeclaracionRow[] = [];
+	const seen = new Set<string>();
+	let pagination: ListaPagination | undefined;
+	for (let page = 1; page <= 100; page++) {
+		const res = await request(buildListaExpression(desde, hasta, pagination));
+		if (!res.ok) {
+			throw new DeclaracionesPortalError(
+				res.status === 0 ? "SUNAT did not answer." : `SUNAT answered HTTP ${res.status}.`,
+				res.status || 503,
+				res.status === 0 ? "network" : "http-error",
+				"Retry in a minute; the legacy hosts throttle by IP.",
+			);
+		}
+		if (looksLikeLostSession(res.html)) {
+			throw new DeclaracionesPortalError(
+				"The SOL session expired before the query.",
+				401,
+				"session-expired",
+				"Run 'sunat-cli login' and retry.",
+			);
+		}
+		const rows = parseListaHtml(res.html);
+		if (rows.length === 0) {
+			if (hasNoResultsNotice(res.html)) return items;
+			throw new DeclaracionesPortalError(
+				"SUNAT returned a page without a results table.",
+				502,
+				"unexpected-page",
+				"The visor layout may have changed. Run with the browser visible to inspect.",
+			);
+		}
+		const before = items.length;
+		for (const row of rows) {
+			const key = JSON.stringify([row.kind, row.formulario, row.numOrden, row.numPresentacion]);
+			if (seen.has(key)) continue;
+			seen.add(key);
+			items.push(row);
+		}
+		if (page > 1 && items.length === before) {
+			throw new DeclaracionesPortalError(
+				"SUNAT repeated declaration results; the listing is incomplete.",
+				502,
+				"pagination-stalled",
+			);
+		}
+		let current: ListaPagination | null;
+		try {
+			current = parseListaPagination(res.html);
+			if (!current && pagination && rows.length >= pagination.tamanioPagina) {
+				throw new Error("Missing pagination state");
+			}
+			if (current && (current.pagina !== page || (pagination && current.tamanioPagina !== pagination.tamanioPagina))) {
+				throw new Error("Unexpected pagination state");
+			}
+		} catch {
+			throw new DeclaracionesPortalError(
+				"SUNAT returned inconsistent pagination; the listing is incomplete.",
+				502,
+				"invalid-pagination",
+			);
+		}
+		if (!current || rows.length < current.tamanioPagina) return items;
+		pagination = { ...current, pagina: page + 1 };
+	}
+	throw new DeclaracionesPortalError(
+		"The declaration query exceeded 100 pages; the listing is incomplete.",
+		502,
+		"pagination-limit",
+		"Retry with a narrower date range.",
+	);
+}
+
 export async function openDeclaracionesPortal(): Promise<DeclaracionesPortal> {
 	let session: CdpSession;
 	try {
@@ -197,35 +288,7 @@ export async function openDeclaracionesPortal(): Promise<DeclaracionesPortal> {
 	const request = createDeclaracionesRequester(session);
 
 	return {
-		lista: async (desde, hasta) => {
-			const res = await request<ListaResponse>(buildListaExpression(desde, hasta));
-			if (!res.ok) {
-				throw new DeclaracionesPortalError(
-					res.status === 0 ? "SUNAT did not answer." : `SUNAT answered HTTP ${res.status}.`,
-					res.status || 503,
-					res.status === 0 ? "network" : "http-error",
-					"Retry in a minute; the legacy hosts throttle by IP.",
-				);
-			}
-			if (looksLikeLostSession(res.html)) {
-				throw new DeclaracionesPortalError(
-					"The SOL session expired before the query.",
-					401,
-					"session-expired",
-					"Run 'sunat-cli login' and retry.",
-				);
-			}
-			const rows = parseListaHtml(res.html);
-			if (rows.length === 0 && !hasNoResultsNotice(res.html)) {
-				throw new DeclaracionesPortalError(
-					"SUNAT returned a page without a results table.",
-					502,
-					"unexpected-page",
-					"The visor layout may have changed. Run with the browser visible to inspect.",
-				);
-			}
-			return rows;
-		},
+		lista: (desde, hasta) => collectDeclaraciones(desde, hasta, request),
 		constancia: async (numOrden, formulario) => {
 			const res = await request<ConstanciaResponse>(buildConstanciaExpression(numOrden, formulario));
 			if (res.code === "not-available") {

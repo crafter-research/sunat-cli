@@ -24,7 +24,7 @@ describe("sunat-cli declaraciones", () => {
 		const schema = JSON.parse(stdout);
 		expect(schema.version).toBe("1.0.0");
 		expect(schema.boundaries.filing).toBe("not implemented, by design");
-		expect(schema.boundaries.pagination).toContain("first page");
+		expect(schema.boundaries.pagination).toContain("100-page bound");
 	});
 
 	test("rejects invalid list inputs before opening the portal", async () => {
